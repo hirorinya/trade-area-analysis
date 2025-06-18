@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: trade-area-db
+    environment:
+      POSTGRES_DB: trade_area_analysis
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - trade-area-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: trade-area-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - trade-area-network
+
+  pgadmin:
+    image: dpage/pgadmin4:7
+    container_name: trade-area-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@tradearea.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - trade-area-network
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:
+
+networks:
+  trade-area-network:
+    driver: bridge
