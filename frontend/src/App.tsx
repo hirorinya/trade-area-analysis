@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import L from 'leaflet';
 import * as turf from '@turf/turf';
 import 'leaflet/dist/leaflet.css';
+import { auth } from './lib/supabase';
 
 function App() {
   // Debug environment variables
@@ -54,16 +55,17 @@ function App() {
     e.preventDefault();
     const formData = new FormData(e.target);
     try {
-      const data = await apiCall('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: formData.get('email'),
-          password: formData.get('password')
-        })
-      });
-      setToken(data.access_token);
+      const { data, error } = await auth.signIn(
+        formData.get('email'),
+        formData.get('password')
+      );
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      setToken(data.session?.access_token);
       setUser(data.user);
-      localStorage.setItem('token', data.access_token);
       setMessage('Login successful!');
       setCurrentView('dashboard');
       loadProjects();
@@ -76,23 +78,26 @@ function App() {
     e.preventDefault();
     const formData = new FormData(e.target);
     try {
-      const data = await apiCall('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: formData.get('email'),
-          password: formData.get('password'),
-          first_name: formData.get('firstName'),
-          last_name: formData.get('lastName')
-        })
-      });
-      setToken(data.access_token);
+      const { data, error } = await auth.signUp(
+        formData.get('email'),
+        formData.get('password'),
+        {
+          firstName: formData.get('firstName'),
+          lastName: formData.get('lastName')
+        }
+      );
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      setToken(data.session?.access_token);
       setUser(data.user);
-      localStorage.setItem('token', data.access_token);
-      setMessage('Registration successful!');
+      setMessage('Registration successful! Please check your email to verify your account.');
       setCurrentView('dashboard');
       loadProjects();
     } catch (error) {
-      // Error already handled in apiCall
+      setMessage(`Registration error: ${error.message}`);
     }
   };
 
