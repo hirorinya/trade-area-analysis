@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { User, LoginRequest, RegisterRequest, AuthResponse } from '../../types';
-import { authApi } from '../../services/api';
+import { auth } from '../../lib/supabase';
 
 interface AuthState {
   user: User | null;
@@ -19,42 +19,50 @@ const initialState: AuthState = {
 };
 
 // Async thunks
-export const login = createAsyncThunk<AuthResponse, LoginRequest>(
+export const login = createAsyncThunk<any, LoginRequest>(
   'auth/login',
   async (credentials, { rejectWithValue }) => {
     try {
-      const response = await authApi.login(credentials);
-      localStorage.setItem('token', response.access_token);
-      localStorage.setItem('refreshToken', response.refresh_token);
-      return response;
+      const { data, error } = await auth.signIn(credentials.email, credentials.password);
+      if (error) {
+        return rejectWithValue(error.message);
+      }
+      return { user: data.user, session: data.session };
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Login failed');
+      return rejectWithValue(error.message || 'Login failed');
     }
   }
 );
 
-export const register = createAsyncThunk<AuthResponse, RegisterRequest>(
+export const register = createAsyncThunk<any, RegisterRequest>(
   'auth/register',
   async (userData, { rejectWithValue }) => {
     try {
-      const response = await authApi.register(userData);
-      localStorage.setItem('token', response.access_token);
-      localStorage.setItem('refreshToken', response.refresh_token);
-      return response;
+      const { data, error } = await auth.signUp(userData.email, userData.password, {
+        firstName: userData.firstName,
+        lastName: userData.lastName
+      });
+      if (error) {
+        return rejectWithValue(error.message);
+      }
+      return { user: data.user, session: data.session };
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Registration failed');
+      return rejectWithValue(error.message || 'Registration failed');
     }
   }
 );
 
-export const getProfile = createAsyncThunk<User, void>(
+export const getProfile = createAsyncThunk<any, void>(
   'auth/getProfile',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await authApi.getProfile();
-      return response;
+      const { user, error } = await auth.getUser();
+      if (error) {
+        return rejectWithValue(error.message);
+      }
+      return user;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch profile');
+      return rejectWithValue(error.message || 'Failed to fetch profile');
     }
   }
 );
@@ -68,8 +76,7 @@ const authSlice = createSlice({
       state.token = null;
       state.isAuthenticated = false;
       state.error = null;
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
+      auth.signOut();
     },
     clearError: (state) => {
       state.error = null;
@@ -85,7 +92,7 @@ const authSlice = createSlice({
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload.user;
-        state.token = action.payload.access_token;
+        state.token = action.payload.session?.access_token;
         state.isAuthenticated = true;
         state.error = null;
       })
@@ -102,7 +109,7 @@ const authSlice = createSlice({
       .addCase(register.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload.user;
-        state.token = action.payload.access_token;
+        state.token = action.payload.session?.access_token;
         state.isAuthenticated = true;
         state.error = null;
       })
