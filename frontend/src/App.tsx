@@ -1016,17 +1016,19 @@ function App() {
         }
 
         try {
-          await apiCall('/locations', {
-            method: 'POST',
-            body: JSON.stringify({
-              project_id: selectedProject.id,
-              name: name,
-              address: address,
-              latitude: latitude,
-              longitude: longitude,
-              location_type: locationType
-            })
+          const { error } = await db.createLocation({
+            project_id: selectedProject.id,
+            name: name,
+            address: address,
+            latitude: latitude,
+            longitude: longitude,
+            location_type: locationType
           });
+          
+          if (error) {
+            throw new Error(error.message);
+          }
+          
           successCount++;
         } catch (error) {
           errorCount++;
@@ -1293,14 +1295,16 @@ function App() {
   // Effects
   useEffect(() => {
     if (token) {
-      apiCall('/auth/profile')
-        .then(data => {
-          setUser(data.user);
+      auth.getUser()
+        .then(({ user, error }) => {
+          if (error) {
+            throw new Error(error.message);
+          }
+          setUser(user);
           setCurrentView('dashboard');
           loadProjects();
         })
         .catch(() => {
-          localStorage.removeItem('token');
           setToken(null);
         });
     }
