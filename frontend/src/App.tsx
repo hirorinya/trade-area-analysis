@@ -4,6 +4,15 @@ import * as turf from '@turf/turf';
 import 'leaflet/dist/leaflet.css';
 
 function App() {
+  // Debug environment variables
+  useEffect(() => {
+    console.log('=== Environment Variables Debug ===');
+    console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
+    console.log('VITE_SUPABASE_ANON_KEY:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
+    console.log('Mode:', import.meta.env.MODE);
+    console.log('All env vars:', Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')));
+  }, []);
+
   const [currentView, setCurrentView] = useState('login');
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
