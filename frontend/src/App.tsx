@@ -60,8 +60,11 @@ function App() {
         formData.get('password')
       );
       
+      console.log('Login attempt result:', { data, error });
+      
       if (error) {
-        throw new Error(error.message);
+        console.error('Supabase auth error:', error);
+        throw new Error(`Auth error: ${error.message} (Code: ${error.status || 'unknown'})`);
       }
       
       setToken(data.session?.access_token);
