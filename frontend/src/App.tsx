@@ -70,7 +70,7 @@ function App() {
       setCurrentView('dashboard');
       loadProjects();
     } catch (error) {
-      // Error already handled in apiCall
+      setMessage(`Login error: ${error.message}`);
     }
   };
 
