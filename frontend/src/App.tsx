@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import L from 'leaflet';
 import * as turf from '@turf/turf';
 import 'leaflet/dist/leaflet.css';
-import { auth } from './lib/supabase';
+import { auth, db } from './lib/supabase';
 
 function App() {
   // Debug environment variables
@@ -104,10 +104,14 @@ function App() {
   // Projects
   const loadProjects = async () => {
     try {
-      const data = await apiCall('/projects');
-      setProjects(data.projects);
+      if (!user?.id) return;
+      const { data, error } = await db.getProjects(user.id);
+      if (error) {
+        throw new Error(error.message);
+      }
+      setProjects(data || []);
     } catch (error) {
-      // Error already handled in apiCall
+      setMessage(`Error loading projects: ${error.message}`);
     }
   };
 
@@ -115,28 +119,37 @@ function App() {
     e.preventDefault();
     const formData = new FormData(e.target);
     try {
-      await apiCall('/projects', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: formData.get('name'),
-          description: formData.get('description')
-        })
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+      
+      const { data, error } = await db.createProject(user.id, {
+        name: formData.get('name'),
+        description: formData.get('description')
       });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
       setMessage('Project created successfully!');
       e.target.reset();
       loadProjects();
     } catch (error) {
-      // Error already handled in apiCall
+      setMessage(`Error creating project: ${error.message}`);
     }
   };
 
   // Locations
   const loadLocations = async (projectId) => {
     try {
-      const data = await apiCall(`/locations/project/${projectId}`);
-      setLocations(data.locations);
+      const { data, error } = await db.getLocations(projectId);
+      if (error) {
+        throw new Error(error.message);
+      }
+      setLocations(data || []);
     } catch (error) {
-      // Error already handled in apiCall
+      setMessage(`Error loading locations: ${error.message}`);
     }
   };
 
@@ -146,23 +159,25 @@ function App() {
     
     const formData = new FormData(e.target);
     try {
-      await apiCall('/locations', {
-        method: 'POST',
-        body: JSON.stringify({
-          project_id: selectedProject.id,
-          name: formData.get('locationName'),
-          address: formData.get('address'),
-          latitude: parseFloat(formData.get('latitude')),
-          longitude: parseFloat(formData.get('longitude')),
-          location_type: formData.get('locationType')
-        })
+      const { data, error } = await db.createLocation({
+        project_id: selectedProject.id,
+        name: formData.get('locationName'),
+        address: formData.get('address'),
+        latitude: parseFloat(formData.get('latitude')),
+        longitude: parseFloat(formData.get('longitude')),
+        location_type: formData.get('locationType')
       });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
       setMessage('Location created successfully!');
       e.target.reset();
       loadLocations(selectedProject.id);
       updateMapMarkers();
     } catch (error) {
-      // Error already handled in apiCall
+      setMessage(`Error creating location: ${error.message}`);
     }
   };
 
