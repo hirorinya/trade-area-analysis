@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { auth, db } from './lib/supabase';
 import MapboxMap from './components/map/MapboxMap';
 import AIAnalysisChat from './components/ai/AIAnalysisChat';
+import ModernLoginForm from './components/auth/ModernLoginForm';
 
 function App() {
   // Debug environment variables
@@ -33,6 +34,7 @@ function App() {
   const [showHelp, setShowHelp] = useState(false);
   const [useMapbox, setUseMapbox] = useState(true);
   const [showAIChat, setShowAIChat] = useState(false);
+  const [authView, setAuthView] = useState('login'); // 'login' or 'register'
 
   // API calls
   const apiCall = async (endpoint, options = {}) => {
@@ -54,21 +56,16 @@ function App() {
     }
   };
 
-  // Authentication
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
+  // Modern Authentication handlers
+  const handleModernLogin = async (email, password) => {
     try {
-      const { data, error } = await auth.signIn(
-        formData.get('email'),
-        formData.get('password')
-      );
+      const { data, error } = await auth.signIn(email, password);
       
       console.log('Login attempt result:', { data, error });
       
       if (error) {
         console.error('Supabase auth error:', error);
-        throw new Error(`Auth error: ${error.message} (Code: ${error.status || 'unknown'})`);
+        throw new Error(error.message);
       }
       
       setToken(data.session?.access_token);
@@ -78,7 +75,15 @@ function App() {
       loadProjects();
     } catch (error) {
       setMessage(`Login error: ${error.message}`);
+      throw error; // Re-throw for ModernLoginForm to handle
     }
+  };
+
+  // Legacy Authentication (keep for backup)
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    await handleModernLogin(formData.get('email'), formData.get('password'));
   };
 
   const handleRegister = async (e) => {
@@ -1299,23 +1304,53 @@ function App() {
   const buttonStyle = { backgroundColor: '#007bff', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '3px', cursor: 'pointer', margin: '5px' };
   const projectStyle = { backgroundColor: '#f0f0f0', padding: '15px', borderRadius: '5px', marginBottom: '10px' };
 
-  // Effects
+  // Check for existing session on app load
   useEffect(() => {
-    if (token) {
-      auth.getUser()
-        .then(({ user, error }) => {
-          if (error) {
-            throw new Error(error.message);
-          }
-          setUser(user);
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await auth.getSession();
+        
+        if (error) {
+          console.error('Session check error:', error);
+          return;
+        }
+
+        if (session?.user) {
+          setUser(session.user);
+          setToken(session.access_token);
           setCurrentView('dashboard');
           loadProjects();
-        })
-        .catch(() => {
+        }
+      } catch (error) {
+        console.error('Session check failed:', error);
+      }
+    };
+
+    checkSession();
+  }, []); // Run only once on mount
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const { data: { subscription } } = auth.onAuthStateChange(
+      (event, session) => {
+        console.log('Auth state changed:', event, session);
+        
+        if (event === 'SIGNED_IN' && session) {
+          setUser(session.user);
+          setToken(session.access_token);
+          setCurrentView('dashboard');
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
           setToken(null);
-        });
-    }
-  }, []); // Keep empty dependency to run only once on mount
+          setCurrentView('login');
+        }
+      }
+    );
+
+    return () => {
+      subscription?.unsubscribe?.();
+    };
+  }, []);
 
   // Load projects when user is set and we're on dashboard
   useEffect(() => {
@@ -1356,27 +1391,12 @@ function App() {
       )}
 
       {currentView === 'login' && (
-        <div>
-          <div style={formStyle}>
-            <h2>Login</h2>
-            <form onSubmit={handleLogin}>
-              <input type="email" name="email" placeholder="Email" required style={inputStyle} />
-              <input type="password" name="password" placeholder="Password" required style={inputStyle} />
-              <button type="submit" style={buttonStyle}>Login</button>
-            </form>
-          </div>
-          
-          <div style={formStyle}>
-            <h2>Register New Account</h2>
-            <form onSubmit={handleRegister}>
-              <input type="text" name="firstName" placeholder="First Name" style={inputStyle} />
-              <input type="text" name="lastName" placeholder="Last Name" style={inputStyle} />
-              <input type="email" name="email" placeholder="Email" required style={inputStyle} />
-              <input type="password" name="password" placeholder="Password (min 8 chars)" required style={inputStyle} />
-              <button type="submit" style={buttonStyle}>Register</button>
-            </form>
-          </div>
-        </div>
+        <ModernLoginForm
+          onLogin={handleModernLogin}
+          onSwitchToRegister={() => setAuthView('register')}
+          loading={false}
+          error={message?.includes('Login error') ? message.replace('Login error: ', '') : undefined}
+        />
       )}
 
       {currentView === 'dashboard' && user && (
