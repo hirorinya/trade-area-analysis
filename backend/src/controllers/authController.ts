@@ -3,14 +3,15 @@ import { UserModel } from '../models/User';
 import { generateTokens } from '../utils/jwt';
 import { LoginRequest, RegisterRequest, AuthRequest } from '../types';
 
-export const register = async (req: Request, res: Response) => {
+export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const userData: RegisterRequest = req.body;
     
     // Check if user already exists
     const existingUser = await UserModel.findByEmail(userData.email);
     if (existingUser) {
-      return res.status(409).json({ error: 'User already exists with this email' });
+      res.status(409).json({ error: 'User already exists with this email' });
+      return;
     }
     
     // Create new user
@@ -33,7 +34,8 @@ export const register = async (req: Request, res: Response) => {
         company: user.company,
         role: user.role
       },
-      tokens
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -41,20 +43,22 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password }: LoginRequest = req.body;
     
     // Find user
     const user = await UserModel.findByEmail(email);
     if (!user || !user.password_hash) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Invalid credentials' });
+      return;
     }
     
     // Validate password
     const isValidPassword = await UserModel.validatePassword(password, user.password_hash);
     if (!isValidPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Invalid credentials' });
+      return;
     }
     
     // Generate tokens
@@ -74,7 +78,8 @@ export const login = async (req: Request, res: Response) => {
         company: user.company,
         role: user.role
       },
-      tokens
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -82,10 +87,11 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const getProfile = async (req: AuthRequest, res: Response) => {
+export const getProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
     }
     
     res.json({
@@ -104,17 +110,19 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const updateProfile = async (req: AuthRequest, res: Response) => {
+export const updateProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
     }
     
     const updates = req.body;
     const updatedUser = await UserModel.updateProfile(req.user.id, updates);
     
     if (!updatedUser) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
+      return;
     }
     
     res.json({

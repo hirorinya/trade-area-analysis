@@ -1,5 +1,7 @@
 import express from 'express';
 import authRoutes from './auth';
+import projectRoutes from './projects';
+import locationRoutes from './locations';
 
 const router = express.Router();
 
@@ -14,6 +16,8 @@ router.get('/health', (req, res) => {
 
 // API routes
 router.use('/auth', authRoutes);
+router.use('/projects', projectRoutes);
+router.use('/locations', locationRoutes);
 
 // API info
 router.get('/', (req, res) => {
@@ -24,7 +28,7 @@ router.get('/', (req, res) => {
       auth: '/api/auth',
       projects: '/api/projects',
       locations: '/api/locations',
-      'trade-areas': '/api/trade-areas',
+      tradeAreas: '/api/trade-areas',
       geo: '/api/geo'
     }
   });

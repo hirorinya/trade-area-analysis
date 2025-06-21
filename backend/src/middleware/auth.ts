@@ -3,12 +3,13 @@ import { verifyToken } from '../utils/jwt';
 import { UserModel } from '../models/User';
 import { AuthRequest } from '../types';
 
-export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Access token required' });
+      res.status(401).json({ error: 'Access token required' });
+      return;
     }
     
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
@@ -17,32 +18,37 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     const user = await UserModel.findById(decoded.userId);
     
     if (!user) {
-      return res.status(401).json({ error: 'User not found' });
+      res.status(401).json({ error: 'User not found' });
+      return;
     }
     
     req.user = user;
     next();
   } catch (error) {
     if (error instanceof Error && error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'Invalid token' });
+      res.status(401).json({ error: 'Invalid token' });
+      return;
     }
     if (error instanceof Error && error.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expired' });
+      res.status(401).json({ error: 'Token expired' });
+      return;
     }
     
     console.error('Authentication error:', error);
-    return res.status(500).json({ error: 'Authentication failed' });
+    res.status(500).json({ error: 'Authentication failed' });
   }
 };
 
 export const authorize = (roles: string[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction) => {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required' });
+      res.status(401).json({ error: 'Authentication required' });
+      return;
     }
     
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
     }
     
     next();

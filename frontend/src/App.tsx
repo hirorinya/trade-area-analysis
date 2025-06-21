@@ -3,6 +3,8 @@ import L from 'leaflet';
 import * as turf from '@turf/turf';
 import 'leaflet/dist/leaflet.css';
 import { auth, db } from './lib/supabase';
+import MapboxMap from './components/map/MapboxMap';
+import AIAnalysisChat from './components/ai/AIAnalysisChat';
 
 function App() {
   // Debug environment variables
@@ -29,6 +31,8 @@ function App() {
   const [competitorAnalysis, setCompetitorAnalysis] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [useMapbox, setUseMapbox] = useState(true);
+  const [showAIChat, setShowAIChat] = useState(false);
 
   // API calls
   const apiCall = async (endpoint, options = {}) => {
@@ -1432,6 +1436,26 @@ function App() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h2>📍 {selectedProject.name} - Locations & Map</h2>
             <div>
+              <button 
+                onClick={() => setUseMapbox(!useMapbox)} 
+                style={{
+                  ...buttonStyle,
+                  backgroundColor: useMapbox ? '#28a745' : '#6c757d',
+                  marginRight: '10px'
+                }}
+              >
+                🗺️ {useMapbox ? 'Mapbox' : 'Leaflet'}
+              </button>
+              <button 
+                onClick={() => setShowAIChat(!showAIChat)} 
+                style={{
+                  ...buttonStyle,
+                  backgroundColor: showAIChat ? '#2563eb' : '#6c757d',
+                  marginRight: '10px'
+                }}
+              >
+                🤖 AI Analyst
+              </button>
               <button onClick={() => setCurrentView('dashboard')} style={buttonStyle}>
                 ← Back to Dashboard
               </button>
@@ -2515,6 +2539,75 @@ function App() {
               </div>
             </div>
           )}
+
+          {/* Map and AI Chat Integration */}
+          <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
+            {/* Map Section */}
+            <div style={{ 
+              flex: showAIChat ? '1' : '1', 
+              height: '600px',
+              border: '1px solid #ddd',
+              borderRadius: '8px',
+              overflow: 'hidden'
+            }}>
+              {useMapbox ? (
+                <MapboxMap
+                  locations={locations.map(loc => ({
+                    id: loc.id,
+                    name: loc.name,
+                    latitude: loc.latitude || loc.coordinates?.coordinates?.[1] || 35.6895,
+                    longitude: loc.longitude || loc.coordinates?.coordinates?.[0] || 139.6917,
+                    location_type: loc.location_type,
+                    address: loc.address
+                  }))}
+                  onLocationSelect={(location) => {
+                    setSelectedLocation(location);
+                    setMessage(`Selected: ${location.name}`);
+                  }}
+                  onMapClick={(coordinates) => {
+                    console.log('Map clicked at:', coordinates);
+                    setMessage(`Clicked at: ${coordinates[1].toFixed(4)}, ${coordinates[0].toFixed(4)}`);
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#f5f5f5',
+                  color: '#666',
+                  fontSize: '16px'
+                }}>
+                  🗺️ Leaflet Map Implementation
+                  <br />
+                  <span style={{ fontSize: '14px' }}>
+                    Original map functionality preserved
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* AI Chat Section */}
+            {showAIChat && (
+              <div style={{ 
+                flex: '1',
+                maxWidth: '500px'
+              }}>
+                <AIAnalysisChat
+                  project={selectedProject}
+                  locations={locations}
+                  onLocationHighlight={(locationIds) => {
+                    setMessage(`Highlighting locations: ${locationIds.join(', ')}`);
+                  }}
+                  onRecommendationSelect={(recommendation) => {
+                    setMessage(`AI Recommendation: ${recommendation}`);
+                  }}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

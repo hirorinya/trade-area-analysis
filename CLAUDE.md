@@ -97,6 +97,12 @@ cd frontend && npm run dev
 - Environment variables in `.env` files
 - API base URL: http://localhost:8000/api
 
+## Deployment Credentials
+- **GitHub PAT**: `[Token stored securely - removed for security]`
+- **GitHub Username**: `hirorinya`
+- **Repository**: `https://github.com/hirorinya/trade-area-analysis.git`
+- **Deployment Platform**: Vercel + Supabase
+
 ## Useful Commands
 ```bash
 # Database management

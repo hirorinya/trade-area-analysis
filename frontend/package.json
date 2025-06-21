@@ -23,6 +23,7 @@
     "@types/react-router-dom": "^5.3.3",
     "axios": "^1.10.0",
     "leaflet": "^1.9.4",
+    "lucide-react": "^0.263.1",
     "mapbox-gl": "^3.13.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

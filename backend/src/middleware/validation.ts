@@ -2,7 +2,7 @@ import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
 
 export const validateRequest = (schema: Joi.ObjectSchema) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     const { error } = schema.validate(req.body);
     
     if (error) {
@@ -11,10 +11,11 @@ export const validateRequest = (schema: Joi.ObjectSchema) => {
         message: detail.message
       }));
       
-      return res.status(400).json({
+      res.status(400).json({
         error: 'Validation failed',
         details
       });
+      return;
     }
     
     next();
