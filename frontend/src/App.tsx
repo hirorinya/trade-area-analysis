@@ -1566,20 +1566,17 @@ function App() {
                   )}
                 </div>
               </div>
-              <button 
+              <Button 
                 onClick={() => setShowAIChat(!showAIChat)} 
-                style={{
-                  ...buttonStyle,
-                  backgroundColor: showAIChat ? '#2563eb' : '#6c757d',
-                  marginRight: '10px'
-                }}
+                variant={showAIChat ? 'primary' : 'secondary'}
+                style={{ marginRight: theme.spacing[2] }}
               >
                 🤖 AI Analyst
-              </button>
-              <button onClick={() => setCurrentView('dashboard')} style={buttonStyle}>
+              </Button>
+              <Button onClick={() => setCurrentView('dashboard')} variant="secondary">
                 ← Back to Dashboard
-              </button>
-              <button onClick={logout} style={buttonStyle}>Logout</button>
+              </Button>
+              <Button onClick={logout} variant="secondary">Logout</Button>
             </div>
           </div>
 
@@ -1588,28 +1585,20 @@ function App() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h3>📊 Analytics Dashboard</h3>
               <div>
-                <button 
+                <Button 
                   onClick={() => setShowHelp(!showHelp)}
-                  style={{
-                    ...buttonStyle,
-                    backgroundColor: '#17a2b8',
-                    fontSize: '12px',
-                    padding: '8px 12px',
-                    marginRight: '10px'
-                  }}
+                  variant="secondary"
+                  size="small"
+                  style={{ marginRight: theme.spacing[2] }}
                 >
                   📚 How to Use
-                </button>
-                <button 
+                </Button>
+                <Button 
                   onClick={generateDashboard}
-                  style={{
-                    ...buttonStyle,
-                    backgroundColor: '#28a745',
-                    fontSize: '14px'
-                  }}
+                  variant="primary"
                 >
                   📈 Generate Dashboard
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -2085,7 +2074,7 @@ function App() {
                   <option value="competitor">🏢 Competitor (競合)</option>
                   <option value="poi">📍 Point of Interest</option>
                 </select>
-                <button type="submit" style={buttonStyle}>Add Location</button>
+                <Button type="submit" variant="primary">Add Location</Button>
               </form>
               
               <div style={{ marginTop: '15px', padding: '12px', backgroundColor: '#e8f5e8', borderRadius: '5px' }}>
