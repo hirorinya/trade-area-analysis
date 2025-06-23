@@ -31,7 +31,8 @@ import {
   captionTextStyle,
   flexBetweenStyle,
   mapContainerStyle,
-  responsiveFlexStyle
+  responsiveFlexStyle,
+  preventOverflowStyle
 } from './styles/layouts';
 
 function App() {
