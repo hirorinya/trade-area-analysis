@@ -7,6 +7,8 @@ import MapboxMap from './components/map/MapboxMap';
 import LeafletMap from './components/map/LeafletMap';
 import AIAnalysisChat from './components/ai/AIAnalysisChat';
 import ModernLoginForm from './components/auth/ModernLoginForm';
+import Button from './components/ui/Button';
+import Input from './components/ui/Input';
 import { theme } from './styles/theme';
 import { 
   containerStyle, 
@@ -1289,12 +1291,28 @@ function App() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const { data: { session }, error } = await auth.getSession();
+        const result = await auth.getSession();
+        
+        // Handle case where result might be undefined
+        if (!result) {
+          console.log('No session result returned');
+          return;
+        }
+
+        const { data, error } = result;
         
         if (error) {
           console.error('Session check error:', error);
           return;
         }
+
+        // Handle case where data might be undefined
+        if (!data) {
+          console.log('No session data returned');
+          return;
+        }
+
+        const { session } = data;
 
         if (session?.user) {
           setUser(session.user);
