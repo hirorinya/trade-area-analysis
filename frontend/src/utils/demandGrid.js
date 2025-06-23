@@ -55,7 +55,7 @@ export function generateDemandGrid(bounds, meshSize = 250) {
  * @param {number} lng - Longitude
  * @returns {number} Estimated population in this mesh
  */
-function generatePopulationDensity(lat, lng) {
+export function generatePopulationDensity(lat, lng) {
   // Simulate realistic population patterns
   const basePopulation = 150; // Base population per mesh
   
@@ -84,7 +84,7 @@ function generatePopulationDensity(lat, lng) {
  * @param {number} lng2 - Second point longitude
  * @returns {number} Distance in kilometers
  */
-function getDistance(lat1, lng1, lat2, lng2) {
+export function getDistance(lat1, lng1, lat2, lng2) {
   const R = 6371; // Earth's radius in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
