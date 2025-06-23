@@ -2030,6 +2030,18 @@ Make it actionable and specific to help guide them through the platform.
         </div>
       )}
 
+      {/* Debug: Map view state logging */}
+      {currentView === 'map' && console.log('🗺️ Map view state:', { 
+        currentView, 
+        selectedProject: selectedProject ? selectedProject.name : 'null', 
+        user: user ? user.email : 'null',
+        projectsCount: projects.length,
+        condition1: currentView === 'map',
+        condition2: !selectedProject,
+        condition3: !!user,
+        allConditions: currentView === 'map' && !selectedProject && user
+      })}
+
       {currentView === 'map' && !selectedProject && user && (
         <div style={sectionStyle}>
           <h2 style={heading2Style}>🗺️ Select a Project to View Map</h2>
