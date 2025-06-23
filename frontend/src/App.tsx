@@ -4,6 +4,7 @@ import * as turf from '@turf/turf';
 import 'leaflet/dist/leaflet.css';
 import { auth, db } from './lib/supabase';
 import MapboxMap from './components/map/MapboxMap';
+import LeafletMap from './components/map/LeafletMap';
 import AIAnalysisChat from './components/ai/AIAnalysisChat';
 import ModernLoginForm from './components/auth/ModernLoginForm';
 
@@ -1456,16 +1457,47 @@ function App() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h2>📍 {selectedProject.name} - Locations & Map</h2>
             <div>
-              <button 
-                onClick={() => setUseMapbox(!useMapbox)} 
-                style={{
-                  ...buttonStyle,
-                  backgroundColor: useMapbox ? '#28a745' : '#6c757d',
-                  marginRight: '10px'
-                }}
-              >
-                🗺️ {useMapbox ? 'Mapbox' : 'Leaflet'}
-              </button>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '15px',
+                marginRight: '10px'
+              }}>
+                <select
+                  value={useMapbox ? 'mapbox' : 'leaflet'}
+                  onChange={(e) => setUseMapbox(e.target.value === 'mapbox')}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #ddd',
+                    fontSize: '14px',
+                    backgroundColor: 'white',
+                    color: '#333',
+                    cursor: 'pointer',
+                    minWidth: '200px'
+                  }}
+                >
+                  <option value="mapbox">🛰️ Professional (Satellite & AI)</option>
+                  <option value="leaflet">🗾 Japan Local (国土地理院)</option>
+                </select>
+                
+                <div style={{
+                  fontSize: '12px',
+                  color: '#666',
+                  maxWidth: '250px',
+                  lineHeight: '1.3'
+                }}>
+                  {useMapbox ? (
+                    <span>
+                      <strong>Satellite imagery</strong> with AI analysis for global coverage
+                    </span>
+                  ) : (
+                    <span>
+                      <strong>Japanese government data</strong> optimized for local analysis
+                    </span>
+                  )}
+                </div>
+              </div>
               <button 
                 onClick={() => setShowAIChat(!showAIChat)} 
                 style={{
@@ -2590,22 +2622,24 @@ function App() {
                   }}
                 />
               ) : (
-                <div style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#f5f5f5',
-                  color: '#666',
-                  fontSize: '16px'
-                }}>
-                  🗺️ Leaflet Map Implementation
-                  <br />
-                  <span style={{ fontSize: '14px' }}>
-                    Original map functionality preserved
-                  </span>
-                </div>
+                <LeafletMap
+                  locations={locations.map(loc => ({
+                    id: loc.id,
+                    name: loc.name,
+                    latitude: loc.latitude || loc.coordinates?.coordinates?.[1] || 35.6895,
+                    longitude: loc.longitude || loc.coordinates?.coordinates?.[0] || 139.6917,
+                    location_type: loc.location_type,
+                    address: loc.address
+                  }))}
+                  onLocationSelect={(location) => {
+                    setSelectedLocation(location);
+                    setMessage(`Selected: ${location.name}`);
+                  }}
+                  onMapClick={(coordinates) => {
+                    console.log('Map clicked at:', coordinates);
+                    setMessage(`Clicked at: ${coordinates[1].toFixed(4)}, ${coordinates[0].toFixed(4)}`);
+                  }}
+                />
               )}
             </div>
 
