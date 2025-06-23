@@ -254,33 +254,7 @@ function App() {
       console.log('Geocoding address:', address);
       setMessage('🔍 Searching address...');
       
-      // Try OpenStreetMap Nominatim first (free, no API key needed)
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=jp&limit=1`,
-          {
-            headers: {
-              'User-Agent': 'TradeAreaAnalysis/1.0'
-            }
-          }
-        );
-        const data = await response.json();
-        
-        if (data && data.length > 0) {
-          const result = data[0];
-          const coordinates = {
-            latitude: parseFloat(result.lat),
-            longitude: parseFloat(result.lon)
-          };
-          
-          setMessage(`✅ Address found: ${result.display_name}`);
-          return coordinates;
-        }
-      } catch (nominatimError) {
-        console.log('Nominatim failed, trying alternative method');
-      }
-      
-      // Fallback: Try a simple coordinate extraction for manual input
+      // Method 1: Check if input is already coordinates
       const coordMatch = address.match(/(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)/);
       if (coordMatch) {
         const lat = parseFloat(coordMatch[1]);
@@ -296,8 +270,104 @@ function App() {
         }
       }
       
-      throw new Error('Address not found. Try using coordinates like "35.6762, 139.6503" or a more specific address.');
+      // Method 2: Try OpenStreetMap Nominatim (with better error handling)
+      try {
+        console.log('Trying Nominatim...');
+        const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=jp&limit=3&addressdetails=1`;
+        console.log('Nominatim URL:', nominatimUrl);
+        
+        const response = await fetch(nominatimUrl, {
+          headers: {
+            'User-Agent': 'TradeAreaAnalysis/1.0 (https://trade-area-analysis-2png.vercel.app)'
+          }
+        });
+        
+        console.log('Nominatim response status:', response.status);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Nominatim data:', data);
+        
+        if (data && data.length > 0) {
+          const result = data[0];
+          const coordinates = {
+            latitude: parseFloat(result.lat),
+            longitude: parseFloat(result.lon)
+          };
+          
+          setMessage(`✅ Address found via Nominatim: ${result.display_name}`);
+          return coordinates;
+        }
+      } catch (nominatimError) {
+        console.log('Nominatim failed:', nominatimError);
+        setMessage('🔄 Nominatim failed, trying alternative methods...');
+      }
+      
+      // Method 3: Try a different Nominatim instance (with global search)
+      try {
+        console.log('Trying global Nominatim search...');
+        const globalUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + " Japan")}&limit=3`;
+        
+        const response = await fetch(globalUrl, {
+          headers: {
+            'User-Agent': 'TradeAreaAnalysis/1.0'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Global Nominatim data:', data);
+          
+          // Filter results for Japan
+          const japanResults = data.filter(result => {
+            const lat = parseFloat(result.lat);
+            const lon = parseFloat(result.lon);
+            return lat >= 24 && lat <= 46 && lon >= 122 && lon <= 154;
+          });
+          
+          if (japanResults.length > 0) {
+            const result = japanResults[0];
+            const coordinates = {
+              latitude: parseFloat(result.lat),
+              longitude: parseFloat(result.lon)
+            };
+            
+            setMessage(`✅ Address found via global search: ${result.display_name}`);
+            return coordinates;
+          }
+        }
+      } catch (globalError) {
+        console.log('Global search failed:', globalError);
+      }
+      
+      // Method 4: Handle common Japanese location patterns
+      const commonLocations = {
+        '東京駅': { latitude: 35.6812, longitude: 139.7671 },
+        'tokyo station': { latitude: 35.6812, longitude: 139.7671 },
+        '新宿駅': { latitude: 35.6896, longitude: 139.7006 },
+        'shinjuku station': { latitude: 35.6896, longitude: 139.7006 },
+        '渋谷駅': { latitude: 35.6580, longitude: 139.7016 },
+        'shibuya station': { latitude: 35.6580, longitude: 139.7016 },
+        '池袋駅': { latitude: 35.7295, longitude: 139.7109 },
+        'ikebukuro station': { latitude: 35.7295, longitude: 139.7109 },
+        '品川駅': { latitude: 35.6284, longitude: 139.7387 },
+        'shinagawa station': { latitude: 35.6284, longitude: 139.7387 }
+      };
+      
+      const normalizedAddress = address.toLowerCase().trim();
+      for (const [key, coords] of Object.entries(commonLocations)) {
+        if (normalizedAddress.includes(key)) {
+          setMessage(`✅ Found common location: ${key} → ${coords.latitude}, ${coords.longitude}`);
+          return coords;
+        }
+      }
+      
+      throw new Error('Address not found. Try:\n• Coordinates: "35.6762, 139.6503"\n• Station names: "Tokyo Station", "東京駅"\n• Full addresses: "東京都新宿区新宿3-1-1"');
     } catch (error) {
+      console.error('All geocoding methods failed:', error);
       setMessage(`❌ Geocoding failed: ${error.message}`);
       return null;
     }
@@ -2249,11 +2319,12 @@ function App() {
                   🌍 Enhanced Geocoding Features:
                 </div>
                 <div style={{ fontSize: '12px', color: '#2d5016' }}>
-                  • <strong>Address → Coordinates:</strong> Type address and click "🔍 Find" button<br/>
-                  • <strong>Manual Coordinates:</strong> Enter "35.6762, 139.6503" directly in address field<br/>
-                  • <strong>Auto-geocoding:</strong> Automatically triggers when you finish typing addresses<br/>
-                  • <strong>Examples:</strong> 東京都新宿区新宿3-1-1 or Tokyo Station or 35.6812, 139.7671<br/>
-                  • <strong>Delete Locations:</strong> Use the 🗑️ Delete button to remove unwanted locations
+                  • <strong>Coordinates (Most Reliable):</strong> "35.6762, 139.6503"<br/>
+                  • <strong>Major Stations:</strong> "Tokyo Station", "東京駅", "Shibuya Station"<br/>
+                  • <strong>Full Addresses:</strong> "東京都新宿区新宿3-1-1" (may need internet)<br/>
+                  • <strong>English Names:</strong> "Tokyo Station", "Shinjuku Station"<br/>
+                  • <strong>Auto-geocoding:</strong> Automatically triggers when you finish typing<br/>
+                  • <strong>Delete Locations:</strong> Use the 🗑️ Delete button to remove locations
                 </div>
                 
                 {/* Test Geocoding Button */}
