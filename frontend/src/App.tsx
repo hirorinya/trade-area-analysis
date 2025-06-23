@@ -1950,21 +1950,21 @@ function App() {
             <div style={formStyle}>
               <h3>Add New Location</h3>
               <form onSubmit={createLocation}>
-                <input 
+                <Input 
                   type="text" 
                   name="locationName" 
                   placeholder="Location Name (e.g., 新宿店)" 
+                  label="Location Name"
                   required 
-                  style={inputStyle} 
                 />
                 
                 {/* Enhanced Address Input with Geocoding */}
                 <div style={{ position: 'relative' }}>
-                  <input 
+                  <Input 
                     type="text" 
                     name="address" 
                     placeholder="Address (e.g., 東京都新宿区新宿3-1-1)" 
-                    style={inputStyle}
+                    label="Address"
                     onBlur={(e) => {
                       const address = e.target.value;
                       if (address && address.length > 5) {
@@ -2011,7 +2011,7 @@ function App() {
                     placeholder="Latitude (緯度)" 
                     step="any" 
                     required 
-                    style={inputStyle}
+                    style={theme.components.input.base}
                     onChange={(e) => {
                       const lat = parseFloat(e.target.value);
                       const lngInput = e.target.parentElement.querySelector('input[name="longitude"]');
@@ -2029,7 +2029,7 @@ function App() {
                     placeholder="Longitude (経度)" 
                     step="any" 
                     required 
-                    style={inputStyle}
+                    style={theme.components.input.base}
                     onChange={(e) => {
                       const lng = parseFloat(e.target.value);
                       const latInput = e.target.parentElement.querySelector('input[name="latitude"]');
@@ -2068,7 +2068,7 @@ function App() {
                   </button>
                 </div>
 
-                <select name="locationType" required style={inputStyle}>
+                <select name="locationType" required style={theme.components.input.base}>
                   <option value="">Select Type</option>
                   <option value="store">🏪 Store (店舗)</option>
                   <option value="competitor">🏢 Competitor (競合)</option>
@@ -2147,7 +2147,7 @@ function App() {
                   <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
                     Analysis Type:
                   </label>
-                  <select name="analysisType" required style={inputStyle}>
+                  <select name="analysisType" required style={theme.components.input.base}>
                     <option value="radius">📏 Simple Radius (Basic)</option>
                     <option value="huff">🎯 Huff Model (Advanced - needs multiple locations)</option>
                   </select>
@@ -2161,9 +2161,9 @@ function App() {
                     type="text" 
                     name="tradeAreaName" 
                     placeholder="Trade Area Name (optional)"
-                    style={inputStyle} 
+                    style={theme.components.input.base} 
                   />
-                  <select name="radius" style={inputStyle}>
+                  <select name="radius" style={theme.components.input.base}>
                     <option value="">Auto-size for Huff Model</option>
                     <option value="0.5">500m radius</option>
                     <option value="1">1km radius</option>
