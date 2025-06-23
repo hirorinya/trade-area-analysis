@@ -2030,54 +2030,6 @@ Make it actionable and specific to help guide them through the platform.
         </div>
       )}
 
-      {/* Debug: Map view state logging */}
-      {currentView === 'map' && console.log('🗺️ DEBUG currentView:', currentView) && 
-       console.log('🗺️ DEBUG selectedProject:', selectedProject) && 
-       console.log('🗺️ DEBUG user:', user) && 
-       console.log('🗺️ DEBUG projects.length:', projects.length) && 
-       console.log('🗺️ DEBUG condition !selectedProject:', !selectedProject) && 
-       console.log('🗺️ DEBUG condition !!user:', !!user) && 
-       console.log('🗺️ DEBUG allConditions:', currentView === 'map' && !selectedProject && user)}
-
-      {currentView === 'map' && !selectedProject && user && (
-        <div style={sectionStyle}>
-          <h2 style={heading2Style}>🗺️ Select a Project to View Map</h2>
-          <p style={bodyTextStyle}>Choose one of your projects to start analyzing locations and trade areas.</p>
-          
-          {projects.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: theme.spacing[6] }}>
-              <p style={bodyTextStyle}>No projects found. Create a project first.</p>
-              <Button onClick={() => changeView('dashboard')} variant="primary">
-                Go to Dashboard
-              </Button>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: theme.spacing[4] }}>
-              {projects.map(project => (
-                <div key={project.id} style={projectCardStyle}>
-                  <h3 style={heading3Style}>{project.name}</h3>
-                  <p style={bodyTextStyle}>{project.description || 'No description provided'}</p>
-                  <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[500], marginBottom: theme.spacing[3] }}>
-                    Created: {new Date(project.created_at).toLocaleDateString()}
-                  </div>
-                  <Button 
-                    onClick={() => {
-                      setSelectedProject(project);
-                      loadLocations(project.id);
-                      setMessage(`Selected project: ${project.name}`);
-                    }}
-                    variant="primary"
-                    style={{ width: '100%' }}
-                  >
-                    🗾 View Map & Locations
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {currentView === 'map' && selectedProject && (
         <div>
           {/* Natural Language Analysis Prompt */}
@@ -2767,6 +2719,34 @@ Make it actionable and specific to help guide them through the platform.
                 <Button type="submit" variant="primary" style={{ width: '100%' }}>Add Location</Button>
               </form>
               
+              <div style={{ 
+                marginTop: theme.spacing[4], 
+                padding: theme.spacing[3], 
+                backgroundColor: theme.colors.success[50], 
+                borderRadius: theme.borderRadius.lg,
+                border: `1px solid ${theme.colors.success[100]}`
+              }}>
+                <div style={{ 
+                  fontSize: theme.typography.fontSize.sm, 
+                  fontWeight: theme.typography.fontWeight.semibold, 
+                  marginBottom: theme.spacing[2], 
+                  color: theme.colors.success[600]
+                }}>
+                  🗾 国土地理院 + Enhanced Geocoding:
+                </div>
+                <div style={{ 
+                  fontSize: theme.typography.fontSize.xs, 
+                  color: theme.colors.success[600],
+                  lineHeight: 1.5
+                }}>
+                  • <strong>Japanese Addresses:</strong> "東京都港区芝浦4-20-2" (via 国土地理院 API)<br/>
+                  • <strong>Coordinates:</strong> "35.6762, 139.6503" (instant)<br/>
+                  • <strong>Major Stations:</strong> "東京駅", "Tokyo Station", "品川駅"<br/>
+                  • <strong>English Names:</strong> "Tokyo Station", "Shinjuku Station"<br/>
+                  • <strong>Auto-geocoding:</strong> Automatically triggers when you finish typing<br/>
+                  • <strong>Delete Locations:</strong> Use the 🗑️ Delete button to remove locations
+                </div>
+              </div>
             </div>
 
             {/* Locations List */}
