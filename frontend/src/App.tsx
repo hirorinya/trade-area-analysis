@@ -30,7 +30,9 @@ import {
   bodyTextStyle,
   captionTextStyle,
   flexBetweenStyle,
-  mapContainerStyle
+  mapContainerStyle,
+  responsiveFlexStyle,
+  preventOverflowStyle
 } from './styles/layouts';
 
 function App() {
