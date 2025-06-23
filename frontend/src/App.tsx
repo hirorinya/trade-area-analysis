@@ -1703,6 +1703,14 @@ Make it actionable and specific to help guide them through the platform.
         // Handle case where data might be undefined
         if (!data) {
           console.log('❌ No session data returned');
+          // If we have a user and token from localStorage, but no session data,
+          // the user is still authenticated but Supabase session expired
+          if (user && token) {
+            console.log('🔄 Have user/token but no session - staying authenticated');
+            if (currentView !== 'dashboard' && currentView !== 'analysis' && currentView !== 'map') {
+              changeView('dashboard');
+            }
+          }
           setIsInitialLoad(false);
           return;
         }
@@ -1724,10 +1732,18 @@ Make it actionable and specific to help guide them through the platform.
           await loadProjects();
         } else {
           console.log('❌ No valid session found');
-          // If no session, ensure we're on login page
-          if (currentView !== 'login') {
-            console.log('🔄 Redirecting unauthenticated user to login');
-            changeView('login');
+          // Check if we have stored authentication
+          if (user && token) {
+            console.log('🔄 Using stored authentication');
+            if (currentView === 'login') {
+              changeView('dashboard');
+            }
+          } else {
+            // If no session and no stored auth, ensure we're on login page
+            if (currentView !== 'login') {
+              console.log('🔄 Redirecting unauthenticated user to login');
+              changeView('login');
+            }
           }
           setIsInitialLoad(false);
         }
@@ -1829,6 +1845,56 @@ Make it actionable and specific to help guide them through the platform.
             ×
           </button>
         </div>
+      )}
+
+      {/* Navigation Bar (when authenticated) */}
+      {user && (
+        <nav style={{
+          background: theme.colors.white,
+          borderBottom: `1px solid ${theme.colors.gray[200]}`,
+          padding: theme.spacing[3],
+          marginBottom: theme.spacing[4]
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            maxWidth: '1200px',
+            margin: '0 auto'
+          }}>
+            <div style={{ display: 'flex', gap: theme.spacing[3] }}>
+              <Button 
+                variant={currentView === 'dashboard' ? 'primary' : 'secondary'}
+                onClick={() => changeView('dashboard')}
+                size="small"
+              >
+                Dashboard
+              </Button>
+              <Button 
+                variant={currentView === 'analysis' ? 'primary' : 'secondary'}
+                onClick={() => changeView('analysis')}
+                size="small"
+              >
+                Analysis
+              </Button>
+              <Button 
+                variant={currentView === 'map' ? 'primary' : 'secondary'}
+                onClick={() => changeView('map')}
+                size="small"
+              >
+                Map
+              </Button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing[3] }}>
+              <span style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>
+                {user.email}
+              </span>
+              <Button variant="secondary" onClick={logout} size="small">
+                Logout
+              </Button>
+            </div>
+          </div>
+        </nav>
       )}
 
       {currentView === 'login' && (
