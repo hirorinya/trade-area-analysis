@@ -272,9 +272,11 @@ function App() {
       
       // Method 2: Try OpenStreetMap Nominatim (with better error handling)
       try {
-        console.log('Trying Nominatim...');
+        console.log('=== Method 2: Trying Nominatim ===');
         const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=jp&limit=3&addressdetails=1`;
         console.log('Nominatim URL:', nominatimUrl);
+        
+        setMessage('🔄 Trying Nominatim geocoding service...');
         
         const response = await fetch(nominatimUrl, {
           headers: {
@@ -283,26 +285,33 @@ function App() {
         });
         
         console.log('Nominatim response status:', response.status);
+        console.log('Nominatim response headers:', Object.fromEntries(response.headers.entries()));
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
         const data = await response.json();
-        console.log('Nominatim data:', data);
+        console.log('Nominatim response data:', data);
+        console.log('Number of results:', data.length);
         
         if (data && data.length > 0) {
           const result = data[0];
+          console.log('Using first result:', result);
           const coordinates = {
             latitude: parseFloat(result.lat),
             longitude: parseFloat(result.lon)
           };
           
+          console.log('Extracted coordinates:', coordinates);
           setMessage(`✅ Address found via Nominatim: ${result.display_name}`);
           return coordinates;
+        } else {
+          console.log('No results from Nominatim');
+          setMessage('🔄 No results from Nominatim, trying alternative methods...');
         }
       } catch (nominatimError) {
-        console.log('Nominatim failed:', nominatimError);
+        console.error('Nominatim error details:', nominatimError);
         setMessage('🔄 Nominatim failed, trying alternative methods...');
       }
       
@@ -344,26 +353,41 @@ function App() {
       }
       
       // Method 4: Handle common Japanese location patterns
+      console.log('=== Method 4: Checking built-in locations ===');
+      console.log('Original address:', address);
+      
       const commonLocations = {
         '東京駅': { latitude: 35.6812, longitude: 139.7671 },
         'tokyo station': { latitude: 35.6812, longitude: 139.7671 },
+        'tokyo': { latitude: 35.6812, longitude: 139.7671 },
         '新宿駅': { latitude: 35.6896, longitude: 139.7006 },
         'shinjuku station': { latitude: 35.6896, longitude: 139.7006 },
+        'shinjuku': { latitude: 35.6896, longitude: 139.7006 },
         '渋谷駅': { latitude: 35.6580, longitude: 139.7016 },
         'shibuya station': { latitude: 35.6580, longitude: 139.7016 },
+        'shibuya': { latitude: 35.6580, longitude: 139.7016 },
         '池袋駅': { latitude: 35.7295, longitude: 139.7109 },
         'ikebukuro station': { latitude: 35.7295, longitude: 139.7109 },
+        'ikebukuro': { latitude: 35.7295, longitude: 139.7109 },
         '品川駅': { latitude: 35.6284, longitude: 139.7387 },
-        'shinagawa station': { latitude: 35.6284, longitude: 139.7387 }
+        'shinagawa station': { latitude: 35.6284, longitude: 139.7387 },
+        'shinagawa': { latitude: 35.6284, longitude: 139.7387 }
       };
       
       const normalizedAddress = address.toLowerCase().trim();
+      console.log('Normalized address:', normalizedAddress);
+      console.log('Available locations:', Object.keys(commonLocations));
+      
       for (const [key, coords] of Object.entries(commonLocations)) {
+        console.log(`Checking if "${normalizedAddress}" includes "${key}"`);
         if (normalizedAddress.includes(key)) {
+          console.log(`✅ Match found! ${key} → ${coords.latitude}, ${coords.longitude}`);
           setMessage(`✅ Found common location: ${key} → ${coords.latitude}, ${coords.longitude}`);
           return coords;
         }
       }
+      
+      console.log('No built-in location matches found');
       
       throw new Error('Address not found. Try:\n• Coordinates: "35.6762, 139.6503"\n• Station names: "Tokyo Station", "東京駅"\n• Full addresses: "東京都新宿区新宿3-1-1"');
     } catch (error) {
@@ -2332,21 +2356,44 @@ function App() {
                   <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '5px', color: '#2d5016' }}>
                     🧪 Test Geocoding:
                   </div>
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      const testAddress = "Tokyo Station";
-                      setCurrentAddress(testAddress);
-                      handleAddressGeocoding(testAddress, (coords) => {
-                        setFormCoordinates({ lat: coords.latitude.toString(), lng: coords.longitude.toString() });
-                        setMessage(`✅ Test successful! Tokyo Station: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`);
-                      });
-                    }}
-                    variant="secondary"
-                    size="small"
-                  >
-                    🧪 Test with Tokyo Station
-                  </Button>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        console.log('=== MANUAL TEST BUTTON CLICKED ===');
+                        const testAddress = "tokyo station";
+                        console.log('Testing with:', testAddress);
+                        setCurrentAddress(testAddress);
+                        handleAddressGeocoding(testAddress, (coords) => {
+                          console.log('Test callback received coords:', coords);
+                          setFormCoordinates({ lat: coords.latitude.toString(), lng: coords.longitude.toString() });
+                          setMessage(`✅ Test successful! Tokyo Station: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`);
+                        });
+                      }}
+                      variant="secondary"
+                      size="small"
+                    >
+                      🧪 Test Tokyo
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        console.log('=== COORDINATE TEST BUTTON CLICKED ===');
+                        const testCoords = "35.6812, 139.7671";
+                        console.log('Testing with coordinates:', testCoords);
+                        setCurrentAddress(testCoords);
+                        handleAddressGeocoding(testCoords, (coords) => {
+                          console.log('Coords test callback:', coords);
+                          setFormCoordinates({ lat: coords.latitude.toString(), lng: coords.longitude.toString() });
+                          setMessage(`✅ Coordinates test successful: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`);
+                        });
+                      }}
+                      variant="secondary"
+                      size="small"
+                    >
+                      📍 Test Coords
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
