@@ -1219,41 +1219,7 @@ function App() {
   };
 
   // Map functions
-  const initializeMap = () => {
-    if (map) return;
-    
-    const mapInstance = L.map('map').setView([35.6762, 139.6503], 10); // Tokyo center
-    
-    // 国土地理院 base map
-    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.gsi.go.jp/">国土地理院</a>',
-      maxZoom: 18
-    }).addTo(mapInstance);
-    
-    setMap(mapInstance);
-    return mapInstance;
-  };
 
-  const updateMapMarkers = () => {
-    if (!map) return;
-    
-    // Clear existing markers
-    map.eachLayer((layer) => {
-      if (layer instanceof L.Marker) {
-        map.removeLayer(layer);
-      }
-    });
-    
-    // Add location markers
-    locations.forEach(location => {
-      const icon = location.location_type === 'store' ? '🏪' : 
-                   location.location_type === 'competitor' ? '🏢' : '📍';
-      
-      const marker = L.marker([location.coordinates.coordinates[1], location.coordinates.coordinates[0]])
-        .addTo(map)
-        .bindPopup(`${icon} ${location.name}<br/>${location.address || ''}<br/><small>${location.location_type}</small>`);
-    });
-  };
 
   const updateMapOptimizedLocations = (optimizedStores) => {
     if (!map) return;
@@ -1360,25 +1326,7 @@ function App() {
     }
   }, [user, currentView]);
 
-  useEffect(() => {
-    if (currentView === 'map') {
-      setTimeout(() => {
-        initializeMap();
-      }, 100);
-    }
-  }, [currentView]);
 
-  useEffect(() => {
-    if (map && locations.length > 0) {
-      updateMapMarkers();
-    }
-  }, [map, locations]);
-
-  useEffect(() => {
-    if (map && tradeAreas.length > 0) {
-      updateMapTradeAreas(tradeAreas);
-    }
-  }, [map, tradeAreas]);
 
   return (
     <div style={containerStyle}>
@@ -2075,22 +2023,6 @@ function App() {
             </div>
           </div>
 
-          {/* Map */}
-          <div style={formStyle}>
-            <h3>🗾 Map (国土地理院)</h3>
-            <div 
-              id="map" 
-              style={{ 
-                height: '500px', 
-                width: '100%', 
-                border: '1px solid #ddd', 
-                borderRadius: '5px' 
-              }}
-            />
-            <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
-              Map data © <a href="https://www.gsi.go.jp/" target="_blank" rel="noopener">国土地理院</a>
-            </div>
-          </div>
 
           {/* Trade Area Creation Form */}
           {selectedLocation && (
