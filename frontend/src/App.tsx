@@ -2031,16 +2031,13 @@ Make it actionable and specific to help guide them through the platform.
       )}
 
       {/* Debug: Map view state logging */}
-      {currentView === 'map' && console.log('🗺️ Map view state:', { 
-        currentView, 
-        selectedProject: selectedProject ? selectedProject.name : 'null', 
-        user: user ? user.email : 'null',
-        projectsCount: projects.length,
-        condition1: currentView === 'map',
-        condition2: !selectedProject,
-        condition3: !!user,
-        allConditions: currentView === 'map' && !selectedProject && user
-      })}
+      {currentView === 'map' && console.log('🗺️ DEBUG currentView:', currentView) && 
+       console.log('🗺️ DEBUG selectedProject:', selectedProject) && 
+       console.log('🗺️ DEBUG user:', user) && 
+       console.log('🗺️ DEBUG projects.length:', projects.length) && 
+       console.log('🗺️ DEBUG condition !selectedProject:', !selectedProject) && 
+       console.log('🗺️ DEBUG condition !!user:', !!user) && 
+       console.log('🗺️ DEBUG allConditions:', currentView === 'map' && !selectedProject && user)}
 
       {currentView === 'map' && !selectedProject && user && (
         <div style={sectionStyle}>
