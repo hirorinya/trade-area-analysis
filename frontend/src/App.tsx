@@ -6,6 +6,7 @@ import { auth, db } from './lib/supabase';
 import MapboxMap from './components/map/MapboxMap';
 import LeafletMap from './components/map/LeafletMap';
 import AIAnalysisChat from './components/ai/AIAnalysisChat';
+import OptimizationPanel from './components/analysis/OptimizationPanel';
 import ModernLoginForm from './components/auth/ModernLoginForm';
 import Button from './components/ui/Button';
 import Input from './components/ui/Input';
@@ -57,13 +58,19 @@ function App() {
   const [message, setMessage] = useState('');
   const [map, setMap] = useState(null);
   const [candidateLocations, setCandidateLocations] = useState([]);
-  const [optimizationResults, setOptimizationResults] = useState(null);
   const [competitorAnalysis, setCompetitorAnalysis] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [useMapbox, setUseMapbox] = useState(true);
   const [showAIChat, setShowAIChat] = useState(false);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
+  const [showOptimization, setShowOptimization] = useState(false);
+  const [demandMeshes, setDemandMeshes] = useState([]);
+  const [optimizationResults, setOptimizationResults] = useState(null);
+  const [candidateMarkers, setCandidateMarkers] = useState([]);
+  const [showDemandGrid, setShowDemandGrid] = useState(false);
+  const [formCoordinates, setFormCoordinates] = useState({ lat: '', lng: '' });
+  const [currentAddress, setCurrentAddress] = useState('');
 
   // API calls
   const apiCall = async (endpoint, options = {}) => {
@@ -215,6 +222,8 @@ function App() {
       
       setMessage('Location created successfully!');
       e.target.reset();
+      setCurrentAddress(''); // Clear the address state
+      setFormCoordinates({ lat: '', lng: '' }); // Clear coordinate state
       loadLocations(selectedProject.id);
       updateMapMarkers();
     } catch (error) {
@@ -222,26 +231,72 @@ function App() {
     }
   };
 
-  // Enhanced Geocoding with 国土地理院 API
+  // Delete location functionality
+  const deleteLocation = async (locationId) => {
+    try {
+      const { error } = await db.deleteLocation(locationId);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      setMessage('Location deleted successfully!');
+      loadLocations(selectedProject.id);
+      updateMapMarkers();
+    } catch (error) {
+      setMessage(`Error deleting location: ${error.message}`);
+    }
+  };
+
+  // Enhanced Geocoding with multiple providers
   const geocodeAddress = async (address) => {
     try {
+      console.log('Geocoding address:', address);
       setMessage('🔍 Searching address...');
       
-      // Using 国土地理院 geocoding service
-      const response = await fetch(`https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(address)}`);
-      const data = await response.json();
-      
-      if (data && data.length > 0) {
-        const result = data[0];
-        const coordinates = {
-          latitude: parseFloat(result.geometry.coordinates[1]),
-          longitude: parseFloat(result.geometry.coordinates[0])
-        };
+      // Try OpenStreetMap Nominatim first (free, no API key needed)
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=jp&limit=1`,
+          {
+            headers: {
+              'User-Agent': 'TradeAreaAnalysis/1.0'
+            }
+          }
+        );
+        const data = await response.json();
         
-        setMessage(`✅ Address found: ${result.properties.title || address}`);
-        return coordinates;
+        if (data && data.length > 0) {
+          const result = data[0];
+          const coordinates = {
+            latitude: parseFloat(result.lat),
+            longitude: parseFloat(result.lon)
+          };
+          
+          setMessage(`✅ Address found: ${result.display_name}`);
+          return coordinates;
+        }
+      } catch (nominatimError) {
+        console.log('Nominatim failed, trying alternative method');
       }
-      throw new Error('Address not found in 国土地理院 database');
+      
+      // Fallback: Try a simple coordinate extraction for manual input
+      const coordMatch = address.match(/(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)/);
+      if (coordMatch) {
+        const lat = parseFloat(coordMatch[1]);
+        const lng = parseFloat(coordMatch[2]);
+        
+        // Check if coordinates are reasonable for Japan
+        if (lat >= 24 && lat <= 46 && lng >= 122 && lng <= 154) {
+          setMessage(`✅ Coordinates extracted from input: ${lat}, ${lng}`);
+          return {
+            latitude: lat,
+            longitude: lng
+          };
+        }
+      }
+      
+      throw new Error('Address not found. Try using coordinates like "35.6762, 139.6503" or a more specific address.');
     } catch (error) {
       setMessage(`❌ Geocoding failed: ${error.message}`);
       return null;
@@ -296,18 +351,31 @@ function App() {
   };
 
   // Auto-fill coordinates from address
-  const handleAddressGeocoding = async (address) => {
-    if (!address || address.length < 3) return;
+  const handleAddressGeocoding = async (address, callback) => {
+    if (!address || address.length < 3) {
+      setMessage('Please enter an address with at least 3 characters');
+      return;
+    }
     
     const coords = await geocodeAddress(address);
     if (coords) {
-      // Auto-fill the latitude and longitude fields
-      const latInput = document.querySelector('input[name="latitude"]');
-      const lngInput = document.querySelector('input[name="longitude"]');
-      
-      if (latInput && lngInput) {
-        latInput.value = coords.latitude.toString();
-        lngInput.value = coords.longitude.toString();
+      // Use callback to update form fields properly
+      if (callback) {
+        callback(coords);
+      } else {
+        // Fallback to DOM manipulation
+        const latInput = document.querySelector('input[name="latitude"]');
+        const lngInput = document.querySelector('input[name="longitude"]');
+        
+        if (latInput && lngInput) {
+          latInput.value = coords.latitude.toString();
+          lngInput.value = coords.longitude.toString();
+          
+          // Trigger change event for React to pick up the change
+          const event = new Event('input', { bubbles: true });
+          latInput.dispatchEvent(event);
+          lngInput.dispatchEvent(event);
+        }
       }
     }
   };
@@ -998,6 +1066,49 @@ function App() {
     return recommendations;
   };
 
+  // Optimization Engine Handlers
+  const handleOptimizationComplete = (results) => {
+    setOptimizationResults(results);
+    setMessage(`Optimization completed: ${results.algorithm} algorithm selected ${results.totalStores || results.selectedStores?.length || 0} optimal locations`);
+  };
+
+  const handleShowCandidates = (candidates) => {
+    setCandidateMarkers(candidates);
+    setMessage(`Showing ${candidates.length} candidate/optimized locations on map`);
+  };
+
+  const handleDemandAnalysis = (analysis) => {
+    setDemandMeshes(analysis.meshes || []);
+    console.log('Demand analysis updated:', analysis);
+  };
+
+  // Get current map bounds for optimization
+  const getCurrentMapBounds = () => {
+    if (locations.length === 0) return null;
+    
+    // Calculate bounds from existing locations
+    const lats = locations.map(loc => loc.coordinates?.coordinates?.[1] || loc.latitude || 0);
+    const lngs = locations.map(loc => loc.coordinates?.coordinates?.[0] || loc.longitude || 0);
+    
+    if (lats.length === 0 || lngs.length === 0) return null;
+    
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    
+    // Add padding
+    const latPadding = (maxLat - minLat) * 0.2 || 0.02;
+    const lngPadding = (maxLng - minLng) * 0.2 || 0.02;
+    
+    return {
+      north: maxLat + latPadding,
+      south: minLat - latPadding,
+      east: maxLng + lngPadding,
+      west: minLng - lngPadding
+    };
+  };
+
   // CSV Import Functionality
   const handleCSVImport = async (event) => {
     const file = event.target.files[0];
@@ -1596,6 +1707,20 @@ function App() {
                 >
                   🤖 AI Analyst
                 </Button>
+                <Button 
+                  onClick={() => setShowOptimization(!showOptimization)} 
+                  variant={showOptimization ? 'primary' : 'secondary'}
+                  size="small"
+                >
+                  🎯 Store Optimizer
+                </Button>
+                <Button 
+                  onClick={() => setShowDemandGrid(!showDemandGrid)} 
+                  variant={showDemandGrid ? 'primary' : 'secondary'}
+                  size="small"
+                >
+                  📊 Population Grid
+                </Button>
                 <Button onClick={() => setCurrentView('dashboard')} variant="secondary" size="small">
                   ← Back to Dashboard
                 </Button>
@@ -1989,44 +2114,60 @@ function App() {
                   <Input 
                     type="text" 
                     name="address" 
-                    placeholder="Address (e.g., 東京都新宿区新宿3-1-1)" 
+                    value={currentAddress}
+                    onChange={(e) => setCurrentAddress(e.target.value)}
+                    placeholder="Address (e.g., 東京都新宿区新宿3-1-1 or 35.6762, 139.6503)" 
                     label="Address"
                     onBlur={(e) => {
                       const address = e.target.value;
                       if (address && address.length > 5) {
                         // Auto-geocode when user finishes typing address
-                        handleAddressGeocoding(address);
+                        handleAddressGeocoding(address, (coords) => {
+                          setFormCoordinates({ lat: coords.latitude.toString(), lng: coords.longitude.toString() });
+                        });
                       }
                     }}
                   />
-                  <button 
+                  <Button
                     type="button"
                     onClick={(e) => {
                       e.preventDefault();
-                      const addressInput = e.target.previousElementSibling;
-                      if (addressInput.value) {
-                        handleAddressGeocoding(addressInput.value);
+                      console.log('Button clicked, current address:', currentAddress);
+                      if (currentAddress && currentAddress.trim().length > 0) {
+                        handleAddressGeocoding(currentAddress.trim(), (coords) => {
+                          console.log('Geocoding success:', coords);
+                          // Update form coordinates
+                          setFormCoordinates({ lat: coords.latitude.toString(), lng: coords.longitude.toString() });
+                          // Also update the form inputs directly
+                          const form = e.target.closest('form');
+                          const latInput = form?.querySelector('input[name="latitude"]');
+                          const lngInput = form?.querySelector('input[name="longitude"]');
+                          if (latInput && lngInput) {
+                            latInput.value = coords.latitude.toString();
+                            lngInput.value = coords.longitude.toString();
+                          }
+                          setMessage(`✅ Coordinates found: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`);
+                        });
                       } else {
-                        setMessage('Please enter an address first');
+                        setMessage('⚠️ Please enter an address first');
+                        console.log('No address entered, current value:', currentAddress);
                       }
                     }}
+                    variant="primary"
+                    size="small"
                     style={{
                       position: 'absolute',
-                      right: '5px',
+                      right: '8px',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      background: '#007bff',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '3px',
-                      padding: '5px 8px',
-                      fontSize: '12px',
-                      cursor: 'pointer'
+                      fontSize: '11px',
+                      padding: '4px 8px',
+                      zIndex: 10
                     }}
                     title="Get coordinates from address"
                   >
-                    🔍
-                  </button>
+                    🔍 Find
+                  </Button>
                 </div>
 
                 {/* Enhanced Coordinate Inputs with Reverse Geocoding */}
@@ -2105,13 +2246,36 @@ function App() {
               
               <div style={{ marginTop: '15px', padding: '12px', backgroundColor: '#e8f5e8', borderRadius: '5px' }}>
                 <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', color: '#2d5016' }}>
-                  🗾 国土地理院 Geocoding Features:
+                  🌍 Enhanced Geocoding Features:
                 </div>
                 <div style={{ fontSize: '12px', color: '#2d5016' }}>
-                  • <strong>Address → Coordinates:</strong> Type address and click 🔍 or press Tab<br/>
-                  • <strong>Coordinates → Address:</strong> Enter lat/lng and click 📍→📫<br/>
-                  • <strong>Auto-geocoding:</strong> Automatically triggers when typing complete addresses<br/>
-                  • <strong>Example:</strong> 東京都新宿区新宿3-1-1 → 35.6895, 139.7006
+                  • <strong>Address → Coordinates:</strong> Type address and click "🔍 Find" button<br/>
+                  • <strong>Manual Coordinates:</strong> Enter "35.6762, 139.6503" directly in address field<br/>
+                  • <strong>Auto-geocoding:</strong> Automatically triggers when you finish typing addresses<br/>
+                  • <strong>Examples:</strong> 東京都新宿区新宿3-1-1 or Tokyo Station or 35.6812, 139.7671<br/>
+                  • <strong>Delete Locations:</strong> Use the 🗑️ Delete button to remove unwanted locations
+                </div>
+                
+                {/* Test Geocoding Button */}
+                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #c3e6c3' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '5px', color: '#2d5016' }}>
+                    🧪 Test Geocoding:
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const testAddress = "Tokyo Station";
+                      setCurrentAddress(testAddress);
+                      handleAddressGeocoding(testAddress, (coords) => {
+                        setFormCoordinates({ lat: coords.latitude.toString(), lng: coords.longitude.toString() });
+                        setMessage(`✅ Test successful! Tokyo Station: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`);
+                      });
+                    }}
+                    variant="secondary"
+                    size="small"
+                  >
+                    🧪 Test with Tokyo Station
+                  </Button>
                 </div>
               </div>
             </div>
@@ -2139,14 +2303,26 @@ function App() {
                       <div style={{ fontSize: '12px', color: '#888' }}>
                         {location.coordinates.coordinates[1].toFixed(4)}, {location.coordinates.coordinates[0].toFixed(4)}
                       </div>
-                      <Button 
-                        onClick={() => setSelectedLocation(location)}
-                        variant="secondary"
-                        size="small"
-                        style={{ marginTop: theme.spacing[1] }}
-                      >
-                        📊 Create Trade Area
-                      </Button>
+                      <div style={{ ...buttonContainerStyle, marginTop: theme.spacing[1] }}>
+                        <Button 
+                          onClick={() => setSelectedLocation(location)}
+                          variant="secondary"
+                          size="small"
+                        >
+                          📊 Create Trade Area
+                        </Button>
+                        <Button 
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to delete "${location.name}"?`)) {
+                              deleteLocation(location.id);
+                            }
+                          }}
+                          variant="danger"
+                          size="small"
+                        >
+                          🗑️ Delete
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -2668,14 +2844,24 @@ function App() {
             }}>
               {useMapbox ? (
                 <MapboxMap
-                  locations={locations.map(loc => ({
-                    id: loc.id,
-                    name: loc.name,
-                    latitude: loc.latitude || loc.coordinates?.coordinates?.[1] || 35.6895,
-                    longitude: loc.longitude || loc.coordinates?.coordinates?.[0] || 139.6917,
-                    location_type: loc.location_type,
-                    address: loc.address
-                  }))}
+                  locations={[
+                    ...locations.map(loc => ({
+                      id: loc.id,
+                      name: loc.name,
+                      latitude: loc.latitude || loc.coordinates?.coordinates?.[1] || 35.6895,
+                      longitude: loc.longitude || loc.coordinates?.coordinates?.[0] || 139.6917,
+                      location_type: loc.location_type,
+                      address: loc.address
+                    })),
+                    ...candidateMarkers.map(candidate => ({
+                      id: candidate.id,
+                      name: candidate.name || `Optimized Site ${candidate.storeNumber || ''}`,
+                      latitude: candidate.lat,
+                      longitude: candidate.lng,
+                      location_type: 'candidate',
+                      address: candidate.address || 'Optimized Location'
+                    }))
+                  ]}
                   onLocationSelect={(location) => {
                     setSelectedLocation(location);
                     setMessage(`Selected: ${location.name}`);
@@ -2684,6 +2870,9 @@ function App() {
                     console.log('Map clicked at:', coordinates);
                     setMessage(`Clicked at: ${coordinates[1].toFixed(4)}, ${coordinates[0].toFixed(4)}`);
                   }}
+                  showDemandGrid={showDemandGrid}
+                  gridBounds={getCurrentMapBounds()}
+                  onDemandAnalysis={handleDemandAnalysis}
                 />
               ) : (
                 <LeafletMap
@@ -2726,6 +2915,20 @@ function App() {
               </div>
             )}
           </div>
+
+          {/* Store Optimization Panel */}
+          {showOptimization && (
+            <div style={{ marginTop: '20px' }}>
+              <OptimizationPanel
+                demandMeshes={demandMeshes}
+                existingStores={locations.filter(loc => loc.location_type === 'store')}
+                competitors={locations.filter(loc => loc.location_type === 'competitor')}
+                bounds={getCurrentMapBounds()}
+                onOptimizationComplete={handleOptimizationComplete}
+                onShowCandidates={handleShowCandidates}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
