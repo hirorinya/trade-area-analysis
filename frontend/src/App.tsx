@@ -2113,18 +2113,14 @@ function App() {
                       <div style={{ fontSize: '12px', color: '#888' }}>
                         {location.coordinates.coordinates[1].toFixed(4)}, {location.coordinates.coordinates[0].toFixed(4)}
                       </div>
-                      <button 
+                      <Button 
                         onClick={() => setSelectedLocation(location)}
-                        style={{
-                          ...buttonStyle,
-                          fontSize: '12px',
-                          padding: '5px 10px',
-                          marginTop: '5px',
-                          backgroundColor: '#17a2b8'
-                        }}
+                        variant="secondary"
+                        size="small"
+                        style={{ marginTop: theme.spacing[1] }}
                       >
                         📊 Create Trade Area
-                      </button>
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -2191,16 +2187,17 @@ function App() {
                 </div>
 
                 <div style={{ marginTop: '10px' }}>
-                  <button type="submit" style={buttonStyle}>
+                  <Button type="submit" variant="primary">
                     {locations.length > 1 ? '🎯 Run Analysis' : '📏 Create Trade Area'}
-                  </button>
-                  <button 
+                  </Button>
+                  <Button 
                     type="button" 
                     onClick={() => setSelectedLocation(null)}
-                    style={{...buttonStyle, backgroundColor: '#6c757d'}}
+                    variant="secondary"
+                    style={{ marginLeft: theme.spacing[2] }}
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>
