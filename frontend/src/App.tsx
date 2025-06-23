@@ -251,7 +251,6 @@ function App() {
   // Enhanced Geocoding with multiple providers
   const geocodeAddress = async (address) => {
     try {
-      console.log('Geocoding address:', address);
       setMessage('🔍 Searching address...');
       
       // Method 1: Check if input is already coordinates
@@ -272,26 +271,19 @@ function App() {
       
       // Method 2: Try 国土地理院 (GSI Japan) API first for Japanese addresses
       try {
-        console.log('=== Method 2: Trying 国土地理院 (GSI Japan) API ===');
-        const gsiUrl = `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(address)}`;
-        console.log('GSI URL:', gsiUrl);
-        
         setMessage('🔄 Trying 国土地理院 geocoding service...');
         
+        const gsiUrl = `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(address)}`;
         const response = await fetch(gsiUrl);
-        console.log('GSI response status:', response.status);
         
         if (!response.ok) {
           throw new Error(`GSI HTTP ${response.status}: ${response.statusText}`);
         }
         
         const data = await response.json();
-        console.log('GSI response data:', data);
-        console.log('Number of GSI results:', data.length);
         
         if (data && data.length > 0) {
           const result = data[0];
-          console.log('Using first GSI result:', result);
           
           // GSI returns coordinates in geometry.coordinates [lng, lat] format
           const coordinates = {
@@ -299,59 +291,45 @@ function App() {
             longitude: parseFloat(result.geometry.coordinates[0])
           };
           
-          console.log('Extracted GSI coordinates:', coordinates);
           setMessage(`✅ Address found via 国土地理院: ${result.properties.title || address}`);
           return coordinates;
         } else {
-          console.log('No results from GSI');
           setMessage('🔄 No results from 国土地理院, trying OpenStreetMap...');
         }
       } catch (gsiError) {
-        console.error('GSI error details:', gsiError);
         setMessage('🔄 国土地理院 failed, trying OpenStreetMap...');
       }
       
       // Method 3: Try OpenStreetMap Nominatim as fallback
       try {
-        console.log('=== Method 3: Trying Nominatim (Fallback) ===');
-        const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=jp&limit=3&addressdetails=1`;
-        console.log('Nominatim URL:', nominatimUrl);
-        
         setMessage('🔄 Trying OpenStreetMap geocoding...');
         
+        const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=jp&limit=3&addressdetails=1`;
         const response = await fetch(nominatimUrl, {
           headers: {
             'User-Agent': 'TradeAreaAnalysis/1.0 (https://trade-area-analysis-2png.vercel.app)'
           }
         });
         
-        console.log('Nominatim response status:', response.status);
-        
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
         const data = await response.json();
-        console.log('Nominatim response data:', data);
-        console.log('Number of Nominatim results:', data.length);
         
         if (data && data.length > 0) {
           const result = data[0];
-          console.log('Using first Nominatim result:', result);
           const coordinates = {
             latitude: parseFloat(result.lat),
             longitude: parseFloat(result.lon)
           };
           
-          console.log('Extracted Nominatim coordinates:', coordinates);
           setMessage(`✅ Address found via OpenStreetMap: ${result.display_name}`);
           return coordinates;
         } else {
-          console.log('No results from Nominatim');
           setMessage('🔄 No results from OpenStreetMap, trying global search...');
         }
       } catch (nominatimError) {
-        console.error('Nominatim error details:', nominatimError);
         setMessage('🔄 OpenStreetMap failed, trying global search...');
       }
       
@@ -393,9 +371,6 @@ function App() {
       }
       
       // Method 5: Handle common Japanese location patterns
-      console.log('=== Method 5: Checking built-in locations ===');
-      console.log('Original address:', address);
-      
       const commonLocations = {
         '東京駅': { latitude: 35.6812, longitude: 139.7671 },
         'tokyo station': { latitude: 35.6812, longitude: 139.7671 },
@@ -424,19 +399,13 @@ function App() {
       };
       
       const normalizedAddress = address.toLowerCase().trim();
-      console.log('Normalized address:', normalizedAddress);
-      console.log('Available locations:', Object.keys(commonLocations));
       
       for (const [key, coords] of Object.entries(commonLocations)) {
-        console.log(`Checking if "${normalizedAddress}" includes "${key}"`);
         if (normalizedAddress.includes(key)) {
-          console.log(`✅ Match found! ${key} → ${coords.latitude}, ${coords.longitude}`);
           setMessage(`✅ Found common location: ${key} → ${coords.latitude}, ${coords.longitude}`);
           return coords;
         }
       }
-      
-      console.log('No built-in location matches found');
       
       throw new Error('Address not found. Try:\n• Coordinates: "35.6762, 139.6503"\n• Station names: "Tokyo Station", "東京駅"\n• Full addresses: "東京都新宿区新宿3-1-1"');
     } catch (error) {
@@ -2398,51 +2367,6 @@ function App() {
                   • <strong>English Names:</strong> "Tokyo Station", "Shinjuku Station"<br/>
                   • <strong>Auto-geocoding:</strong> Automatically triggers when you finish typing<br/>
                   • <strong>Delete Locations:</strong> Use the 🗑️ Delete button to remove locations
-                </div>
-                
-                {/* Test Geocoding Button */}
-                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #c3e6c3' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '5px', color: '#2d5016' }}>
-                    🧪 Test Geocoding:
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        console.log('=== MANUAL TEST BUTTON CLICKED ===');
-                        const testAddress = "tokyo station";
-                        console.log('Testing with:', testAddress);
-                        setCurrentAddress(testAddress);
-                        handleAddressGeocoding(testAddress, (coords) => {
-                          console.log('Test callback received coords:', coords);
-                          setFormCoordinates({ lat: coords.latitude.toString(), lng: coords.longitude.toString() });
-                          setMessage(`✅ Test successful! Tokyo Station: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`);
-                        });
-                      }}
-                      variant="secondary"
-                      size="small"
-                    >
-                      🧪 Test Tokyo
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        console.log('=== COORDINATE TEST BUTTON CLICKED ===');
-                        const testCoords = "35.6812, 139.7671";
-                        console.log('Testing with coordinates:', testCoords);
-                        setCurrentAddress(testCoords);
-                        handleAddressGeocoding(testCoords, (coords) => {
-                          console.log('Coords test callback:', coords);
-                          setFormCoordinates({ lat: coords.latitude.toString(), lng: coords.longitude.toString() });
-                          setMessage(`✅ Coordinates test successful: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`);
-                        });
-                      }}
-                      variant="secondary"
-                      size="small"
-                    >
-                      📍 Test Coords
-                    </Button>
-                  </div>
                 </div>
               </div>
             </div>
