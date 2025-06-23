@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { generateDemandGrid, calculateDemandCapture, calculateStorePerformance } from '../../utils/demandGrid';
@@ -51,9 +51,15 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [visualizationMode, setVisualizationMode] = useState<'grid' | 'heatmap'>('grid');
+  const onDemandAnalysisRef = useRef(onDemandAnalysis);
 
   // Check if Mapbox token is properly configured
   const isTokenConfigured = mapboxToken && !mapboxToken.includes('your_mapbox_token_here') && !mapboxToken.includes('example');
+
+  // Update the ref when the callback changes
+  useEffect(() => {
+    onDemandAnalysisRef.current = onDemandAnalysis;
+  }, [onDemandAnalysis]);
 
   // Initialize map
   useEffect(() => {
@@ -343,8 +349,8 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
       
       console.log('Store performance analysis:', storePerformance);
       
-      if (onDemandAnalysis) {
-        onDemandAnalysis({
+      if (onDemandAnalysisRef.current) {
+        onDemandAnalysisRef.current({
           meshes: updatedMeshes,
           storePerformance,
           totalMeshes: updatedMeshes.length,
@@ -552,7 +558,7 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
         map.current.setLayoutProperty('demand-flow-animated', 'visibility', 'visible');
       }
     }
-  }, [showDemandGrid, gridBounds, locations, mapLoaded, onDemandAnalysis, visualizationMode]);
+  }, [showDemandGrid, gridBounds, locations, mapLoaded, visualizationMode]);
   
   // Hide demand grid and flow lines when not needed
   useEffect(() => {
