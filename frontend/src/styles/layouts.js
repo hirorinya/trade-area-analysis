@@ -78,7 +78,15 @@ export const formStyle = {
   padding: theme.spacing[6],                   // p-6 (24px)
   boxShadow: theme.shadows.sm,
   marginBottom: theme.spacing[6],
-  transition: 'all 0.2s ease-in-out'
+  transition: 'all 0.2s ease-in-out',
+  width: '100%',                               // Ensure full width
+  boxSizing: 'border-box'                      // Include padding in width
+};
+
+// Compact form style for tighter spaces
+export const compactFormStyle = {
+  ...formStyle,
+  padding: theme.spacing[4],                   // p-4 (16px) - smaller padding
 };
 
 export const formHeaderStyle = {
@@ -93,9 +101,25 @@ export const formHeaderStyle = {
 // Button groups
 export const buttonGroupStyle = {
   display: 'flex',
-  gap: theme.spacing[3],                       // space-x-3 (12px)
+  gap: theme.spacing[2],                       // space-x-2 (8px) - reduced gap
   alignItems: 'center',
-  flexWrap: 'wrap'
+  flexWrap: 'wrap',
+  width: '100%',                               // Ensure full width
+  justifyContent: 'flex-start'                 // Align buttons to start
+};
+
+// Responsive button group for mobile
+export const responsiveButtonGroupStyle = {
+  display: 'flex',
+  gap: theme.spacing[2],
+  alignItems: 'stretch',
+  flexDirection: 'column',                     // Stack on mobile
+  width: '100%',
+  
+  '@media (min-width: 640px)': {
+    flexDirection: 'row',                      // Row on larger screens
+    alignItems: 'center'
+  }
 };
 
 // Navigation
@@ -247,5 +271,46 @@ export const showOnMobile = {
   display: 'block',
   '@media (min-width: 768px)': {
     display: 'none'
+  }
+};
+
+// Container overflow fixes
+export const preventOverflowStyle = {
+  width: '100%',
+  maxWidth: '100%',
+  boxSizing: 'border-box',
+  overflow: 'hidden'
+};
+
+export const scrollableContainerStyle = {
+  width: '100%',
+  maxWidth: '100%',
+  boxSizing: 'border-box',
+  overflowX: 'auto',
+  overflowY: 'visible'
+};
+
+// Button container fixes
+export const buttonContainerStyle = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: theme.spacing[2],
+  alignItems: 'center',
+  width: '100%',
+  maxWidth: '100%',
+  boxSizing: 'border-box'
+};
+
+// Responsive flex container
+export const responsiveFlexStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.spacing[3],
+  width: '100%',
+  
+  '@media (min-width: 640px)': {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
   }
 };

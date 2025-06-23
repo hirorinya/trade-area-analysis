@@ -17,8 +17,14 @@ import {
   subtitleStyle,
   sectionStyle,
   formStyle,
+  compactFormStyle,
   formHeaderStyle,
   buttonGroupStyle,
+  responsiveButtonGroupStyle,
+  buttonContainerStyle,
+  responsiveFlexStyle,
+  preventOverflowStyle,
+  scrollableContainerStyle,
   projectCardStyle,
   successMessageStyle,
   errorMessageStyle,
@@ -1522,9 +1528,9 @@ function App() {
 
       {currentView === 'map' && selectedProject && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2>📍 {selectedProject.name} - Locations & Map</h2>
-            <div>
+          <div style={responsiveFlexStyle}>
+            <h2 style={heading2Style}>📍 {selectedProject.name} - Locations & Map</h2>
+            <div style={preventOverflowStyle}>
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1566,36 +1572,42 @@ function App() {
                   )}
                 </div>
               </div>
-              <Button 
-                onClick={() => setShowAIChat(!showAIChat)} 
-                variant={showAIChat ? 'primary' : 'secondary'}
-                style={{ marginRight: theme.spacing[2] }}
-              >
-                🤖 AI Analyst
-              </Button>
-              <Button onClick={() => setCurrentView('dashboard')} variant="secondary">
-                ← Back to Dashboard
-              </Button>
-              <Button onClick={logout} variant="secondary">Logout</Button>
+              
+              {/* Navigation Buttons */}
+              <div style={buttonContainerStyle}>
+                <Button 
+                  onClick={() => setShowAIChat(!showAIChat)} 
+                  variant={showAIChat ? 'primary' : 'secondary'}
+                  size="small"
+                >
+                  🤖 AI Analyst
+                </Button>
+                <Button onClick={() => setCurrentView('dashboard')} variant="secondary" size="small">
+                  ← Back to Dashboard
+                </Button>
+                <Button onClick={logout} variant="secondary" size="small">
+                  Logout
+                </Button>
+              </div>
             </div>
           </div>
 
           {/* Professional Analytics Dashboard */}
           <div style={formStyle}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h3>📊 Analytics Dashboard</h3>
-              <div>
+            <div style={responsiveFlexStyle}>
+              <h3 style={heading3Style}>📊 Analytics Dashboard</h3>
+              <div style={buttonContainerStyle}>
                 <Button 
                   onClick={() => setShowHelp(!showHelp)}
                   variant="secondary"
                   size="small"
-                  style={{ marginRight: theme.spacing[2] }}
                 >
                   📚 How to Use
                 </Button>
                 <Button 
                   onClick={generateDashboard}
                   variant="primary"
+                  size="small"
                 >
                   📈 Generate Dashboard
                 </Button>
