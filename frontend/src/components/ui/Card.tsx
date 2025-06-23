@@ -4,65 +4,54 @@ import { theme } from '../../styles/theme.js';
 interface CardProps {
   children: React.ReactNode;
   className?: string;
-  padding?: 'sm' | 'md' | 'lg';
-  shadow?: 'sm' | 'md' | 'lg';
+  padding?: 'small' | 'standard' | 'large' | 'xlarge';
   hover?: boolean;
 }
 
 const Card: React.FC<CardProps> = ({
   children,
   className = '',
-  padding = 'md',
-  shadow = 'md',
-  hover = false
+  padding = 'standard',
+  hover = true
 }) => {
+  // Padding values according to design guidelines
   const paddingValues = {
-    sm: theme.spacing[4],
-    md: theme.spacing[6],
-    lg: theme.spacing[8]
+    small: theme.spacing[4],     // p-4 (16px)
+    standard: theme.spacing[5],  // p-5 (20px) 
+    large: theme.spacing[6],     // p-6 (24px)
+    xlarge: theme.spacing[8]     // p-8 (32px)
   };
 
-  const shadowValues = {
-    sm: theme.shadows.sm,
-    md: theme.shadows.md,
-    lg: theme.shadows.lg
-  };
+  // Get base card styles from theme
+  const baseCardStyles = theme.components.card.base;
 
   const baseStyles = {
-    backgroundColor: 'white',
-    borderRadius: theme.borderRadius.xl,
-    boxShadow: shadowValues[shadow],
+    ...baseCardStyles,
     padding: paddingValues[padding],
-    border: `1px solid ${theme.colors.gray[100]}`,
-    transition: 'all 0.2s ease-in-out'
+    fontFamily: theme.typography.fontFamily.primary
   };
 
-  const hoverStyles = hover ? {
-    ':hover': {
-      boxShadow: theme.shadows.lg,
-      transform: 'translateY(-2px)',
-      borderColor: theme.colors.gray[200]
+  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (hover && baseCardStyles[':hover']) {
+      Object.assign(e.currentTarget.style, baseCardStyles[':hover']);
     }
-  } : {};
+  };
+
+  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (hover) {
+      Object.assign(e.currentTarget.style, {
+        boxShadow: baseCardStyles.boxShadow,
+        borderColor: baseCardStyles.border.split(' ')[2] // Extract border color
+      });
+    }
+  };
 
   return (
     <div
       className={className}
       style={baseStyles}
-      onMouseEnter={(e) => {
-        if (hover) {
-          e.target.style.boxShadow = theme.shadows.lg;
-          e.target.style.transform = 'translateY(-2px)';
-          e.target.style.borderColor = theme.colors.gray[200];
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (hover) {
-          e.target.style.boxShadow = shadowValues[shadow];
-          e.target.style.transform = 'translateY(0)';
-          e.target.style.borderColor = theme.colors.gray[100];
-        }
-      }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {children}
     </div>

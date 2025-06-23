@@ -7,6 +7,25 @@ import MapboxMap from './components/map/MapboxMap';
 import LeafletMap from './components/map/LeafletMap';
 import AIAnalysisChat from './components/ai/AIAnalysisChat';
 import ModernLoginForm from './components/auth/ModernLoginForm';
+import { theme } from './styles/theme';
+import { 
+  containerStyle, 
+  headerStyle, 
+  titleStyle, 
+  subtitleStyle,
+  sectionStyle,
+  formStyle,
+  formHeaderStyle,
+  buttonGroupStyle,
+  projectCardStyle,
+  successMessageStyle,
+  errorMessageStyle,
+  heading2Style,
+  heading3Style,
+  bodyTextStyle,
+  captionTextStyle,
+  flexBetweenStyle
+} from './styles/layouts';
 
 function App() {
   // Debug environment variables
@@ -1264,12 +1283,7 @@ function App() {
     setMessage('Logged out successfully');
   };
 
-  // Styles
-  const containerStyle = { padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '800px', margin: '0 auto' };
-  const formStyle = { backgroundColor: '#f9f9f9', padding: '20px', borderRadius: '5px', marginBottom: '20px' };
-  const inputStyle = { width: '100%', padding: '8px', margin: '5px 0', borderRadius: '3px', border: '1px solid #ccc' };
-  const buttonStyle = { backgroundColor: '#007bff', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '3px', cursor: 'pointer', margin: '5px' };
-  const projectStyle = { backgroundColor: '#f0f0f0', padding: '15px', borderRadius: '5px', marginBottom: '10px' };
+  // Using Apple-style design system from theme.js and layouts.js
 
   // Check for existing session on app load
   useEffect(() => {
@@ -1330,12 +1344,30 @@ function App() {
 
   return (
     <div style={containerStyle}>
-      <h1>Trade Area Analysis - MVP</h1>
+      {/* App Header */}
+      <header style={headerStyle}>
+        <h1 style={titleStyle}>Trade Area Analysis Platform</h1>
+        <p style={subtitleStyle}>Professional retail analytics with AI-powered insights</p>
+      </header>
       
+      {/* Message Display */}
       {message && (
-        <div style={{ padding: '10px', backgroundColor: message.includes('Error') ? '#ffe6e6' : '#e6ffe6', borderRadius: '3px', marginBottom: '20px' }}>
-          {message}
-          <button onClick={() => setMessage('')} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+        <div style={message.includes('Error') ? errorMessageStyle : successMessageStyle}>
+          <span>{message}</span>
+          <button 
+            onClick={() => setMessage('')} 
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer',
+              fontSize: theme.typography.fontSize.lg,
+              color: 'inherit',
+              padding: theme.spacing[1]
+            }}
+            aria-label="Dismiss message"
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -1349,52 +1381,122 @@ function App() {
       )}
 
       {currentView === 'dashboard' && user && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2>Welcome, {user.first_name || user.email}!</h2>
-            <button onClick={logout} style={buttonStyle}>Logout</button>
+        <div style={sectionStyle}>
+          {/* Dashboard Header */}
+          <div style={flexBetweenStyle}>
+            <h2 style={heading2Style}>Welcome, {user.first_name || user.email}!</h2>
+            <Button variant="secondary" onClick={logout}>
+              Logout
+            </Button>
           </div>
 
+          {/* Create Project Form */}
           <div style={formStyle}>
-            <h3>Create New Project</h3>
-            <form onSubmit={createProject}>
-              <input type="text" name="name" placeholder="Project Name" required style={inputStyle} />
-              <textarea name="description" placeholder="Project Description (optional)" style={inputStyle} rows="3"></textarea>
-              <button type="submit" style={buttonStyle}>Create Project</button>
+            <h3 style={formHeaderStyle}>Create New Project</h3>
+            <form onSubmit={createProject} style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing[4] }}>
+              <Input 
+                type="text" 
+                name="name" 
+                placeholder="Project Name" 
+                label="Project Name"
+                required 
+              />
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: theme.spacing[2],
+                  fontSize: theme.typography.fontSize.sm,
+                  fontWeight: theme.typography.fontWeight.medium,
+                  color: theme.colors.gray[700],
+                  fontFamily: theme.typography.fontFamily.primary
+                }}>
+                  Project Description (optional)
+                </label>
+                <textarea 
+                  name="description" 
+                  placeholder="Describe your trade area analysis project..."
+                  rows={3}
+                  style={{
+                    ...theme.components.input.base,
+                    resize: 'vertical',
+                    minHeight: '80px'
+                  }}
+                />
+              </div>
+              <Button type="submit" variant="primary">
+                Create Project
+              </Button>
             </form>
           </div>
 
-          <div>
-            <h3>Your Projects ({projects.length})</h3>
+          {/* Projects List */}
+          <div style={sectionStyle}>
+            <h3 style={heading3Style}>Your Projects ({projects.length})</h3>
             {projects.length === 0 ? (
-              <p>No projects yet. Create your first project above!</p>
+              <div style={{
+                textAlign: 'center',
+                padding: theme.spacing[8],
+                color: theme.colors.gray[600]
+              }}>
+                <p style={bodyTextStyle}>No projects yet. Create your first project above!</p>
+              </div>
             ) : (
-              projects.map(project => (
-                <div key={project.id} style={projectStyle}>
-                  <h4 style={{ margin: '0 0 8px 0' }}>{project.name}</h4>
-                  {project.description && (
-                    <p style={{ margin: '0 0 8px 0', color: '#666' }}>{project.description}</p>
-                  )}
-                  <div style={{ fontSize: '12px', color: '#888', marginBottom: '12px' }}>
-                    Created: {new Date(project.created_at).toLocaleDateString()}
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setSelectedProject(project);
-                      setCurrentView('map');
-                      loadLocations(project.id);
+              <div style={{ 
+                display: 'grid',
+                gap: theme.spacing[4],
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))'
+              }}>
+                {projects.map(project => (
+                  <div 
+                    key={project.id} 
+                    style={projectCardStyle}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = theme.shadows.md;
+                      e.currentTarget.style.borderColor = theme.colors.gray[400];
+                      e.currentTarget.style.transform = 'translateY(-2px)';
                     }}
-                    style={{
-                      ...buttonStyle,
-                      width: '100%',
-                      backgroundColor: '#28a745',
-                      fontSize: '14px'
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = theme.shadows.sm;
+                      e.currentTarget.style.borderColor = theme.colors.gray[300];
+                      e.currentTarget.style.transform = 'translateY(0)';
                     }}
                   >
-                    🗾 Open Map & Locations
-                  </button>
-                </div>
-              ))
+                    <h4 style={{
+                      ...heading3Style,
+                      marginBottom: theme.spacing[2],
+                      fontSize: theme.typography.fontSize.lg
+                    }}>
+                      {project.name}
+                    </h4>
+                    {project.description && (
+                      <p style={{
+                        ...bodyTextStyle,
+                        marginBottom: theme.spacing[3],
+                        fontSize: theme.typography.fontSize.sm
+                      }}>
+                        {project.description}
+                      </p>
+                    )}
+                    <div style={{
+                      ...captionTextStyle,
+                      marginBottom: theme.spacing[4]
+                    }}>
+                      Created: {new Date(project.created_at).toLocaleDateString()}
+                    </div>
+                    <Button 
+                      onClick={() => {
+                        setSelectedProject(project);
+                        setCurrentView('map');
+                        loadLocations(project.id);
+                      }}
+                      variant="primary"
+                      style={{ width: '100%' }}
+                    >
+                      🗾 Open Map & Locations
+                    </Button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

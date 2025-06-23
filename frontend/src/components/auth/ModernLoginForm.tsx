@@ -105,7 +105,7 @@ const ModernLoginForm: React.FC<ModernLoginFormProps> = ({
         </div>
 
         {/* Login Card */}
-        <Card padding="lg" shadow="xl">
+        <Card padding="large">
           <div style={{ marginBottom: theme.spacing[6] }}>
             <h2 style={{
               margin: 0,
@@ -191,7 +191,7 @@ const ModernLoginForm: React.FC<ModernLoginFormProps> = ({
             <Button
               type="submit"
               variant="primary"
-              size="lg"
+              size="large"
               disabled={loading || !email || !password}
             >
               {loading ? (

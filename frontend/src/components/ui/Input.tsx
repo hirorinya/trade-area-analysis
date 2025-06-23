@@ -28,24 +28,34 @@ const Input: React.FC<InputProps> = ({
   className = '',
   name
 }) => {
-  const baseStyles = {
-    width: '100%',
-    padding: icon ? '0.75rem 1rem 0.75rem 2.5rem' : '0.75rem 1rem',
-    border: `1px solid ${error ? theme.colors.error[300] : theme.colors.gray[300]}`,
-    borderRadius: theme.borderRadius.lg,
-    fontSize: theme.typography.fontSize.sm,
-    fontFamily: theme.typography.fontFamily.primary,
-    backgroundColor: disabled ? theme.colors.gray[50] : 'white',
-    color: disabled ? theme.colors.gray[500] : theme.colors.gray[900],
-    transition: 'all 0.2s ease-in-out',
-    outline: 'none'
+  // Get base input styles from theme
+  const baseInputStyles = theme.components.input.base;
+  
+  const inputStyles = {
+    ...baseInputStyles,
+    padding: icon ? '0.75rem 1rem 0.75rem 2.5rem' : baseInputStyles.padding,
+    borderColor: error ? theme.colors.error[600] : baseInputStyles.border.split(' ')[2],
+    backgroundColor: disabled ? theme.colors.gray[50] : baseInputStyles.backgroundColor,
+    color: disabled ? theme.colors.gray[500] : baseInputStyles.color,
+    opacity: disabled ? 0.6 : 1,
+    cursor: disabled ? 'not-allowed' : 'text'
   };
 
-  const focusStyles = {
-    borderColor: error ? theme.colors.error[500] : theme.colors.primary[500],
-    boxShadow: `0 0 0 3px ${error ? 
-      theme.colors.error[100] : 
-      'rgb(59 130 246 / 0.1)'}`
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (!disabled) {
+      if (error) {
+        Object.assign(e.target.style, baseInputStyles[':error']);
+      } else {
+        Object.assign(e.target.style, baseInputStyles[':focus']);
+      }
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (!disabled) {
+      e.target.style.borderColor = error ? theme.colors.error[600] : theme.colors.gray[300];
+      e.target.style.boxShadow = 'none';
+    }
   };
 
   return (
@@ -63,7 +73,7 @@ const Input: React.FC<InputProps> = ({
         >
           {label}
           {required && (
-            <span style={{ color: theme.colors.error[500], marginLeft: '2px' }}>*</span>
+            <span style={{ color: theme.colors.error[600], marginLeft: '2px' }}>*</span>
           )}
         </label>
       )}
@@ -93,25 +103,24 @@ const Input: React.FC<InputProps> = ({
           onChange={onChange}
           required={required}
           disabled={disabled}
-          style={baseStyles}
-          onFocus={(e) => {
-            Object.assign(e.target.style, focusStyles);
-          }}
-          onBlur={(e) => {
-            e.target.style.borderColor = error ? theme.colors.error[300] : theme.colors.gray[300];
-            e.target.style.boxShadow = 'none';
-          }}
+          style={inputStyles}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          aria-invalid={error ? 'true' : 'false'}
+          aria-describedby={error ? `${name}-error` : undefined}
         />
       </div>
       
       {error && (
         <p 
+          id={`${name}-error`}
           style={{
             marginTop: theme.spacing[1],
             fontSize: theme.typography.fontSize.xs,
             color: theme.colors.error[600],
             fontFamily: theme.typography.fontFamily.primary
           }}
+          role="alert"
         >
           {error}
         </p>
