@@ -270,13 +270,54 @@ function App() {
         }
       }
       
-      // Method 2: Try OpenStreetMap Nominatim (with better error handling)
+      // Method 2: Try 国土地理院 (GSI Japan) API first for Japanese addresses
       try {
-        console.log('=== Method 2: Trying Nominatim ===');
+        console.log('=== Method 2: Trying 国土地理院 (GSI Japan) API ===');
+        const gsiUrl = `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(address)}`;
+        console.log('GSI URL:', gsiUrl);
+        
+        setMessage('🔄 Trying 国土地理院 geocoding service...');
+        
+        const response = await fetch(gsiUrl);
+        console.log('GSI response status:', response.status);
+        
+        if (!response.ok) {
+          throw new Error(`GSI HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('GSI response data:', data);
+        console.log('Number of GSI results:', data.length);
+        
+        if (data && data.length > 0) {
+          const result = data[0];
+          console.log('Using first GSI result:', result);
+          
+          // GSI returns coordinates in geometry.coordinates [lng, lat] format
+          const coordinates = {
+            latitude: parseFloat(result.geometry.coordinates[1]),
+            longitude: parseFloat(result.geometry.coordinates[0])
+          };
+          
+          console.log('Extracted GSI coordinates:', coordinates);
+          setMessage(`✅ Address found via 国土地理院: ${result.properties.title || address}`);
+          return coordinates;
+        } else {
+          console.log('No results from GSI');
+          setMessage('🔄 No results from 国土地理院, trying OpenStreetMap...');
+        }
+      } catch (gsiError) {
+        console.error('GSI error details:', gsiError);
+        setMessage('🔄 国土地理院 failed, trying OpenStreetMap...');
+      }
+      
+      // Method 3: Try OpenStreetMap Nominatim as fallback
+      try {
+        console.log('=== Method 3: Trying Nominatim (Fallback) ===');
         const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=jp&limit=3&addressdetails=1`;
         console.log('Nominatim URL:', nominatimUrl);
         
-        setMessage('🔄 Trying Nominatim geocoding service...');
+        setMessage('🔄 Trying OpenStreetMap geocoding...');
         
         const response = await fetch(nominatimUrl, {
           headers: {
@@ -285,7 +326,6 @@ function App() {
         });
         
         console.log('Nominatim response status:', response.status);
-        console.log('Nominatim response headers:', Object.fromEntries(response.headers.entries()));
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -293,31 +333,31 @@ function App() {
         
         const data = await response.json();
         console.log('Nominatim response data:', data);
-        console.log('Number of results:', data.length);
+        console.log('Number of Nominatim results:', data.length);
         
         if (data && data.length > 0) {
           const result = data[0];
-          console.log('Using first result:', result);
+          console.log('Using first Nominatim result:', result);
           const coordinates = {
             latitude: parseFloat(result.lat),
             longitude: parseFloat(result.lon)
           };
           
-          console.log('Extracted coordinates:', coordinates);
-          setMessage(`✅ Address found via Nominatim: ${result.display_name}`);
+          console.log('Extracted Nominatim coordinates:', coordinates);
+          setMessage(`✅ Address found via OpenStreetMap: ${result.display_name}`);
           return coordinates;
         } else {
           console.log('No results from Nominatim');
-          setMessage('🔄 No results from Nominatim, trying alternative methods...');
+          setMessage('🔄 No results from OpenStreetMap, trying global search...');
         }
       } catch (nominatimError) {
         console.error('Nominatim error details:', nominatimError);
-        setMessage('🔄 Nominatim failed, trying alternative methods...');
+        setMessage('🔄 OpenStreetMap failed, trying global search...');
       }
       
-      // Method 3: Try a different Nominatim instance (with global search)
+      // Method 4: Try a different Nominatim instance (with global search)
       try {
-        console.log('Trying global Nominatim search...');
+        console.log('=== Method 4: Trying global Nominatim search ===');
         const globalUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + " Japan")}&limit=3`;
         
         const response = await fetch(globalUrl, {
@@ -352,8 +392,8 @@ function App() {
         console.log('Global search failed:', globalError);
       }
       
-      // Method 4: Handle common Japanese location patterns
-      console.log('=== Method 4: Checking built-in locations ===');
+      // Method 5: Handle common Japanese location patterns
+      console.log('=== Method 5: Checking built-in locations ===');
       console.log('Original address:', address);
       
       const commonLocations = {
@@ -371,7 +411,16 @@ function App() {
         'ikebukuro': { latitude: 35.7295, longitude: 139.7109 },
         '品川駅': { latitude: 35.6284, longitude: 139.7387 },
         'shinagawa station': { latitude: 35.6284, longitude: 139.7387 },
-        'shinagawa': { latitude: 35.6284, longitude: 139.7387 }
+        'shinagawa': { latitude: 35.6284, longitude: 139.7387 },
+        // Tokyo areas
+        '芝浦': { latitude: 35.6397, longitude: 139.7479 },
+        'shibaura': { latitude: 35.6397, longitude: 139.7479 },
+        '港区': { latitude: 35.6581, longitude: 139.7414 },
+        'minato': { latitude: 35.6581, longitude: 139.7414 },
+        '新宿区': { latitude: 35.6938, longitude: 139.7034 },
+        'shinjuku-ku': { latitude: 35.6938, longitude: 139.7034 },
+        '渋谷区': { latitude: 35.6627, longitude: 139.7038 },
+        'shibuya-ku': { latitude: 35.6627, longitude: 139.7038 }
       };
       
       const normalizedAddress = address.toLowerCase().trim();
@@ -2340,12 +2389,12 @@ function App() {
               
               <div style={{ marginTop: '15px', padding: '12px', backgroundColor: '#e8f5e8', borderRadius: '5px' }}>
                 <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', color: '#2d5016' }}>
-                  🌍 Enhanced Geocoding Features:
+                  🗾 国土地理院 + Enhanced Geocoding:
                 </div>
                 <div style={{ fontSize: '12px', color: '#2d5016' }}>
-                  • <strong>Coordinates (Most Reliable):</strong> "35.6762, 139.6503"<br/>
-                  • <strong>Major Stations:</strong> "Tokyo Station", "東京駅", "Shibuya Station"<br/>
-                  • <strong>Full Addresses:</strong> "東京都新宿区新宿3-1-1" (may need internet)<br/>
+                  • <strong>Japanese Addresses:</strong> "東京都港区芝浦4-20-2" (via 国土地理院 API)<br/>
+                  • <strong>Coordinates:</strong> "35.6762, 139.6503" (instant)<br/>
+                  • <strong>Major Stations:</strong> "東京駅", "Tokyo Station", "品川駅"<br/>
                   • <strong>English Names:</strong> "Tokyo Station", "Shinjuku Station"<br/>
                   • <strong>Auto-geocoding:</strong> Automatically triggers when you finish typing<br/>
                   • <strong>Delete Locations:</strong> Use the 🗑️ Delete button to remove locations
