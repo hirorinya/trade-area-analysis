@@ -120,21 +120,37 @@ function App() {
   // Modern Authentication handlers
   const handleModernLogin = async (email, password) => {
     try {
+      console.log('🔐 Attempting login for:', email);
       const { data, error } = await auth.signIn(email, password);
       
-      console.log('Login attempt result:', { data, error });
+      console.log('📝 Login attempt result:', { 
+        success: !!data?.session, 
+        user: data?.user?.email, 
+        error: error?.message 
+      });
       
       if (error) {
-        console.error('Supabase auth error:', error);
+        console.error('❌ Supabase auth error:', error);
         throw new Error(error.message);
       }
       
-      setToken(data.session?.access_token);
-      setUser(data.user);
-      setMessage('Login successful!');
-      changeView('dashboard');
-      loadProjects();
+      if (data?.session?.user) {
+        console.log('✅ Login successful, setting user state');
+        setUser(data.session.user);
+        setToken(data.session.access_token);
+        localStorage.setItem('token', data.session.access_token);
+        setMessage('Login successful!');
+        
+        console.log('🔄 Redirecting to dashboard');
+        changeView('dashboard');
+        
+        console.log('📂 Loading projects...');
+        await loadProjects();
+      } else {
+        throw new Error('No session returned from login');
+      }
     } catch (error) {
+      console.error('❌ Login failed:', error);
       setMessage(`Login error: ${error.message}`);
       throw error; // Re-throw for ModernLoginForm to handle
     }
@@ -177,13 +193,23 @@ function App() {
   // Projects
   const loadProjects = async () => {
     try {
-      if (!user?.id) return;
+      if (!user?.id) {
+        console.log('⚠️ Cannot load projects: No user ID available', user);
+        return;
+      }
+      
+      console.log('📂 Loading projects for user:', user.id);
       const { data, error } = await db.getProjects(user.id);
+      
       if (error) {
+        console.error('❌ Error loading projects:', error);
         throw new Error(error.message);
       }
+      
+      console.log('✅ Projects loaded:', data?.length || 0, 'projects');
       setProjects(data || []);
     } catch (error) {
+      console.error('❌ LoadProjects failed:', error);
       setMessage(`Error loading projects: ${error.message}`);
     }
   };
@@ -1674,48 +1700,58 @@ Make it actionable and specific to help guide them through the platform.
   useEffect(() => {
     const checkSession = async () => {
       try {
+        console.log('🔍 Checking existing session...');
         const result = await auth.getSession();
         
         // Handle case where result might be undefined
         if (!result) {
-          console.log('No session result returned');
+          console.log('❌ No session result returned');
+          setIsInitialLoad(false);
           return;
         }
 
         const { data, error } = result;
         
         if (error) {
-          console.error('Session check error:', error);
+          console.error('❌ Session check error:', error);
+          setIsInitialLoad(false);
           return;
         }
 
         // Handle case where data might be undefined
         if (!data) {
-          if (import.meta.env.MODE === 'development') {
-            console.log('No session data returned');
-          }
+          console.log('❌ No session data returned');
+          setIsInitialLoad(false);
           return;
         }
 
         const { session } = data;
 
         if (session?.user) {
+          console.log('✅ Valid session found for:', session.user.email);
           setUser(session.user);
           setToken(session.access_token);
-          // Only set dashboard view on initial login, not on page reload
-          if (isInitialLoad) {
+          
+          // If user is authenticated but currentView is login, redirect to dashboard
+          if (currentView === 'login') {
+            console.log('🔄 Redirecting authenticated user to dashboard');
             changeView('dashboard');
-            setIsInitialLoad(false);
           }
-          loadProjects();
+          
+          setIsInitialLoad(false);
+          await loadProjects();
         } else {
-          // If no session and this is initial load, stay on login
-          if (isInitialLoad) {
-            setIsInitialLoad(false);
+          console.log('❌ No valid session found');
+          // If no session, ensure we're on login page
+          if (currentView !== 'login') {
+            console.log('🔄 Redirecting unauthenticated user to login');
+            changeView('login');
           }
+          setIsInitialLoad(false);
         }
       } catch (error) {
-        console.error('Session check failed:', error);
+        console.error('❌ Session check failed:', error);
+        setIsInitialLoad(false);
       }
     };
 
@@ -1762,6 +1798,15 @@ Make it actionable and specific to help guide them through the platform.
 
 
 
+  // Debug rendering conditions
+  console.log('🖼️ Render state:', {
+    currentView,
+    hasUser: !!user,
+    userEmail: user?.email,
+    isInitialLoad,
+    token: !!token
+  });
+
   return (
     <div style={containerStyle}>
       {/* App Header */}
@@ -1769,6 +1814,19 @@ Make it actionable and specific to help guide them through the platform.
         <h1 style={titleStyle}>Trade Area Analysis Platform</h1>
         <p style={subtitleStyle}>Professional retail analytics with AI-powered insights</p>
       </header>
+      
+      {/* Debug Info (Development only) */}
+      {import.meta.env.MODE === 'development' && (
+        <div style={{
+          background: '#f0f0f0',
+          padding: '8px',
+          margin: '8px 0',
+          fontSize: '12px',
+          fontFamily: 'monospace'
+        }}>
+          View: {currentView} | User: {user?.email || 'None'} | Initial: {isInitialLoad ? 'Yes' : 'No'}
+        </div>
+      )}
       
       {/* Message Display */}
       {message && (
