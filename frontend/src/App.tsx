@@ -1796,7 +1796,7 @@ function App() {
                     setMessage('Dashboard cleared');
                   }}
                   style={{
-                    ...buttonStyle,
+                    ...theme.components.button.secondary,
                     backgroundColor: '#6c757d',
                     fontSize: '12px',
                     padding: '8px 12px',
@@ -1933,7 +1933,7 @@ function App() {
                 <button 
                   onClick={() => setShowHelp(false)}
                   style={{
-                    ...buttonStyle,
+                    ...theme.components.button.secondary,
                     backgroundColor: '#17a2b8',
                     fontSize: '12px',
                     padding: '8px 12px'
@@ -2057,7 +2057,7 @@ function App() {
                       }
                     }}
                     style={{
-                      ...buttonStyle,
+                      ...theme.components.button.secondary,
                       fontSize: '12px',
                       padding: '8px 12px',
                       backgroundColor: '#28a745'
@@ -2226,7 +2226,7 @@ function App() {
                     setMessage(`Generated ${candidates.length} candidate locations for optimization`);
                   }}
                   style={{
-                    ...buttonStyle,
+                    ...theme.components.button.secondary,
                     backgroundColor: '#6c757d',
                     fontSize: '14px'
                   }}
@@ -2254,7 +2254,7 @@ function App() {
                     }
                   }}
                   style={{
-                    ...buttonStyle,
+                    ...theme.components.button.secondary,
                     backgroundColor: candidateLocations.length > 0 ? '#28a745' : '#6c757d',
                     fontSize: '14px'
                   }}
@@ -2327,7 +2327,7 @@ function App() {
                       setMessage('Optimization results cleared');
                     }}
                     style={{
-                      ...buttonStyle,
+                      ...theme.components.button.secondary,
                       backgroundColor: '#dc3545',
                       fontSize: '12px',
                       padding: '8px 12px',
@@ -2378,7 +2378,7 @@ function App() {
                     }
                   }}
                   style={{
-                    ...buttonStyle,
+                    ...theme.components.button.secondary,
                     backgroundColor: '#dc3545',
                     fontSize: '14px'
                   }}
@@ -2402,7 +2402,7 @@ function App() {
                     }
                   }}
                   style={{
-                    ...buttonStyle,
+                    ...theme.components.button.secondary,
                     backgroundColor: '#17a2b8',
                     fontSize: '14px'
                   }}
@@ -2550,7 +2550,7 @@ function App() {
                       setMessage('Competitor analysis cleared');
                     }}
                     style={{
-                      ...buttonStyle,
+                      ...theme.components.button.secondary,
                       backgroundColor: '#6c757d',
                       fontSize: '12px',
                       padding: '8px 12px',
