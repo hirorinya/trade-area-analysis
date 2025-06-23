@@ -46,6 +46,7 @@ function App() {
   }, []);
 
   const [currentView, setCurrentView] = useState('login');
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [projects, setProjects] = useState([]);
@@ -1323,8 +1324,17 @@ function App() {
         if (session?.user) {
           setUser(session.user);
           setToken(session.access_token);
-          setCurrentView('dashboard');
+          // Only set dashboard view on initial login, not on page reload
+          if (isInitialLoad) {
+            setCurrentView('dashboard');
+            setIsInitialLoad(false);
+          }
           loadProjects();
+        } else {
+          // If no session and this is initial load, stay on login
+          if (isInitialLoad) {
+            setIsInitialLoad(false);
+          }
         }
       } catch (error) {
         console.error('Session check failed:', error);
@@ -1343,7 +1353,11 @@ function App() {
         if (event === 'SIGNED_IN' && session) {
           setUser(session.user);
           setToken(session.access_token);
-          setCurrentView('dashboard');
+          // Only redirect to dashboard if user is currently on login page
+          // This preserves current page when session is restored
+          if (currentView === 'login') {
+            setCurrentView('dashboard');
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setToken(null);
