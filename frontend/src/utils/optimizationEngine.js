@@ -1,5 +1,6 @@
 // Store Optimization Engine
 // Implements MIP and Greedy algorithms for optimal store placement
+// Includes store capacity optimization analysis
 
 import { generateDemandGrid, calculateDemandCapture, generateCandidateSites, getDistance } from './demandGrid.js';
 
@@ -436,6 +437,191 @@ export function multiScenarioAnalysis(candidateSites, demandMeshes, scenarios) {
   console.log(`Best by efficiency: ${comparison.bestByEfficiency.name} (${comparison.bestByEfficiency.results.metrics.efficiency.toFixed(1)})`);
   
   return comparison;
+}
+
+/**
+ * Store capacity optimization analysis
+ * Analyzes optimal store capacity based on demand patterns and operational constraints
+ * @param {Array} stores - Existing store locations
+ * @param {Array} demandMeshes - Array of demand mesh cells
+ * @param {Object} capacityParams - Capacity analysis parameters
+ * @returns {Object} Capacity optimization results
+ */
+export function storeCapacityOptimization(stores, demandMeshes, capacityParams = {}) {
+  const {
+    maxRadius = 2.0,
+    distanceDecay = 1.5,
+    peakHourMultiplier = 1.5,        // Peak demand is 1.5x average
+    serviceTimePerCustomer = 3,       // Minutes per customer
+    operatingHoursPerDay = 12,        // Hours store is open
+    targetUtilization = 0.8,          // Target 80% capacity utilization
+    staffingCostPerHour = 25,         // Staff cost per hour
+    fixedCostPerDay = 500,           // Fixed operating costs per day
+    revenuePerCustomer = 15           // Average revenue per customer
+  } = capacityParams;
+
+  console.log(`Analyzing store capacity optimization for ${stores.length} stores`);
+
+  // Calculate demand capture for current stores
+  const capturedMeshes = calculateDemandCapture([...demandMeshes], stores, maxRadius, distanceDecay);
+  
+  const storeAnalysis = stores.map(store => {
+    // Find meshes captured by this store
+    const storeMeshes = capturedMeshes.filter(mesh => 
+      mesh.capturedBy.includes(store.id)
+    );
+    
+    // Calculate total demand for this store
+    const dailyDemand = storeMeshes.reduce((sum, mesh) => {
+      const storeShare = mesh.captureRatio[store.id] || 0;
+      return sum + (mesh.demand * storeShare);
+    }, 0);
+    
+    // Calculate peak demand
+    const peakDemand = dailyDemand * peakHourMultiplier;
+    
+    // Calculate required service capacity
+    const totalServiceMinutesNeeded = dailyDemand * serviceTimePerCustomer;
+    const peakServiceMinutesNeeded = peakDemand * serviceTimePerCustomer;
+    
+    // Calculate optimal staffing
+    const peakHours = 4; // Assume 4 peak hours per day
+    const offPeakHours = operatingHoursPerDay - peakHours;
+    
+    // Staff needed during peak hours
+    const peakStaffNeeded = Math.ceil(peakServiceMinutesNeeded / (peakHours * 60));
+    
+    // Staff needed during off-peak hours
+    const offPeakDemand = dailyDemand - peakDemand;
+    const offPeakStaffNeeded = Math.max(1, Math.ceil((offPeakDemand * serviceTimePerCustomer) / (offPeakHours * 60)));
+    
+    // Calculate capacity utilization
+    const maxDailyCapacity = (peakStaffNeeded * peakHours * 60 + offPeakStaffNeeded * offPeakHours * 60) / serviceTimePerCustomer;
+    const currentUtilization = dailyDemand / maxDailyCapacity;
+    
+    // Optimize for target utilization
+    const optimalDailyCapacity = dailyDemand / targetUtilization;
+    const optimalServiceMinutes = optimalDailyCapacity * serviceTimePerCustomer;
+    
+    // Calculate optimal staffing for target utilization
+    const optimalPeakStaff = Math.ceil((peakServiceMinutesNeeded / targetUtilization) / (peakHours * 60));
+    const optimalOffPeakStaff = Math.max(1, Math.ceil(((totalServiceMinutesNeeded - peakServiceMinutesNeeded) / targetUtilization) / (offPeakHours * 60)));
+    
+    // Financial analysis
+    const currentStaffCost = (peakStaffNeeded * peakHours + offPeakStaffNeeded * offPeakHours) * staffingCostPerHour;
+    const optimalStaffCost = (optimalPeakStaff * peakHours + optimalOffPeakStaff * offPeakHours) * staffingCostPerHour;
+    
+    const revenue = dailyDemand * revenuePerCustomer;
+    const currentTotalCost = currentStaffCost + fixedCostPerDay;
+    const optimalTotalCost = optimalStaffCost + fixedCostPerDay;
+    
+    const currentProfit = revenue - currentTotalCost;
+    const optimalProfit = revenue - optimalTotalCost;
+    
+    // Service quality metrics
+    const averageWaitTime = currentUtilization > 0.9 ? 
+      Math.pow(currentUtilization, 3) * 10 : // Exponential wait time growth near capacity
+      currentUtilization * 2; // Linear growth at lower utilization
+    
+    // Capacity recommendations
+    let recommendation = 'Optimal';
+    if (currentUtilization > 0.95) {
+      recommendation = 'Increase Capacity - Critical';
+    } else if (currentUtilization > 0.85) {
+      recommendation = 'Monitor Closely';
+    } else if (currentUtilization < 0.6) {
+      recommendation = 'Consider Reducing Capacity';
+    }
+
+    return {
+      storeId: store.id,
+      storeName: store.name,
+      location: {
+        latitude: store.latitude,
+        longitude: store.longitude
+      },
+      demand: {
+        daily: Math.round(dailyDemand),
+        peak: Math.round(peakDemand),
+        meshesServed: storeMeshes.length
+      },
+      capacity: {
+        current: {
+          maxDaily: Math.round(maxDailyCapacity),
+          utilization: Math.round(currentUtilization * 100),
+          peakStaff: peakStaffNeeded,
+          offPeakStaff: offPeakStaffNeeded
+        },
+        optimal: {
+          maxDaily: Math.round(optimalDailyCapacity),
+          utilization: Math.round(targetUtilization * 100),
+          peakStaff: optimalPeakStaff,
+          offPeakStaff: optimalOffPeakStaff
+        }
+      },
+      financial: {
+        revenue: Math.round(revenue),
+        currentCost: Math.round(currentTotalCost),
+        currentProfit: Math.round(currentProfit),
+        optimalCost: Math.round(optimalTotalCost),
+        optimalProfit: Math.round(optimalProfit),
+        profitImprovement: Math.round(optimalProfit - currentProfit)
+      },
+      serviceQuality: {
+        averageWaitTime: Math.round(averageWaitTime * 10) / 10,
+        customerSatisfaction: Math.max(0, Math.min(100, 100 - (averageWaitTime * 8)))
+      },
+      recommendation,
+      priority: currentUtilization > 0.95 ? 'High' : 
+                currentUtilization > 0.85 ? 'Medium' : 'Low'
+    };
+  });
+
+  // Network-level analysis
+  const networkMetrics = {
+    totalDemand: Math.round(storeAnalysis.reduce((sum, store) => sum + store.demand.daily, 0)),
+    totalRevenue: Math.round(storeAnalysis.reduce((sum, store) => sum + store.financial.revenue, 0)),
+    totalCurrentCost: Math.round(storeAnalysis.reduce((sum, store) => sum + store.financial.currentCost, 0)),
+    totalOptimalCost: Math.round(storeAnalysis.reduce((sum, store) => sum + store.financial.optimalCost, 0)),
+    averageUtilization: Math.round(storeAnalysis.reduce((sum, store) => sum + store.capacity.current.utilization, 0) / storeAnalysis.length),
+    storesOverCapacity: storeAnalysis.filter(store => store.capacity.current.utilization > 95).length,
+    storesUnderUtilized: storeAnalysis.filter(store => store.capacity.current.utilization < 60).length,
+    totalProfitImprovement: Math.round(storeAnalysis.reduce((sum, store) => sum + store.financial.profitImprovement, 0))
+  };
+
+  // Priority actions
+  const priorityActions = storeAnalysis
+    .filter(store => store.priority === 'High')
+    .sort((a, b) => b.capacity.current.utilization - a.capacity.current.utilization);
+
+  const result = {
+    storeAnalysis,
+    networkMetrics,
+    priorityActions,
+    recommendations: {
+      immediate: priorityActions.length > 0 ? 
+        `${priorityActions.length} stores require immediate capacity increases` : 
+        'No immediate capacity issues identified',
+      strategic: networkMetrics.averageUtilization < 70 ? 
+        'Consider consolidating underutilized locations' : 
+        'Network capacity appears well-balanced',
+      financial: networkMetrics.totalProfitImprovement > 0 ? 
+        `Potential profit improvement of $${networkMetrics.totalProfitImprovement}/day through capacity optimization` : 
+        'Current capacity allocation is near-optimal'
+    },
+    summary: {
+      analysisDate: new Date().toISOString(),
+      totalStores: stores.length,
+      averageUtilization: `${networkMetrics.averageUtilization}%`,
+      profitOpportunity: `$${networkMetrics.totalProfitImprovement}/day`
+    }
+  };
+
+  console.log(`Capacity analysis complete: ${storeAnalysis.length} stores analyzed`);
+  console.log(`Average utilization: ${networkMetrics.averageUtilization}%`);
+  console.log(`Profit improvement opportunity: $${networkMetrics.totalProfitImprovement}/day`);
+
+  return result;
 }
 
 /**

@@ -21,11 +21,7 @@ import {
   compactFormStyle,
   formHeaderStyle,
   buttonGroupStyle,
-  responsiveButtonGroupStyle,
   buttonContainerStyle,
-  responsiveFlexStyle,
-  preventOverflowStyle,
-  scrollableContainerStyle,
   projectCardStyle,
   successMessageStyle,
   errorMessageStyle,
@@ -33,7 +29,8 @@ import {
   heading3Style,
   bodyTextStyle,
   captionTextStyle,
-  flexBetweenStyle
+  flexBetweenStyle,
+  mapContainerStyle
 } from './styles/layouts';
 
 function App() {
@@ -46,7 +43,10 @@ function App() {
     console.log('All env vars:', Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')));
   }, []);
 
-  const [currentView, setCurrentView] = useState('login');
+  const [currentView, setCurrentView] = useState(() => {
+    // Restore view from localStorage, default to 'login' if not found
+    return localStorage.getItem('currentView') || 'login';
+  });
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -71,6 +71,13 @@ function App() {
   const [showDemandGrid, setShowDemandGrid] = useState(false);
   const [formCoordinates, setFormCoordinates] = useState({ lat: '', lng: '' });
   const [currentAddress, setCurrentAddress] = useState('');
+  const [analysisRecommendations, setAnalysisRecommendations] = useState('');
+
+  // Helper function to change view and persist to localStorage
+  const changeView = (newView) => {
+    setCurrentView(newView);
+    localStorage.setItem('currentView', newView);
+  };
 
   // API calls
   const apiCall = async (endpoint, options = {}) => {
@@ -107,7 +114,7 @@ function App() {
       setToken(data.session?.access_token);
       setUser(data.user);
       setMessage('Login successful!');
-      setCurrentView('dashboard');
+      changeView('dashboard');
       loadProjects();
     } catch (error) {
       setMessage(`Login error: ${error.message}`);
@@ -142,7 +149,7 @@ function App() {
       setToken(data.session?.access_token);
       setUser(data.user);
       setMessage('Registration successful! Please check your email to verify your account.');
-      setCurrentView('dashboard');
+      changeView('dashboard');
       loadProjects();
     } catch (error) {
       setMessage(`Registration error: ${error.message}`);
@@ -185,6 +192,134 @@ function App() {
       loadProjects();
     } catch (error) {
       setMessage(`Error creating project: ${error.message}`);
+    }
+  };
+
+  // Natural Language Analysis Query Handler
+  const handleNaturalLanguageQuery = async () => {
+    if (!currentAddress.trim()) {
+      setMessage('Please enter your analysis goal first.');
+      return;
+    }
+
+    try {
+      setMessage('Analyzing your request and generating recommendations...');
+      
+      // Prepare context about available features
+      const availableFeatures = {
+        mapFeatures: [
+          "🛰️ Satellite imagery with Mapbox",
+          "🗾 Japanese government data (国土地理院)",
+          "📊 Population demand grid visualization",
+          "📍 Location plotting and management"
+        ],
+        analysisTools: [
+          "🎯 Store Optimization Engine (Greedy & MIP algorithms)",
+          "🏆 Competitive Analysis vs existing competitors",
+          "📈 Multi-scenario planning and comparison",
+          "⚖️ Store Capacity Optimization with financial metrics",
+          "🧠 AI-powered insights and recommendations"
+        ],
+        dataCapabilities: [
+          "📍 Geocoding for Japanese and international addresses",
+          "👥 Population density analysis with 250m mesh cells",
+          "🎯 Demand flow visualization between customers and stores",
+          "💰 Financial modeling (revenue, costs, profits)",
+          "📊 Market share and coverage analysis"
+        ],
+        workflowSteps: [
+          "1. Add store locations (existing and competitors)",
+          "2. Enable population grid to see demand patterns",
+          "3. Use store optimizer to find optimal new locations",
+          "4. Run competitive analysis against existing competition",
+          "5. Analyze capacity and financial performance"
+        ]
+      };
+
+      const prompt = `
+You are an expert retail location analyst helping a user plan their store network analysis. 
+
+User Request: "${currentAddress}"
+
+Available Platform Features:
+${Object.entries(availableFeatures).map(([category, features]) => 
+  `${category}:\n${features.map(f => `  - ${f}`).join('\n')}`
+).join('\n\n')}
+
+Based on the user's request, provide:
+1. A clear interpretation of what they want to accomplish
+2. Step-by-step recommended workflow using the available features
+3. Specific UI actions they should take (which buttons to click, what data to enter)
+4. Expected insights they'll gain from each step
+
+Format your response in HTML with:
+- Clear section headers (<h5>)
+- Bulleted action steps (<ul><li>)
+- Highlighted key features (<strong>)
+- Call-out boxes for important tips (<div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 8px 0;">)
+
+Make it actionable and specific to help guide them through the platform.
+`;
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert retail location analyst and UX guide. Provide clear, actionable guidance for trade area analysis workflows.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 1000,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const recommendations = data.choices[0].message.content;
+      
+      setAnalysisRecommendations(recommendations);
+      setMessage('Analysis recommendations generated! Follow the steps below to get started.');
+      
+    } catch (error) {
+      console.error('Natural language query failed:', error);
+      
+      // Fallback recommendations if API fails
+      const fallbackRecommendations = `
+        <h5>🎯 Analysis Workflow Recommendations</h5>
+        <p>Based on your request: "<em>${currentAddress}</em>"</p>
+        
+        <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 8px 0;">
+          <strong>💡 Quick Start Guide:</strong>
+        </div>
+        
+        <ul>
+          <li><strong>Step 1:</strong> Add your store locations using the "Add Location" form below</li>
+          <li><strong>Step 2:</strong> Click <strong>"📊 Population Grid"</strong> to see demand patterns</li>
+          <li><strong>Step 3:</strong> Use <strong>"🎯 Store Optimizer"</strong> to find optimal locations</li>
+          <li><strong>Step 4:</strong> Try <strong>"🤖 AI Analyst"</strong> for detailed insights</li>
+        </ul>
+        
+        <div style="background: #fff3e0; padding: 12px; border-radius: 6px; margin: 8px 0;">
+          <strong>🔧 Pro Tip:</strong> Start by adding a few existing store locations, then enable the population grid to visualize demand patterns in your area.
+        </div>
+      `;
+      
+      setAnalysisRecommendations(fallbackRecommendations);
+      setMessage('Generated basic workflow recommendations. For advanced AI guidance, check your OpenAI API configuration.');
     }
   };
 
@@ -1511,7 +1646,7 @@ function App() {
     setSelectedProject(null);
     setLocations([]);
     localStorage.removeItem('token');
-    setCurrentView('login');
+    changeView('login');
     setMessage('Logged out successfully');
   };
 
@@ -1549,7 +1684,7 @@ function App() {
           setToken(session.access_token);
           // Only set dashboard view on initial login, not on page reload
           if (isInitialLoad) {
-            setCurrentView('dashboard');
+            changeView('dashboard');
             setIsInitialLoad(false);
           }
           loadProjects();
@@ -1579,12 +1714,14 @@ function App() {
           // Only redirect to dashboard if user is currently on login page
           // This preserves current page when session is restored
           if (currentView === 'login') {
-            setCurrentView('dashboard');
+            changeView('dashboard');
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setToken(null);
-          setCurrentView('login');
+          localStorage.removeItem('token');
+          localStorage.removeItem('currentView');
+          changeView('login');
         }
       }
     );
@@ -1747,7 +1884,7 @@ function App() {
                     <Button 
                       onClick={() => {
                         setSelectedProject(project);
-                        setCurrentView('map');
+                        changeView('map');
                         loadLocations(project.id);
                       }}
                       variant="primary"
@@ -1765,6 +1902,54 @@ function App() {
 
       {currentView === 'map' && selectedProject && (
         <div>
+          {/* Natural Language Analysis Prompt */}
+          <div style={formStyle}>
+            <h3 style={heading3Style}>🤖 What do you want to do?</h3>
+            <p style={bodyTextStyle}>Describe your analysis goals in plain language, and I'll guide you through the process.</p>
+            
+            <div style={{ marginBottom: theme.spacing[4] }}>
+              <Input
+                type="text"
+                placeholder="e.g., Find the best location for a new coffee shop in Tokyo, Analyze competitor density in Shibuya, or Optimize my existing store network"
+                value={currentAddress}
+                onChange={(e) => setCurrentAddress(e.target.value)}
+                label="Analysis Goal"
+              />
+              <div style={{ marginTop: theme.spacing[2], display: 'flex', gap: theme.spacing[2] }}>
+                <Button 
+                  onClick={handleNaturalLanguageQuery}
+                  variant="primary"
+                  size="small"
+                >
+                  🔍 Analyze & Guide Me
+                </Button>
+                <Button 
+                  onClick={() => setCurrentAddress('')}
+                  variant="secondary"
+                  size="small"
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+
+            {/* Analysis Recommendations */}
+            {analysisRecommendations && (
+              <div style={{
+                backgroundColor: theme.colors.blue[50],
+                border: `1px solid ${theme.colors.blue[200]}`,
+                borderRadius: theme.borderRadius.lg,
+                padding: theme.spacing[4],
+                marginBottom: theme.spacing[4]
+              }}>
+                <h4 style={{ ...heading3Style, color: theme.colors.blue[700], marginBottom: theme.spacing[3] }}>
+                  📋 Recommended Analysis Steps
+                </h4>
+                <div dangerouslySetInnerHTML={{ __html: analysisRecommendations }} />
+              </div>
+            )}
+          </div>
+
           <div style={responsiveFlexStyle}>
             <h2 style={heading2Style}>📍 {selectedProject.name} - Locations & Map</h2>
             <div style={preventOverflowStyle}>
@@ -1833,7 +2018,7 @@ function App() {
                 >
                   📊 Population Grid
                 </Button>
-                <Button onClick={() => setCurrentView('dashboard')} variant="secondary" size="small">
+                <Button onClick={() => changeView('dashboard')} variant="secondary" size="small">
                   ← Back to Dashboard
                 </Button>
                 <Button onClick={logout} variant="secondary" size="small">
@@ -1867,25 +2052,44 @@ function App() {
 
             {/* CSV Import Section */}
             <div style={{ 
-              backgroundColor: '#e7f3ff', 
-              padding: '15px', 
-              borderRadius: '5px', 
-              marginBottom: '15px' 
+              backgroundColor: theme.colors.blue[50], 
+              padding: theme.spacing[4], 
+              borderRadius: theme.borderRadius.lg, 
+              marginBottom: theme.spacing[4],
+              border: `1px solid ${theme.colors.blue[200]}`
             }}>
-              <div style={{ marginBottom: '10px', fontSize: '14px', fontWeight: 'bold' }}>
+              <div style={{ 
+                marginBottom: theme.spacing[3], 
+                fontSize: theme.typography.fontSize.base, 
+                fontWeight: theme.typography.fontWeight.semibold,
+                color: theme.colors.blue[700]
+              }}>
                 📁 Bulk Import Locations (CSV)
               </div>
-              <div style={{ marginBottom: '10px', fontSize: '12px', color: '#666' }}>
-                Required columns: name, latitude, longitude, type (store/competitor/poi)<br/>
-                Optional: address
+              <div style={{ 
+                marginBottom: theme.spacing[3], 
+                fontSize: theme.typography.fontSize.sm, 
+                color: theme.colors.blue[600],
+                lineHeight: 1.5
+              }}>
+                <strong>Required columns:</strong> name, latitude, longitude, type (store/competitor/poi)<br/>
+                <strong>Optional:</strong> address
               </div>
               <input 
                 type="file" 
                 accept=".csv"
                 onChange={handleCSVImport}
-                style={{ marginBottom: '5px' }}
+                style={{ 
+                  ...theme.components.input.base,
+                  marginBottom: theme.spacing[2],
+                  width: '100%'
+                }}
               />
-              <div style={{ fontSize: '11px', color: '#888' }}>
+              <div style={{ 
+                fontSize: theme.typography.fontSize.xs, 
+                color: theme.colors.blue[600],
+                fontStyle: 'italic'
+              }}>
                 Example CSV: "Shibuya Store,35.6580,139.7016,store,Tokyo Shibuya"
               </div>
             </div>
@@ -2208,11 +2412,20 @@ function App() {
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '1fr 1fr', 
+            gap: theme.spacing[5], 
+            marginBottom: theme.spacing[5],
+            
+            '@media (max-width: 768px)': {
+              gridTemplateColumns: '1fr'
+            }
+          }}>
             {/* Add Location Form */}
             <div style={formStyle}>
-              <h3>Add New Location</h3>
-              <form onSubmit={createLocation}>
+              <h3 style={formHeaderStyle}>Add New Location</h3>
+              <form onSubmit={createLocation} style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing[4] }}>
                 <Input 
                   type="text" 
                   name="locationName" 
@@ -2283,84 +2496,119 @@ function App() {
                 </div>
 
                 {/* Enhanced Coordinate Inputs with Reverse Geocoding */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', alignItems: 'end' }}>
-                  <input 
-                    type="number" 
-                    name="latitude" 
-                    placeholder="Latitude (緯度)" 
-                    step="any" 
-                    required 
-                    style={theme.components.input.base}
-                    onChange={(e) => {
-                      const lat = parseFloat(e.target.value);
-                      const lngInput = e.target.parentElement.querySelector('input[name="longitude"]');
-                      const lng = parseFloat(lngInput?.value);
-                      
-                      // Auto-reverse geocode when both coordinates are valid
-                      if (lat && lng && lat >= 20 && lat <= 50 && lng >= 120 && lng <= 150) {
-                        handleReverseGeocoding(lat, lng);
-                      }
-                    }}
-                  />
-                  <input 
-                    type="number" 
-                    name="longitude" 
-                    placeholder="Longitude (経度)" 
-                    step="any" 
-                    required 
-                    style={theme.components.input.base}
-                    onChange={(e) => {
-                      const lng = parseFloat(e.target.value);
-                      const latInput = e.target.parentElement.querySelector('input[name="latitude"]');
-                      const lat = parseFloat(latInput?.value);
-                      
-                      // Auto-reverse geocode when both coordinates are valid
-                      if (lat && lng && lat >= 20 && lat <= 50 && lng >= 120 && lng <= 150) {
-                        handleReverseGeocoding(lat, lng);
-                      }
-                    }}
-                  />
-                  <button 
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      const latInput = document.querySelector('input[name="latitude"]');
-                      const lngInput = document.querySelector('input[name="longitude"]');
-                      const lat = parseFloat(latInput?.value);
-                      const lng = parseFloat(lngInput?.value);
-                      
-                      if (lat && lng) {
-                        handleReverseGeocoding(lat, lng);
-                      } else {
-                        setMessage('Please enter both latitude and longitude first');
-                      }
-                    }}
-                    style={{
-                      ...theme.components.button.secondary,
-                      fontSize: '12px',
-                      padding: '8px 12px',
-                      backgroundColor: '#28a745'
-                    }}
-                    title="Get address from coordinates"
-                  >
-                    📍→📫
-                  </button>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: theme.spacing[2],
+                    fontSize: theme.typography.fontSize.sm,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    color: theme.colors.gray[700],
+                    fontFamily: theme.typography.fontFamily.primary
+                  }}>
+                    Coordinates
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: theme.spacing[3], alignItems: 'end' }}>
+                    <input 
+                      type="number" 
+                      name="latitude" 
+                      placeholder="Latitude (緯度)" 
+                      step="any" 
+                      required 
+                      style={theme.components.input.base}
+                      onChange={(e) => {
+                        const lat = parseFloat(e.target.value);
+                        const lngInput = e.target.parentElement.querySelector('input[name="longitude"]');
+                        const lng = parseFloat(lngInput?.value);
+                        
+                        // Auto-reverse geocode when both coordinates are valid
+                        if (lat && lng && lat >= 20 && lat <= 50 && lng >= 120 && lng <= 150) {
+                          handleReverseGeocoding(lat, lng);
+                        }
+                      }}
+                    />
+                    <input 
+                      type="number" 
+                      name="longitude" 
+                      placeholder="Longitude (経度)" 
+                      step="any" 
+                      required 
+                      style={theme.components.input.base}
+                      onChange={(e) => {
+                        const lng = parseFloat(e.target.value);
+                        const latInput = e.target.parentElement.querySelector('input[name="latitude"]');
+                        const lat = parseFloat(latInput?.value);
+                        
+                        // Auto-reverse geocode when both coordinates are valid
+                        if (lat && lng && lat >= 20 && lat <= 50 && lng >= 120 && lng <= 150) {
+                          handleReverseGeocoding(lat, lng);
+                        }
+                      }}
+                    />
+                    <Button 
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const latInput = document.querySelector('input[name="latitude"]');
+                        const lngInput = document.querySelector('input[name="longitude"]');
+                        const lat = parseFloat(latInput?.value);
+                        const lng = parseFloat(lngInput?.value);
+                        
+                        if (lat && lng) {
+                          handleReverseGeocoding(lat, lng);
+                        } else {
+                          setMessage('Please enter both latitude and longitude first');
+                        }
+                      }}
+                      variant="secondary"
+                      size="small"
+                      title="Get address from coordinates"
+                    >
+                      📍→📫
+                    </Button>
+                  </div>
                 </div>
 
-                <select name="locationType" required style={theme.components.input.base}>
-                  <option value="">Select Type</option>
-                  <option value="store">🏪 Store (店舗)</option>
-                  <option value="competitor">🏢 Competitor (競合)</option>
-                  <option value="poi">📍 Point of Interest</option>
-                </select>
-                <Button type="submit" variant="primary">Add Location</Button>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: theme.spacing[2],
+                    fontSize: theme.typography.fontSize.sm,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    color: theme.colors.gray[700],
+                    fontFamily: theme.typography.fontFamily.primary
+                  }}>
+                    Location Type
+                  </label>
+                  <select name="locationType" required style={theme.components.input.base}>
+                    <option value="">Select Type</option>
+                    <option value="store">🏪 Store (店舗)</option>
+                    <option value="competitor">🏢 Competitor (競合)</option>
+                    <option value="poi">📍 Point of Interest</option>
+                  </select>
+                </div>
+                <Button type="submit" variant="primary" style={{ width: '100%' }}>Add Location</Button>
               </form>
               
-              <div style={{ marginTop: '15px', padding: '12px', backgroundColor: '#e8f5e8', borderRadius: '5px' }}>
-                <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px', color: '#2d5016' }}>
+              <div style={{ 
+                marginTop: theme.spacing[4], 
+                padding: theme.spacing[3], 
+                backgroundColor: theme.colors.green[50], 
+                borderRadius: theme.borderRadius.lg,
+                border: `1px solid ${theme.colors.green[200]}`
+              }}>
+                <div style={{ 
+                  fontSize: theme.typography.fontSize.sm, 
+                  fontWeight: theme.typography.fontWeight.semibold, 
+                  marginBottom: theme.spacing[2], 
+                  color: theme.colors.green[700]
+                }}>
                   🗾 国土地理院 + Enhanced Geocoding:
                 </div>
-                <div style={{ fontSize: '12px', color: '#2d5016' }}>
+                <div style={{ 
+                  fontSize: theme.typography.fontSize.xs, 
+                  color: theme.colors.green[700],
+                  lineHeight: 1.5
+                }}>
                   • <strong>Japanese Addresses:</strong> "東京都港区芝浦4-20-2" (via 国土地理院 API)<br/>
                   • <strong>Coordinates:</strong> "35.6762, 139.6503" (instant)<br/>
                   • <strong>Major Stations:</strong> "東京駅", "Tokyo Station", "品川駅"<br/>
@@ -2373,31 +2621,51 @@ function App() {
 
             {/* Locations List */}
             <div style={formStyle}>
-              <h3>Locations ({locations.length})</h3>
+              <h3 style={formHeaderStyle}>Locations ({locations.length})</h3>
               {locations.length === 0 ? (
-                <p>No locations yet. Add your first location!</p>
+                <div style={{
+                  textAlign: 'center',
+                  padding: theme.spacing[8],
+                  color: theme.colors.gray[600]
+                }}>
+                  <p style={bodyTextStyle}>No locations yet. Add your first location!</p>
+                </div>
               ) : (
                 <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                   {locations.map(location => (
                     <div key={location.id} style={{ 
-                      padding: '10px', 
-                      backgroundColor: '#f8f9fa', 
-                      borderRadius: '3px', 
-                      marginBottom: '5px',
-                      fontSize: '14px'
+                      ...projectCardStyle,
+                      padding: theme.spacing[4], 
+                      marginBottom: theme.spacing[3],
+                      position: 'relative'
                     }}>
-                      <div style={{ fontWeight: 'bold' }}>
+                      <div style={{ 
+                        ...heading3Style,
+                        fontSize: theme.typography.fontSize.base,
+                        marginBottom: theme.spacing[2]
+                      }}>
                         {location.location_type === 'store' ? '🏪' : 
                          location.location_type === 'competitor' ? '🏢' : '📍'} {location.name}
                       </div>
-                      {location.address && <div style={{ color: '#666' }}>{location.address}</div>}
-                      <div style={{ fontSize: '12px', color: '#888' }}>
+                      {location.address && (
+                        <div style={{
+                          ...captionTextStyle,
+                          marginBottom: theme.spacing[2]
+                        }}>
+                          {location.address}
+                        </div>
+                      )}
+                      <div style={{ 
+                        ...captionTextStyle,
+                        fontSize: theme.typography.fontSize.xs,
+                        marginBottom: theme.spacing[3]
+                      }}>
                         {location.coordinates.coordinates[1].toFixed(4)}, {location.coordinates.coordinates[0].toFixed(4)}
                       </div>
-                      <div style={{ ...buttonContainerStyle, marginTop: theme.spacing[1] }}>
+                      <div style={buttonGroupStyle}>
                         <Button 
                           onClick={() => setSelectedLocation(location)}
-                          variant="secondary"
+                          variant="primary"
                           size="small"
                         >
                           📊 Create Trade Area
@@ -2424,8 +2692,8 @@ function App() {
 
           {/* Trade Area Creation Form */}
           {selectedLocation && (
-            <div style={formStyle}>
-              <h3>📊 Advanced Trade Area Analysis for {selectedLocation.name}</h3>
+            <div style={compactFormStyle}>
+              <h3 style={formHeaderStyle}>📊 Advanced Trade Area Analysis for {selectedLocation.name}</h3>
               <form onSubmit={(e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target);
@@ -2436,50 +2704,79 @@ function App() {
                 setSelectedLocation(null);
                 e.target.reset();
               }}>
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                <div style={{ marginBottom: theme.spacing[4] }}>
+                  <label style={{
+                    display: 'block',
+                    marginBottom: theme.spacing[2],
+                    fontSize: theme.typography.fontSize.sm,
+                    fontWeight: theme.typography.fontWeight.medium,
+                    color: theme.colors.gray[700],
+                    fontFamily: theme.typography.fontFamily.primary
+                  }}>
                     Analysis Type:
                   </label>
                   <select name="analysisType" required style={theme.components.input.base}>
                     <option value="radius">📏 Simple Radius (Basic)</option>
                     <option value="huff">🎯 Huff Model (Advanced - needs multiple locations)</option>
                   </select>
-                  <small style={{ color: '#666', fontSize: '12px' }}>
+                  <small style={{ 
+                    ...captionTextStyle,
+                    marginTop: theme.spacing[1],
+                    display: 'block'
+                  }}>
                     Huff Model uses competitor locations for realistic market capture analysis
                   </small>
                 </div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
-                  <input 
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: '1fr 1fr', 
+                  gap: theme.spacing[3], 
+                  marginBottom: theme.spacing[4] 
+                }}>
+                  <Input 
                     type="text" 
                     name="tradeAreaName" 
                     placeholder="Trade Area Name (optional)"
-                    style={theme.components.input.base} 
+                    label="Trade Area Name"
                   />
-                  <select name="radius" style={theme.components.input.base}>
-                    <option value="">Auto-size for Huff Model</option>
-                    <option value="0.5">500m radius</option>
-                    <option value="1">1km radius</option>
-                    <option value="2">2km radius</option>
-                    <option value="3">3km radius</option>
-                    <option value="5">5km radius</option>
-                    <option value="10">10km radius</option>
-                  </select>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: theme.spacing[2],
+                      fontSize: theme.typography.fontSize.sm,
+                      fontWeight: theme.typography.fontWeight.medium,
+                      color: theme.colors.gray[700],
+                      fontFamily: theme.typography.fontFamily.primary
+                    }}>
+                      Radius
+                    </label>
+                    <select name="radius" style={theme.components.input.base}>
+                      <option value="">Auto-size for Huff Model</option>
+                      <option value="0.5">500m radius</option>
+                      <option value="1">1km radius</option>
+                      <option value="2">2km radius</option>
+                      <option value="3">3km radius</option>
+                      <option value="5">5km radius</option>
+                      <option value="10">10km radius</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div style={{ 
-                  backgroundColor: '#e3f2fd', 
-                  padding: '10px', 
-                  borderRadius: '5px', 
-                  marginBottom: '15px',
-                  fontSize: '13px'
+                  backgroundColor: theme.colors.blue[50], 
+                  padding: theme.spacing[3], 
+                  borderRadius: theme.borderRadius.lg, 
+                  marginBottom: theme.spacing[4],
+                  fontSize: theme.typography.fontSize.sm,
+                  border: `1px solid ${theme.colors.blue[200]}`
                 }}>
-                  <strong>💡 Analysis Methods:</strong><br/>
+                  <strong style={{ color: theme.colors.blue[700] }}>💡 Analysis Methods:</strong><br/>
                   • <strong>Simple Radius:</strong> Traditional circular trade area<br/>
                   • <strong>Huff Model:</strong> Scientific customer capture probability based on distance decay and competitor locations
                 </div>
 
-                <div style={{ marginTop: '10px' }}>
+                <div style={buttonGroupStyle}>
                   <Button type="submit" variant="primary">
                     {locations.length > 1 ? '🎯 Run Analysis' : '📏 Create Trade Area'}
                   </Button>
@@ -2487,7 +2784,6 @@ function App() {
                     type="button" 
                     onClick={() => setSelectedLocation(null)}
                     variant="secondary"
-                    style={{ marginLeft: theme.spacing[2] }}
                   >
                     Cancel
                   </Button>
@@ -2860,23 +3156,33 @@ function App() {
           {/* Trade Areas List */}
           {tradeAreas.length > 0 && (
             <div style={formStyle}>
-              <h3>🎯 Trade Areas ({tradeAreas.length})</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '10px' }}>
+              <h3 style={formHeaderStyle}>🎯 Trade Areas ({tradeAreas.length})</h3>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+                gap: theme.spacing[4] 
+              }}>
                 {tradeAreas.map((tradeArea, index) => {
                   const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3'];
                   const color = colors[index % colors.length];
                   return (
                     <div key={tradeArea.id} style={{ 
-                      padding: '15px', 
-                      backgroundColor: '#fff', 
+                      ...projectCardStyle,
                       border: `2px solid ${color}`,
-                      borderRadius: '8px',
                       position: 'relative'
                     }}>
-                      <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+                      <div style={{ 
+                        ...heading3Style,
+                        marginBottom: theme.spacing[3],
+                        paddingRight: theme.spacing[8] // Make room for delete button
+                      }}>
                         {tradeArea.name}
                       </div>
-                      <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                      <div style={{ 
+                        ...bodyTextStyle,
+                        fontSize: theme.typography.fontSize.sm,
+                        lineHeight: 1.6
+                      }}>
                         📍 Center: {tradeArea.locationName}<br/>
                         {tradeArea.analysisType === 'huff' ? (
                           <>
@@ -2899,23 +3205,18 @@ function App() {
                           </>
                         )}
                       </div>
-                      <button 
+                      <Button 
                         onClick={() => deleteTradeArea(tradeArea.id)}
+                        variant="danger"
+                        size="small"
                         style={{
                           position: 'absolute',
-                          top: '10px',
-                          right: '10px',
-                          background: '#dc3545',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '3px',
-                          padding: '5px 8px',
-                          fontSize: '12px',
-                          cursor: 'pointer'
+                          top: theme.spacing[3],
+                          right: theme.spacing[3]
                         }}
                       >
                         Delete
-                      </button>
+                      </Button>
                     </div>
                   );
                 })}
@@ -2924,14 +3225,22 @@ function App() {
           )}
 
           {/* Map and AI Chat Integration */}
-          <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
+          <div style={{ 
+            display: 'flex', 
+            gap: theme.spacing[5], 
+            marginTop: theme.spacing[5],
+            flexDirection: 'column',
+            
+            '@media (min-width: 1024px)': {
+              flexDirection: 'row'
+            }
+          }}>
             {/* Map Section */}
             <div style={{ 
+              ...mapContainerStyle,
               flex: showAIChat ? '1' : '1', 
               height: '600px',
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              overflow: 'hidden'
+              minHeight: '500px'
             }}>
               {useMapbox ? (
                 <MapboxMap
@@ -2990,8 +3299,11 @@ function App() {
             {/* AI Chat Section */}
             {showAIChat && (
               <div style={{ 
+                ...mapContainerStyle,
                 flex: '1',
-                maxWidth: '500px'
+                maxWidth: '500px',
+                height: '600px',
+                minHeight: '500px'
               }}>
                 <AIAnalysisChat
                   project={selectedProject}
@@ -3009,7 +3321,10 @@ function App() {
 
           {/* Store Optimization Panel */}
           {showOptimization && (
-            <div style={{ marginTop: '20px' }}>
+            <div style={{ 
+              ...formStyle,
+              marginTop: theme.spacing[5]
+            }}>
               <OptimizationPanel
                 demandMeshes={demandMeshes}
                 existingStores={locations.filter(loc => loc.location_type === 'store')}

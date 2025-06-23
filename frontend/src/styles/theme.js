@@ -243,6 +243,7 @@ export const theme = {
     input: {
       base: {
         width: '100%',
+        boxSizing: 'border-box',     // Ensure padding doesn't cause overflow
         padding: '0.75rem 1rem',     // Standard padding
         border: '1px solid #D1D5DB', // border-gray-300
         borderRadius: '0.5rem',      // rounded-lg (8px)

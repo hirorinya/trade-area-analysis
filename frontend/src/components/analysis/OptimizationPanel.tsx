@@ -18,8 +18,11 @@ import {
   mipStyleOptimization, 
   competitiveAnalysis, 
   multiScenarioAnalysis,
+  storeCapacityOptimization,
   generateCandidateSites 
 } from '../../utils/optimizationEngine';
+import { analyzeHistoricalPatterns } from '../../utils/historicalAnalysis';
+import HistoricalDataInput from './HistoricalDataInput';
 
 interface OptimizationPanelProps {
   demandMeshes: any[];
@@ -37,7 +40,7 @@ interface OptimizationParams {
   minDistance: number;
   maxBudget: number;
   storeCost: number;
-  algorithm: 'greedy' | 'mip' | 'competitive' | 'multi-scenario';
+  algorithm: 'greedy' | 'mip' | 'competitive' | 'multi-scenario' | 'capacity' | 'historical';
 }
 
 const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
@@ -64,6 +67,8 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [historicalData, setHistoricalData] = useState<any[]>([]);
+  const [showHistoricalInput, setShowHistoricalInput] = useState(false);
 
   // Generate candidate sites when bounds change
   useEffect(() => {
@@ -210,6 +215,57 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           optimizationResults = multiScenarioAnalysis(candidateSites, demandMeshes, scenarios);
           break;
 
+        case 'capacity':
+          console.log('Running store capacity optimization...');
+          if (existingStores.length === 0) {
+            showMessage('No existing stores found for capacity analysis.', 'error');
+            setIsOptimizing(false);
+            return;
+          }
+          
+          optimizationResults = storeCapacityOptimization(
+            existingStores,
+            demandMeshes,
+            {
+              maxRadius: params.maxRadius,
+              distanceDecay: params.distanceDecay,
+              peakHourMultiplier: 1.5,
+              serviceTimePerCustomer: 3,
+              operatingHoursPerDay: 12,
+              targetUtilization: 0.8,
+              staffingCostPerHour: 25,
+              fixedCostPerDay: 500,
+              revenuePerCustomer: 15
+            }
+          );
+          break;
+
+        case 'historical':
+          console.log('Running historical pattern analysis...');
+          if (historicalData.length === 0) {
+            showMessage('No historical data provided. Please add store performance data first.', 'error');
+            setIsOptimizing(false);
+            return;
+          }
+          
+          if (demandMeshes.length === 0) {
+            showMessage('No demand data available. Please enable population grid first.', 'error');
+            setIsOptimizing(false);
+            return;
+          }
+          
+          optimizationResults = analyzeHistoricalPatterns(
+            historicalData,
+            demandMeshes,
+            {
+              performanceThreshold: 0.8,
+              minSampleSize: 3,
+              featureImportanceThreshold: 0.1,
+              confidenceLevel: 0.7
+            }
+          );
+          break;
+
         default:
           throw new Error('Unknown optimization algorithm');
       }
@@ -277,6 +333,8 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
               <option value="mip">MIP-Style (Optimal)</option>
               <option value="competitive">Competitive Analysis</option>
               <option value="multi-scenario">Multi-Scenario</option>
+              <option value="capacity">Store Capacity Analysis</option>
+              <option value="historical">Historical Pattern Analysis</option>
             </select>
           </div>
 
@@ -357,6 +415,78 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
               min={100000}
               step={100000}
             />
+          </div>
+        )}
+
+        {/* Historical Data Input */}
+        {params.algorithm === 'historical' && (
+          <div style={{ 
+            marginTop: theme.spacing[4], 
+            padding: theme.spacing[4], 
+            backgroundColor: theme.colors.yellow[50], 
+            borderRadius: theme.borderRadius.lg,
+            border: `1px solid ${theme.colors.yellow[200]}`
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing[4] }}>
+              <h4 style={{ ...heading3Style, fontSize: theme.typography.fontSize.lg, color: theme.colors.yellow[700] }}>
+                📊 Historical Store Performance Data
+              </h4>
+              <Button 
+                onClick={() => setShowHistoricalInput(!showHistoricalInput)}
+                variant="secondary"
+                size="small"
+              >
+                {showHistoricalInput ? 'Hide Input' : 'Add Data'}
+              </Button>
+            </div>
+
+            <p style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600], marginBottom: theme.spacing[3] }}>
+              Provide historical performance data for your existing stores to identify winning patterns and generate tailored recommendations.
+            </p>
+
+            {historicalData.length > 0 && (
+              <div style={{ marginBottom: theme.spacing[4] }}>
+                <h5 style={{ fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.semibold, marginBottom: theme.spacing[2] }}>
+                  Current Data: {historicalData.length} stores
+                </h5>
+                <div style={{ 
+                  maxHeight: '150px', 
+                  overflowY: 'auto', 
+                  backgroundColor: theme.colors.white, 
+                  border: `1px solid ${theme.colors.gray[300]}`, 
+                  borderRadius: theme.borderRadius.md, 
+                  padding: theme.spacing[2] 
+                }}>
+                  {historicalData.map((store, idx) => (
+                    <div key={idx} style={{ 
+                      fontSize: theme.typography.fontSize.xs, 
+                      padding: theme.spacing[1], 
+                      borderBottom: idx < historicalData.length - 1 ? `1px solid ${theme.colors.gray[200]}` : 'none' 
+                    }}>
+                      <strong>{store.name}</strong> - Revenue: ¥{formatNumber(store.revenue || 0)}, Profit: ¥{formatNumber(store.profit || 0)}
+                    </div>
+                  ))}
+                </div>
+                <Button 
+                  onClick={() => setHistoricalData([])}
+                  variant="secondary"
+                  size="small"
+                  style={{ marginTop: theme.spacing[2] }}
+                >
+                  Clear Data
+                </Button>
+              </div>
+            )}
+
+            {showHistoricalInput && (
+              <HistoricalDataInput 
+                onDataAdded={(newStore) => {
+                  setHistoricalData(prev => [...prev, { ...newStore, id: Date.now().toString() }]);
+                  setShowHistoricalInput(false);
+                }}
+                onCancel={() => setShowHistoricalInput(false)}
+              />
+            )}
           </div>
         )}
 
@@ -472,6 +602,227 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                   <div>Total Demand: {formatNumber(results.competitors.totalDemand)}</div>
                   <div>Avg per Store: {formatNumber(results.competitors.averageDemandPerStore)}</div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Store capacity analysis results */}
+          {results.storeAnalysis && (
+            <div style={{ marginTop: theme.spacing[4] }}>
+              <h4 style={{ ...heading3Style, fontSize: theme.typography.fontSize.lg }}>Store Capacity Analysis</h4>
+              
+              {/* Network-level metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: theme.spacing[3], marginBottom: theme.spacing[4] }}>
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.blue[50], borderRadius: theme.borderRadius.lg }}>
+                  <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.blue[600] }}>
+                    {results.networkMetrics.averageUtilization}%
+                  </div>
+                  <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>Avg Utilization</div>
+                </div>
+                
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.green[50], borderRadius: theme.borderRadius.lg }}>
+                  <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.green[600] }}>
+                    {formatCurrency(results.networkMetrics.totalProfitImprovement)}
+                  </div>
+                  <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>Daily Profit Opportunity</div>
+                </div>
+                
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.yellow[50], borderRadius: theme.borderRadius.lg }}>
+                  <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.yellow[600] }}>
+                    {results.networkMetrics.storesOverCapacity}
+                  </div>
+                  <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>Over Capacity</div>
+                </div>
+                
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.gray[100], borderRadius: theme.borderRadius.lg }}>
+                  <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.gray[600] }}>
+                    {results.networkMetrics.storesUnderUtilized}
+                  </div>
+                  <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>Under Utilized</div>
+                </div>
+              </div>
+              
+              {/* Priority actions */}
+              {results.priorityActions.length > 0 && (
+                <div style={{ marginBottom: theme.spacing[4] }}>
+                  <h5 style={{ ...heading3Style, fontSize: theme.typography.fontSize.base, color: theme.colors.red[600] }}>
+                    Priority Actions Required
+                  </h5>
+                  <div style={{ backgroundColor: theme.colors.red[50], padding: theme.spacing[3], borderRadius: theme.borderRadius.lg, border: `1px solid ${theme.colors.red[200]}` }}>
+                    {results.priorityActions.map((store: any, idx: number) => (
+                      <div key={idx} style={{ marginBottom: theme.spacing[2] }}>
+                        <strong>{store.storeName}</strong> - {store.capacity.current.utilization}% utilization
+                        <br />
+                        <span style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>
+                          {store.recommendation}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Store-by-store analysis table */}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: theme.typography.fontSize.sm }}>
+                  <thead>
+                    <tr style={{ backgroundColor: theme.colors.gray[100] }}>
+                      <th style={{ padding: theme.spacing[2], textAlign: 'left', borderBottom: `1px solid ${theme.colors.gray[300]}` }}>Store</th>
+                      <th style={{ padding: theme.spacing[2], textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray[300]}` }}>Daily Demand</th>
+                      <th style={{ padding: theme.spacing[2], textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray[300]}` }}>Utilization</th>
+                      <th style={{ padding: theme.spacing[2], textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray[300]}` }}>Revenue</th>
+                      <th style={{ padding: theme.spacing[2], textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray[300]}` }}>Profit Improvement</th>
+                      <th style={{ padding: theme.spacing[2], textAlign: 'left', borderBottom: `1px solid ${theme.colors.gray[300]}` }}>Recommendation</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.storeAnalysis.map((store: any, idx: number) => (
+                      <tr key={idx} style={{ borderBottom: `1px solid ${theme.colors.gray[200]}` }}>
+                        <td style={{ padding: theme.spacing[2] }}>{store.storeName}</td>
+                        <td style={{ padding: theme.spacing[2], textAlign: 'right' }}>{store.demand.daily}</td>
+                        <td style={{ 
+                          padding: theme.spacing[2], 
+                          textAlign: 'right',
+                          color: store.capacity.current.utilization > 95 ? theme.colors.red[600] : 
+                                 store.capacity.current.utilization < 60 ? theme.colors.yellow[600] : 
+                                 theme.colors.green[600]
+                        }}>
+                          {store.capacity.current.utilization}%
+                        </td>
+                        <td style={{ padding: theme.spacing[2], textAlign: 'right' }}>{formatCurrency(store.financial.revenue)}</td>
+                        <td style={{ padding: theme.spacing[2], textAlign: 'right' }}>
+                          {store.financial.profitImprovement > 0 ? '+' : ''}{formatCurrency(store.financial.profitImprovement)}
+                        </td>
+                        <td style={{ 
+                          padding: theme.spacing[2],
+                          color: store.priority === 'High' ? theme.colors.red[600] : 
+                                 store.priority === 'Medium' ? theme.colors.yellow[600] : 
+                                 theme.colors.green[600]
+                        }}>
+                          {store.recommendation}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Historical Pattern Analysis Results */}
+          {results.siteRecommendations && (
+            <div style={{ marginTop: theme.spacing[4] }}>
+              <h4 style={{ ...heading3Style, fontSize: theme.typography.fontSize.lg }}>Historical Pattern Analysis</h4>
+              
+              {/* Pattern Strength Metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: theme.spacing[3], marginBottom: theme.spacing[4] }}>
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.purple[50], borderRadius: theme.borderRadius.lg }}>
+                  <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.purple[600] }}>
+                    {results.metadata.totalStoresAnalyzed}
+                  </div>
+                  <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>Stores Analyzed</div>
+                </div>
+                
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.green[50], borderRadius: theme.borderRadius.lg }}>
+                  <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.green[600] }}>
+                    {Math.round(results.metadata.patternStrength * 100)}%
+                  </div>
+                  <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>Pattern Strength</div>
+                </div>
+                
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.blue[50], borderRadius: theme.borderRadius.lg }}>
+                  <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.blue[600] }}>
+                    {results.performanceCategories.highPerformers.length}
+                  </div>
+                  <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>High Performers</div>
+                </div>
+                
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.orange[50], borderRadius: theme.borderRadius.lg }}>
+                  <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.orange[600] }}>
+                    {results.siteRecommendations.length}
+                  </div>
+                  <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>Recommended Sites</div>
+                </div>
+              </div>
+
+              {/* Feature Importance */}
+              {results.featureImportance && (
+                <div style={{ marginBottom: theme.spacing[4] }}>
+                  <h5 style={{ ...heading3Style, fontSize: theme.typography.fontSize.base, marginBottom: theme.spacing[3] }}>
+                    🎯 Key Success Factors
+                  </h5>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: theme.spacing[2] }}>
+                    {Object.entries(results.featureImportance).slice(0, 5).map(([feature, importance]: [string, any], idx) => (
+                      <div key={feature} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: theme.spacing[2],
+                        backgroundColor: theme.colors.gray[50],
+                        borderRadius: theme.borderRadius.md,
+                        fontSize: theme.typography.fontSize.sm
+                      }}>
+                        <div style={{
+                          width: `${importance * 100}%`,
+                          height: '4px',
+                          backgroundColor: theme.colors.blue[500],
+                          borderRadius: '2px',
+                          marginRight: theme.spacing[2]
+                        }} />
+                        <span style={{ fontWeight: theme.typography.fontWeight.medium }}>{feature}</span>
+                        <span style={{ marginLeft: 'auto', color: theme.colors.gray[600] }}>
+                          {Math.round(importance * 100)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Site Recommendations */}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: theme.typography.fontSize.sm }}>
+                  <thead>
+                    <tr style={{ backgroundColor: theme.colors.gray[100] }}>
+                      <th style={{ padding: theme.spacing[2], textAlign: 'left', borderBottom: `1px solid ${theme.colors.gray[300]}` }}>Location</th>
+                      <th style={{ padding: theme.spacing[2], textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray[300]}` }}>Pattern Score</th>
+                      <th style={{ padding: theme.spacing[2], textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray[300]}` }}>Confidence</th>
+                      <th style={{ padding: theme.spacing[2], textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray[300]}` }}>Expected Performance</th>
+                      <th style={{ padding: theme.spacing[2], textAlign: 'right', borderBottom: `1px solid ${theme.colors.gray[300]}` }}>Projected Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.siteRecommendations.slice(0, 10).map((site: any, idx: number) => {
+                      const forecast = results.financialForecasts?.find((f: any) => 
+                        f.siteId === `${site.latitude.toFixed(4)}_${site.longitude.toFixed(4)}`
+                      );
+                      return (
+                        <tr key={idx} style={{ borderBottom: `1px solid ${theme.colors.gray[200]}` }}>
+                          <td style={{ padding: theme.spacing[2] }}>
+                            {site.latitude.toFixed(4)}, {site.longitude.toFixed(4)}
+                          </td>
+                          <td style={{ 
+                            padding: theme.spacing[2], 
+                            textAlign: 'right',
+                            color: site.patternScore > 0.8 ? theme.colors.green[600] : 
+                                   site.patternScore > 0.6 ? theme.colors.yellow[600] : 
+                                   theme.colors.red[600]
+                          }}>
+                            {Math.round(site.patternScore * 100)}%
+                          </td>
+                          <td style={{ padding: theme.spacing[2], textAlign: 'right' }}>
+                            {Math.round(site.confidence * 100)}%
+                          </td>
+                          <td style={{ padding: theme.spacing[2], textAlign: 'right' }}>
+                            {Math.round(site.expectedPerformance * 100)}%
+                          </td>
+                          <td style={{ padding: theme.spacing[2], textAlign: 'right' }}>
+                            {forecast ? formatCurrency(forecast.projectedRevenue) : 'N/A'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

@@ -4,7 +4,12 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { generateDemandGrid, calculateDemandCapture, calculateStorePerformance } from '../../utils/demandGrid';
 
 // Set your Mapbox access token
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoidHJhZGUtYXJlYS1hbmFseXNpcyIsImEiOiJjbHpoaGV5M2QwNjZnMmtwNGE3bTNlOGpnIn0.example';
+const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
+if (!mapboxToken || mapboxToken.includes('your_mapbox_token_here')) {
+  console.warn('⚠️ Mapbox token not configured. Please set VITE_MAPBOX_TOKEN environment variable.');
+  console.warn('📖 See MAPBOX_SETUP.md for detailed setup instructions.');
+}
+mapboxgl.accessToken = mapboxToken || 'pk.eyJ1IjoidHJhZGUtYXJlYS1hbmFseXNpcyIsImEiOiJjbHpoaGV5M2QwNjZnMmtwNGE3bTNlOGpnIn0.example';
 
 interface Location {
   id: string;
@@ -44,18 +49,30 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
   const markers = useRef<mapboxgl.Marker[]>([]);
   const [demandMeshes, setDemandMeshes] = useState<any[]>([]);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [visualizationMode, setVisualizationMode] = useState<'grid' | 'heatmap'>('grid');
+
+  // Check if Mapbox token is properly configured
+  const isTokenConfigured = mapboxToken && !mapboxToken.includes('your_mapbox_token_here') && !mapboxToken.includes('example');
 
   // Initialize map
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: style,
-      center: center,
-      zoom: zoom,
-      attributionControl: false
-    });
+    // Check if token is configured
+    if (!isTokenConfigured) {
+      setMapError('Mapbox token not configured. Please set VITE_MAPBOX_TOKEN environment variable.');
+      return;
+    }
+
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: style,
+        center: center,
+        zoom: zoom,
+        attributionControl: false
+      });
 
     // Add navigation controls
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
@@ -73,53 +90,159 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
       });
     }
 
-    map.current.on('load', () => {
-      setMapLoaded(true);
-      
-      // Add demand grid source and layer
-      if (!map.current!.getSource('demand-grid')) {
-        map.current!.addSource('demand-grid', {
-          type: 'geojson',
-          data: {
-            type: 'FeatureCollection',
-            features: []
-          }
-        });
+      map.current.on('load', () => {
+        setMapLoaded(true);
         
-        // Add fill layer for demand visualization
-        map.current!.addLayer({
-          id: 'demand-grid-fill',
-          type: 'fill',
-          source: 'demand-grid',
-          paint: {
-            'fill-color': [
-              'interpolate',
-              ['linear'],
-              ['get', 'demand'],
-              0, '#f3f4f6',  // Light gray for no demand
-              10, '#dbeafe', // Light blue
-              50, '#93c5fd', // Medium blue  
-              100, '#3b82f6', // Blue
-              200, '#1d4ed8', // Dark blue
-              500, '#1e3a8a'  // Very dark blue
-            ],
-            'fill-opacity': 0.6
-          }
-        });
-        
-        // Add stroke layer for mesh boundaries
-        map.current!.addLayer({
-          id: 'demand-grid-stroke',
-          type: 'line',
-          source: 'demand-grid',
-          paint: {
-            'line-color': '#6b7280',
-            'line-width': 0.5,
-            'line-opacity': 0.3
-          }
-        });
-      }
-    });
+        // Add demand grid source and layer
+        if (!map.current!.getSource('demand-grid')) {
+          map.current!.addSource('demand-grid', {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: []
+            }
+          });
+          
+          // Add fill layer for demand visualization
+          map.current!.addLayer({
+            id: 'demand-grid-fill',
+            type: 'fill',
+            source: 'demand-grid',
+            paint: {
+              'fill-color': [
+                'interpolate',
+                ['linear'],
+                ['get', 'demand'],
+                0, '#f3f4f6',  // Light gray for no demand
+                10, '#dbeafe', // Light blue
+                50, '#93c5fd', // Medium blue  
+                100, '#3b82f6', // Blue
+                200, '#1d4ed8', // Dark blue
+                500, '#1e3a8a'  // Very dark blue
+              ],
+              'fill-opacity': 0.6
+            }
+          });
+          
+          // Add stroke layer for mesh boundaries
+          map.current!.addLayer({
+            id: 'demand-grid-stroke',
+            type: 'line',
+            source: 'demand-grid',
+            paint: {
+              'line-color': '#6b7280',
+              'line-width': 0.5,
+              'line-opacity': 0.3
+            }
+          });
+
+          // Add heat-map source for points-based visualization
+          map.current!.addSource('demand-heatmap', {
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: []
+            }
+          });
+
+          // Add heat-map layer
+          map.current!.addLayer({
+            id: 'demand-heatmap-layer',
+            type: 'heatmap',
+            source: 'demand-heatmap',
+            maxzoom: 15,
+            paint: {
+              // Increase weight based on demand property
+              'heatmap-weight': [
+                'interpolate',
+                ['linear'],
+                ['get', 'demand'],
+                0, 0,
+                100, 0.5,
+                500, 1
+              ],
+              // Increase intensity as zoom level increases
+              'heatmap-intensity': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                8, 1,
+                15, 3
+              ],
+              // Use colors from blue to red for heat visualization
+              'heatmap-color': [
+                'interpolate',
+                ['linear'],
+                ['heatmap-density'],
+                0, 'rgba(236,255,255,0)',     // Transparent
+                0.1, 'rgba(224,255,255,0.6)', // Very light cyan
+                0.3, 'rgba(178,223,238,0.8)', // Light blue
+                0.5, 'rgba(51,160,255,0.9)',  // Medium blue  
+                0.7, 'rgba(255,140,0,0.9)',   // Orange
+                0.9, 'rgba(255,69,0,1)',      // Red-orange
+                1, 'rgba(139,0,0,1)'          // Dark red
+              ],
+              // Adjust radius based on zoom level
+              'heatmap-radius': [
+                'interpolate',
+                ['linear'],
+                ['zoom'],
+                8, 15,
+                15, 30
+              ],
+              // Opacity
+              'heatmap-opacity': 0.8
+            }
+          });
+
+          // Add circle layer for high zoom levels (when heatmap fades out)
+          map.current!.addLayer({
+            id: 'demand-points',
+            type: 'circle',
+            source: 'demand-heatmap',
+            minzoom: 14,
+            paint: {
+              'circle-radius': [
+                'interpolate',
+                ['linear'],
+                ['get', 'demand'],
+                0, 2,
+                100, 8,
+                500, 15
+              ],
+              'circle-color': [
+                'interpolate',
+                ['linear'],
+                ['get', 'demand'],
+                0, '#3b82f6',
+                100, '#f59e0b', 
+                300, '#ef4444',
+                500, '#991b1b'
+              ],
+              'circle-opacity': 0.7,
+              'circle-stroke-color': '#ffffff',
+              'circle-stroke-width': 1
+            }
+          });
+        }
+      });
+
+      // Handle map errors
+      map.current.on('error', (e) => {
+        console.error('Mapbox error:', e);
+        if (e.error?.message?.includes('401')) {
+          setMapError('Mapbox token is invalid or expired. Please check your VITE_MAPBOX_TOKEN.');
+        } else if (e.error?.message?.includes('403')) {
+          setMapError('Mapbox token access denied. Check token permissions and URL restrictions.');
+        } else {
+          setMapError('Map failed to load. Please check your internet connection and Mapbox token.');
+        }
+      });
+
+    } catch (error) {
+      console.error('Failed to initialize map:', error);
+      setMapError('Failed to initialize map. Please check your Mapbox token configuration.');
+    }
 
     return () => {
       if (map.current) {
@@ -202,7 +325,7 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
     }
   }, [locations, mapLoaded, onLocationSelect]);
 
-  // Generate and display demand grid
+  // Generate and display demand grid with flow lines
   useEffect(() => {
     if (!map.current || !mapLoaded || !showDemandGrid || !gridBounds) return;
     
@@ -230,8 +353,117 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
       }
       
       setDemandMeshes(updatedMeshes);
+      
+      // Generate demand flow lines from meshes to stores
+      const flowLines = updatedMeshes
+        .filter(mesh => mesh.capturedBy.length > 0 && mesh.demand > 0)
+        .flatMap(mesh => 
+          mesh.capturedBy.map(storeId => {
+            const store = storeLocations.find(s => s.id === storeId);
+            if (!store) return null;
+            
+            const meshCenter = {
+              lng: (mesh.bounds.east + mesh.bounds.west) / 2,
+              lat: (mesh.bounds.north + mesh.bounds.south) / 2
+            };
+            
+            return {
+              type: 'Feature',
+              properties: {
+                meshId: mesh.id,
+                storeId: store.id,
+                storeName: store.name,
+                demand: mesh.demand,
+                captureRatio: mesh.captureRatio,
+                flowIntensity: Math.min(mesh.demand / 50, 1) // Normalize for visualization
+              },
+              geometry: {
+                type: 'LineString',
+                coordinates: [
+                  [meshCenter.lng, meshCenter.lat],
+                  [store.longitude, store.latitude]
+                ]
+              }
+            };
+          })
+        )
+        .filter(line => line !== null);
+      
+      // Add or update demand flow source
+      if (!map.current.getSource('demand-flows')) {
+        map.current.addSource('demand-flows', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: flowLines
+          }
+        });
+        
+        // Add flow lines layer
+        map.current.addLayer({
+          id: 'demand-flow-lines',
+          type: 'line',
+          source: 'demand-flows',
+          paint: {
+            'line-color': [
+              'interpolate',
+              ['linear'],
+              ['get', 'flowIntensity'],
+              0, '#93c5fd',      // Light blue for low flow
+              0.3, '#3b82f6',    // Medium blue
+              0.6, '#1d4ed8',    // Dark blue
+              1, '#1e3a8a'       // Very dark blue for high flow
+            ],
+            'line-width': [
+              'interpolate',
+              ['linear'],
+              ['get', 'flowIntensity'],
+              0, 0.5,
+              0.3, 1,
+              0.6, 1.5,
+              1, 2.5
+            ],
+            'line-opacity': 0.7
+          }
+        });
+        
+        // Add animated flow layer for high-intensity flows
+        map.current.addLayer({
+          id: 'demand-flow-animated',
+          type: 'line',
+          source: 'demand-flows',
+          filter: ['>', ['get', 'flowIntensity'], 0.5],
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': 1,
+            'line-opacity': [
+              'interpolate',
+              ['linear'],
+              ['*', ['%', ['+', ['get', 'flowIntensity'], ['*', ['get', 'demand'], 0.01]], 2], 0.5],
+              0, 0.3,
+              0.5, 0.8,
+              1, 0.3
+            ]
+          }
+        });
+      } else {
+        // Update existing flow source
+        const flowSource = map.current.getSource('demand-flows') as mapboxgl.GeoJSONSource;
+        flowSource.setData({
+          type: 'FeatureCollection',
+          features: flowLines
+        });
+      }
     } else {
       setDemandMeshes(meshes);
+      
+      // Hide flow lines if no stores
+      if (map.current.getLayer('demand-flow-lines')) {
+        map.current.setLayoutProperty('demand-flow-lines', 'visibility', 'none');
+      }
+      if (map.current.getLayer('demand-flow-animated')) {
+        map.current.setLayoutProperty('demand-flow-animated', 'visibility', 'none');
+      }
     }
     
     // Convert meshes to GeoJSON
@@ -256,7 +488,26 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
       }
     }));
     
-    // Update map source
+    // Convert meshes to point features for heat-map
+    const heatmapPoints = meshes
+      .filter(mesh => mesh.demand > 0) // Only include meshes with demand
+      .map(mesh => ({
+        type: 'Feature',
+        properties: {
+          demand: mesh.demand,
+          population: mesh.population,
+          id: mesh.id
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [
+            (mesh.bounds.east + mesh.bounds.west) / 2,  // Center longitude
+            (mesh.bounds.north + mesh.bounds.south) / 2  // Center latitude
+          ]
+        }
+      }));
+
+    // Update demand grid source
     const source = map.current.getSource('demand-grid') as mapboxgl.GeoJSONSource;
     if (source) {
       source.setData({
@@ -264,19 +515,56 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
         features: geoJsonFeatures
       });
       
-      // Show the layers
-      map.current.setLayoutProperty('demand-grid-fill', 'visibility', 'visible');
-      map.current.setLayoutProperty('demand-grid-stroke', 'visibility', 'visible');
+      // Show grid layers based on visualization mode
+      if (visualizationMode === 'grid') {
+        map.current.setLayoutProperty('demand-grid-fill', 'visibility', 'visible');
+        map.current.setLayoutProperty('demand-grid-stroke', 'visibility', 'visible');
+      } else {
+        map.current.setLayoutProperty('demand-grid-fill', 'visibility', 'none');
+        map.current.setLayoutProperty('demand-grid-stroke', 'visibility', 'none');
+      }
     }
-  }, [showDemandGrid, gridBounds, locations, mapLoaded, onDemandAnalysis]);
+
+    // Update heat-map source
+    const heatmapSource = map.current.getSource('demand-heatmap') as mapboxgl.GeoJSONSource;
+    if (heatmapSource) {
+      heatmapSource.setData({
+        type: 'FeatureCollection',
+        features: heatmapPoints
+      });
+      
+      // Show heat-map layers based on visualization mode
+      if (visualizationMode === 'heatmap') {
+        map.current.setLayoutProperty('demand-heatmap-layer', 'visibility', 'visible');
+        map.current.setLayoutProperty('demand-points', 'visibility', 'visible');
+      } else {
+        map.current.setLayoutProperty('demand-heatmap-layer', 'visibility', 'none');
+        map.current.setLayoutProperty('demand-points', 'visibility', 'none');
+      }
+    }
+    
+    // Show flow lines if stores exist
+    if (storeLocations.length > 0) {
+      if (map.current.getLayer('demand-flow-lines')) {
+        map.current.setLayoutProperty('demand-flow-lines', 'visibility', 'visible');
+      }
+      if (map.current.getLayer('demand-flow-animated')) {
+        map.current.setLayoutProperty('demand-flow-animated', 'visibility', 'visible');
+      }
+    }
+  }, [showDemandGrid, gridBounds, locations, mapLoaded, onDemandAnalysis, visualizationMode]);
   
-  // Hide demand grid when not needed
+  // Hide demand grid and flow lines when not needed
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
     
     if (!showDemandGrid) {
       const fillLayer = map.current.getLayer('demand-grid-fill');
       const strokeLayer = map.current.getLayer('demand-grid-stroke');
+      const flowLayer = map.current.getLayer('demand-flow-lines');
+      const flowAnimatedLayer = map.current.getLayer('demand-flow-animated');
+      const heatmapLayer = map.current.getLayer('demand-heatmap-layer');
+      const pointsLayer = map.current.getLayer('demand-points');
       
       if (fillLayer) {
         map.current.setLayoutProperty('demand-grid-fill', 'visibility', 'none');
@@ -284,14 +572,63 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
       if (strokeLayer) {
         map.current.setLayoutProperty('demand-grid-stroke', 'visibility', 'none');
       }
+      if (flowLayer) {
+        map.current.setLayoutProperty('demand-flow-lines', 'visibility', 'none');
+      }
+      if (flowAnimatedLayer) {
+        map.current.setLayoutProperty('demand-flow-animated', 'visibility', 'none');
+      }
+      if (heatmapLayer) {
+        map.current.setLayoutProperty('demand-heatmap-layer', 'visibility', 'none');
+      }
+      if (pointsLayer) {
+        map.current.setLayoutProperty('demand-points', 'visibility', 'none');
+      }
     }
   }, [showDemandGrid, mapLoaded]);
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
+      {/* Error Message Display */}
+      {mapError && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          backgroundColor: '#fef2f2',
+          border: '1px solid #fecaca',
+          borderRadius: '8px',
+          padding: '24px',
+          maxWidth: '400px',
+          textAlign: 'center',
+          zIndex: 1000,
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🗺️</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#dc2626', marginBottom: '12px' }}>
+            Mapbox Configuration Required
+          </div>
+          <div style={{ fontSize: '14px', color: '#7f1d1d', marginBottom: '16px', lineHeight: '1.5' }}>
+            {mapError}
+          </div>
+          <div style={{ fontSize: '12px', color: '#991b1b', backgroundColor: '#fee2e2', padding: '8px', borderRadius: '4px' }}>
+            <strong>Setup Instructions:</strong><br/>
+            1. Get a free token from <a href="https://account.mapbox.com/" target="_blank" style={{ color: '#dc2626' }}>mapbox.com</a><br/>
+            2. Add VITE_MAPBOX_TOKEN to environment variables<br/>
+            3. See MAPBOX_SETUP.md for detailed steps
+          </div>
+        </div>
+      )}
+      
       <div 
         ref={mapContainer} 
-        style={{ height: '100%', width: '100%' }}
+        style={{ 
+          height: '100%', 
+          width: '100%',
+          opacity: mapError ? 0.3 : 1,
+          filter: mapError ? 'grayscale(100%)' : 'none'
+        }}
       />
       
       {/* Map style selector */}
@@ -404,7 +741,8 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
             alignItems: 'center',
             fontSize: '12px',
             cursor: 'pointer',
-            margin: 0
+            margin: 0,
+            marginBottom: '6px'
           }}>
             <input
               type="checkbox"
@@ -416,8 +754,42 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
               }}
               style={{ marginRight: '6px' }}
             />
-            Population Grid
+            Population Analysis
           </label>
+          
+          {/* Visualization Mode Toggle */}
+          {showDemandGrid && (
+            <div style={{ display: 'flex', gap: '4px', fontSize: '11px' }}>
+              <button
+                onClick={() => setVisualizationMode('grid')}
+                style={{
+                  padding: '4px 8px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  backgroundColor: visualizationMode === 'grid' ? '#3b82f6' : '#ffffff',
+                  color: visualizationMode === 'grid' ? '#ffffff' : '#374151',
+                  cursor: 'pointer',
+                  fontSize: '11px'
+                }}
+              >
+                📊 Grid
+              </button>
+              <button
+                onClick={() => setVisualizationMode('heatmap')}
+                style={{
+                  padding: '4px 8px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  backgroundColor: visualizationMode === 'heatmap' ? '#3b82f6' : '#ffffff',
+                  color: visualizationMode === 'heatmap' ? '#ffffff' : '#374151',
+                  cursor: 'pointer',
+                  fontSize: '11px'
+                }}
+              >
+                🔥 Heat Map
+              </button>
+            </div>
+          )}
         </div>
       )}
       

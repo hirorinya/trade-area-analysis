@@ -4,7 +4,7 @@ import { theme } from '../../styles/theme.js';
 interface InputProps {
   type?: string;
   placeholder?: string;
-  value?: string;
+  value?: string | number;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   label?: string;
   error?: string;
@@ -13,6 +13,9 @@ interface InputProps {
   icon?: React.ReactNode;
   className?: string;
   name?: string;
+  min?: number | string;
+  max?: number | string;
+  step?: number | string;
 }
 
 const Input: React.FC<InputProps> = ({
@@ -26,7 +29,10 @@ const Input: React.FC<InputProps> = ({
   disabled = false,
   icon,
   className = '',
-  name
+  name,
+  min,
+  max,
+  step
 }) => {
   // Get base input styles from theme
   const baseInputStyles = theme.components.input.base;
@@ -103,6 +109,9 @@ const Input: React.FC<InputProps> = ({
           onChange={onChange}
           required={required}
           disabled={disabled}
+          min={min}
+          max={max}
+          step={step}
           style={inputStyles}
           onFocus={handleFocus}
           onBlur={handleBlur}
