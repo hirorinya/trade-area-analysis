@@ -34,13 +34,13 @@ import {
 } from './styles/layouts';
 
 function App() {
-  // Debug environment variables
+  // Environment check (only in development)
   useEffect(() => {
-    console.log('=== Environment Variables Debug ===');
-    console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
-    console.log('VITE_SUPABASE_ANON_KEY:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
-    console.log('Mode:', import.meta.env.MODE);
-    console.log('All env vars:', Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')));
+    if (import.meta.env.MODE === 'development') {
+      console.log('🔧 Dev Environment Check:');
+      console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL ? '✅ SET' : '❌ NOT SET');
+      console.log('Mapbox Token:', import.meta.env.VITE_MAPBOX_TOKEN ? '✅ SET' : '❌ NOT SET');
+    }
   }, []);
 
   const [currentView, setCurrentView] = useState(() => {
@@ -1673,7 +1673,9 @@ Make it actionable and specific to help guide them through the platform.
 
         // Handle case where data might be undefined
         if (!data) {
-          console.log('No session data returned');
+          if (import.meta.env.MODE === 'development') {
+            console.log('No session data returned');
+          }
           return;
         }
 
@@ -1706,7 +1708,9 @@ Make it actionable and specific to help guide them through the platform.
   useEffect(() => {
     const { data: { subscription } } = auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth state changed:', event, session);
+        if (import.meta.env.MODE === 'development') {
+          console.log('🔐 Auth:', event, session?.user?.email || 'No user');
+        }
         
         if (event === 'SIGNED_IN' && session) {
           setUser(session.user);
