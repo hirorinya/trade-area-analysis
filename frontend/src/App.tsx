@@ -41,6 +41,24 @@ function App() {
       console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL ? '✅ SET' : '❌ NOT SET');
       console.log('Mapbox Token:', import.meta.env.VITE_MAPBOX_TOKEN ? '✅ SET' : '❌ NOT SET');
     }
+    
+    // Suppress browser extension errors (they don't affect our app)
+    const originalError = console.error;
+    console.error = (...args) => {
+      const message = args[0]?.toString() || '';
+      if (
+        message.includes('runtime.lastError') ||
+        message.includes('message port closed') ||
+        message.includes('Could not establish connection')
+      ) {
+        return; // Ignore extension-related errors
+      }
+      originalError.apply(console, args);
+    };
+    
+    return () => {
+      console.error = originalError;
+    };
   }, []);
 
   const [currentView, setCurrentView] = useState(() => {
