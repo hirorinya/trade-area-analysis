@@ -30,9 +30,7 @@ import {
   bodyTextStyle,
   captionTextStyle,
   flexBetweenStyle,
-  mapContainerStyle,
-  responsiveFlexStyle,
-  preventOverflowStyle
+  mapContainerStyle
 } from './styles/layouts';
 
 function App() {
@@ -2066,13 +2064,13 @@ Make it actionable and specific to help guide them through the platform.
             {/* Analysis Recommendations */}
             {analysisRecommendations && (
               <div style={{
-                backgroundColor: theme.colors.primary[50],
-                border: `1px solid ${theme.colors.primary[100]}`,
+                backgroundColor: theme.colors.blue[50],
+                border: `1px solid ${theme.colors.blue[200]}`,
                 borderRadius: theme.borderRadius.lg,
                 padding: theme.spacing[4],
                 marginBottom: theme.spacing[4]
               }}>
-                <h4 style={{ ...heading3Style, color: theme.colors.primary[700], marginBottom: theme.spacing[3] }}>
+                <h4 style={{ ...heading3Style, color: theme.colors.blue[700], marginBottom: theme.spacing[3] }}>
                   📋 Recommended Analysis Steps
                 </h4>
                 <div dangerouslySetInnerHTML={{ __html: analysisRecommendations }} />
@@ -2182,24 +2180,24 @@ Make it actionable and specific to help guide them through the platform.
 
             {/* CSV Import Section */}
             <div style={{ 
-              backgroundColor: theme.colors.primary[50], 
+              backgroundColor: theme.colors.blue[50], 
               padding: theme.spacing[4], 
               borderRadius: theme.borderRadius.lg, 
               marginBottom: theme.spacing[4],
-              border: `1px solid ${theme.colors.primary[100]}`
+              border: `1px solid ${theme.colors.blue[200]}`
             }}>
               <div style={{ 
                 marginBottom: theme.spacing[3], 
                 fontSize: theme.typography.fontSize.base, 
                 fontWeight: theme.typography.fontWeight.semibold,
-                color: theme.colors.primary[700]
+                color: theme.colors.blue[700]
               }}>
                 📁 Bulk Import Locations (CSV)
               </div>
               <div style={{ 
                 marginBottom: theme.spacing[3], 
                 fontSize: theme.typography.fontSize.sm, 
-                color: theme.colors.primary[600],
+                color: theme.colors.blue[600],
                 lineHeight: 1.5
               }}>
                 <strong>Required columns:</strong> name, latitude, longitude, type (store/competitor/poi)<br/>
@@ -2217,7 +2215,7 @@ Make it actionable and specific to help guide them through the platform.
               />
               <div style={{ 
                 fontSize: theme.typography.fontSize.xs, 
-                color: theme.colors.primary[600],
+                color: theme.colors.blue[600],
                 fontStyle: 'italic'
               }}>
                 Example CSV: "Shibuya Store,35.6580,139.7016,store,Tokyo Shibuya"
@@ -2722,21 +2720,21 @@ Make it actionable and specific to help guide them through the platform.
               <div style={{ 
                 marginTop: theme.spacing[4], 
                 padding: theme.spacing[3], 
-                backgroundColor: theme.colors.success[50], 
+                backgroundColor: theme.colors.green[50], 
                 borderRadius: theme.borderRadius.lg,
-                border: `1px solid ${theme.colors.success[100]}`
+                border: `1px solid ${theme.colors.green[200]}`
               }}>
                 <div style={{ 
                   fontSize: theme.typography.fontSize.sm, 
                   fontWeight: theme.typography.fontWeight.semibold, 
                   marginBottom: theme.spacing[2], 
-                  color: theme.colors.success[600]
+                  color: theme.colors.green[700]
                 }}>
                   🗾 国土地理院 + Enhanced Geocoding:
                 </div>
                 <div style={{ 
                   fontSize: theme.typography.fontSize.xs, 
-                  color: theme.colors.success[600],
+                  color: theme.colors.green[700],
                   lineHeight: 1.5
                 }}>
                   • <strong>Japanese Addresses:</strong> "東京都港区芝浦4-20-2" (via 国土地理院 API)<br/>
@@ -2894,14 +2892,14 @@ Make it actionable and specific to help guide them through the platform.
                 </div>
 
                 <div style={{ 
-                  backgroundColor: theme.colors.primary[50], 
+                  backgroundColor: theme.colors.blue[50], 
                   padding: theme.spacing[3], 
                   borderRadius: theme.borderRadius.lg, 
                   marginBottom: theme.spacing[4],
                   fontSize: theme.typography.fontSize.sm,
-                  border: `1px solid ${theme.colors.primary[100]}`
+                  border: `1px solid ${theme.colors.blue[200]}`
                 }}>
-                  <strong style={{ color: theme.colors.primary[700] }}>💡 Analysis Methods:</strong><br/>
+                  <strong style={{ color: theme.colors.blue[700] }}>💡 Analysis Methods:</strong><br/>
                   • <strong>Simple Radius:</strong> Traditional circular trade area<br/>
                   • <strong>Huff Model:</strong> Scientific customer capture probability based on distance decay and competitor locations
                 </div>
