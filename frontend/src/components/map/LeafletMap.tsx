@@ -42,10 +42,11 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       mapInstanceRef.current = L.map(mapRef.current).setView([35.6895, 139.6917], 10);
       console.log('🗾 LeafletMap: Map instance created');
 
-    // Add Japan GSI (国土地理院) tile layer
-    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>',
-      maxZoom: 18
+    // Add OpenStreetMap tile layer (more reliable than GSI)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+      subdomains: ['a', 'b', 'c']
     }).addTo(mapInstanceRef.current);
     
     console.log('🗾 LeafletMap: Tiles added successfully');
