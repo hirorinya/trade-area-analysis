@@ -81,19 +81,9 @@ function App() {
   const [dashboardData, setDashboardData] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [useMapbox, setUseMapbox] = useState(() => {
-    // Auto-detect browser compatibility for Mapbox
-    const userAgent = navigator.userAgent;
-    const isChrome = userAgent.includes('Chrome') && !userAgent.includes('Safari');
-    const isEdge = userAgent.includes('Edge');
-    
-    // Force Leaflet for Chrome/Edge due to Mapbox GL compatibility issues
-    if (isChrome || isEdge) {
-      console.log('🗺️ Auto-selected Leaflet map for Chrome/Edge compatibility');
-      return false;
-    }
-    
-    console.log('🗺️ Using Mapbox for Safari/Firefox');
-    return true; // Use Mapbox for Safari, Firefox, and others
+    // Force Leaflet for ALL browsers due to Mapbox compatibility issues
+    console.log('🗺️ Auto-selected Leaflet map for better compatibility');
+    return false; // Always use Leaflet for now
   });
   const [showAIChat, setShowAIChat] = useState(false);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
