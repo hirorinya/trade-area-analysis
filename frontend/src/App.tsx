@@ -85,15 +85,15 @@ function App() {
     const userAgent = navigator.userAgent;
     const isChrome = userAgent.includes('Chrome');
     const isEdge = userAgent.includes('Edge');
-    const hasWebGL = !!window.WebGLRenderingContext;
+    const isWindows = userAgent.includes('Windows');
     
-    // Use Leaflet for Chrome/Edge on Windows as fallback
-    if ((isChrome || isEdge) && !hasWebGL) {
-      console.log('🗺️ Using Leaflet map due to browser compatibility');
+    // Force Leaflet for Chrome/Edge on Windows due to Mapbox sprite errors
+    if ((isChrome || isEdge) && isWindows) {
+      console.log('🗺️ Using Leaflet map for Chrome/Edge on Windows');
       return false;
     }
     
-    return true; // Default to Mapbox
+    return true; // Default to Mapbox for other browsers
   });
   const [showAIChat, setShowAIChat] = useState(false);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'

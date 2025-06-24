@@ -38,7 +38,7 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
   onMapClick,
   center = [139.6917, 35.6895], // Tokyo default
   zoom = 10,
-  style = 'mapbox://styles/mapbox/streets-v12',
+  style = 'mapbox://styles/mapbox/light-v11',
   showDemandGrid = false,
   gridBounds,
   onDemandAnalysis
@@ -72,13 +72,29 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
     }
 
     try {
+      // Force clean initialization
+      if (mapContainer.current) {
+        mapContainer.current.innerHTML = '';
+      }
+      
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: style,
         center: center,
         zoom: zoom,
-        attributionControl: false
+        attributionControl: false,
+        failIfMajorPerformanceCaveat: false // Allow map to load even with performance issues
       });
+
+    // Add error handler
+    map.current.on('error', (e) => {
+      console.error('Mapbox error:', e);
+      if (e.error?.message?.includes('setSprite')) {
+        console.log('Ignoring sprite error, map should still work');
+        return;
+      }
+      setMapError('Map loading error: ' + (e.error?.message || 'Unknown error'));
+    });
 
     // Add navigation controls
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
