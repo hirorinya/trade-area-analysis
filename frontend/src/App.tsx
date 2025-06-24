@@ -83,17 +83,17 @@ function App() {
   const [useMapbox, setUseMapbox] = useState(() => {
     // Auto-detect browser compatibility for Mapbox
     const userAgent = navigator.userAgent;
-    const isChrome = userAgent.includes('Chrome');
+    const isChrome = userAgent.includes('Chrome') && !userAgent.includes('Safari');
     const isEdge = userAgent.includes('Edge');
-    const isWindows = userAgent.includes('Windows');
     
-    // Force Leaflet for Chrome/Edge on Windows due to Mapbox sprite errors
-    if ((isChrome || isEdge) && isWindows) {
-      console.log('🗺️ Using Leaflet map for Chrome/Edge on Windows');
+    // Force Leaflet for Chrome/Edge due to Mapbox GL compatibility issues
+    if (isChrome || isEdge) {
+      console.log('🗺️ Auto-selected Leaflet map for Chrome/Edge compatibility');
       return false;
     }
     
-    return true; // Default to Mapbox for other browsers
+    console.log('🗺️ Using Mapbox for Safari/Firefox');
+    return true; // Use Mapbox for Safari, Firefox, and others
   });
   const [showAIChat, setShowAIChat] = useState(false);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
@@ -3448,28 +3448,6 @@ Make it actionable and specific to help guide them through the platform.
               height: '600px',
               minHeight: '500px'
             }}>
-              
-              {/* Map Type Toggle */}
-              <div style={{ 
-                position: 'absolute', 
-                top: theme.spacing[3], 
-                right: theme.spacing[3], 
-                zIndex: 1000,
-                display: 'flex',
-                gap: theme.spacing[2]
-              }}>
-                <Button
-                  onClick={() => setUseMapbox(!useMapbox)}
-                  variant="secondary"
-                  size="small"
-                  style={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    fontSize: theme.typography.fontSize.xs
-                  }}
-                >
-                  🗺️ {useMapbox ? 'Switch to Leaflet' : 'Switch to Mapbox'}
-                </Button>
-              </div>
               {useMapbox ? (
                 <MapboxMap
                   locations={[
