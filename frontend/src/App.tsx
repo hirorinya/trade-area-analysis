@@ -81,23 +81,9 @@ function App() {
   const [dashboardData, setDashboardData] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [useMapbox, setUseMapbox] = useState(() => {
-    const userAgent = navigator.userAgent;
-    const isSafari = userAgent.includes('Safari') && !userAgent.includes('Chrome');
-    const isFirefox = userAgent.includes('Firefox');
-    const isChrome = userAgent.includes('Chrome') && !userAgent.includes('Safari');
-    const isEdge = userAgent.includes('Edge') || userAgent.includes('Edg/');
-    
-    console.log('🗺️ Browser detection:', { isSafari, isFirefox, isChrome, isEdge });
-    
-    // Use Mapbox for Safari and Firefox (they work well)
-    if (isSafari || isFirefox) {
-      console.log('🛰️ Using Mapbox for Safari/Firefox - better features');
-      return true;
-    }
-    
-    // Use Leaflet for Chrome/Edge (they have Mapbox issues)
-    console.log('🗾 Using Leaflet for Chrome/Edge - better compatibility');
-    return false;
+    // Force Mapbox for all browsers to test what broke it
+    console.log('🛰️ Forcing Mapbox for all browsers to debug the issue');
+    return true;
   });
   const [showAIChat, setShowAIChat] = useState(false);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
