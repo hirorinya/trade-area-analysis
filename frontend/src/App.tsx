@@ -3448,6 +3448,7 @@ Make it actionable and specific to help guide them through the platform.
               height: '600px',
               minHeight: '500px'
             }}>
+              {console.log('🗺️ MAP RENDER CHECK:', { useMapbox, userAgent: navigator.userAgent.substring(0, 50) })}
               {useMapbox ? (
                 <MapboxMap
                   locations={[
