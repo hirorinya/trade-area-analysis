@@ -2186,7 +2186,8 @@ Make it actionable and specific to help guide them through the platform.
               }}>
                 <select
                   value={useMapbox ? 'mapbox' : 'leaflet'}
-                  onChange={(e) => setUseMapbox(e.target.value === 'mapbox')}
+                  onChange={(e) => {}} // Disabled - Leaflet only
+                  disabled={true}
                   style={{
                     padding: '8px 12px',
                     borderRadius: '6px',
