@@ -1899,13 +1899,33 @@ Make it actionable and specific to help guide them through the platform.
         </nav>
       )}
 
-      {currentView === 'login' && (
+      {currentView === 'login' && authView === 'login' && (
         <ModernLoginForm
           onLogin={handleModernLogin}
           onSwitchToRegister={() => setAuthView('register')}
           loading={false}
           error={message?.includes('Login error') ? message.replace('Login error: ', '') : undefined}
         />
+      )}
+
+      {currentView === 'login' && authView === 'register' && (
+        <div style={sectionStyle}>
+          <h2 style={heading2Style}>Register</h2>
+          <form onSubmit={handleRegister} style={formStyle}>
+            <Input type="email" name="email" placeholder="Email" required />
+            <Input type="password" name="password" placeholder="Password" required />
+            <Input type="text" name="first_name" placeholder="First Name" />
+            <Input type="text" name="last_name" placeholder="Last Name" />
+            <Button type="submit" variant="primary">Register</Button>
+            <Button 
+              type="button" 
+              variant="secondary" 
+              onClick={() => setAuthView('login')}
+            >
+              Back to Login
+            </Button>
+          </form>
+        </div>
       )}
 
       {currentView === 'dashboard' && user && (
