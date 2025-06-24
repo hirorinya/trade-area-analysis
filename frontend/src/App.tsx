@@ -2087,7 +2087,7 @@ Make it actionable and specific to help guide them through the platform.
             {analysisRecommendations && (
               <div style={{
                 backgroundColor: theme.colors.primary[50],
-                border: `1px solid ${theme.colors.blue[200]}`,
+                border: `1px solid ${theme.colors.primary[100]}`,
                 borderRadius: theme.borderRadius.lg,
                 padding: theme.spacing[4],
                 marginBottom: theme.spacing[4]
@@ -2206,7 +2206,7 @@ Make it actionable and specific to help guide them through the platform.
               padding: theme.spacing[4], 
               borderRadius: theme.borderRadius.lg, 
               marginBottom: theme.spacing[4],
-              border: `1px solid ${theme.colors.blue[200]}`
+              border: `1px solid ${theme.colors.primary[100]}`
             }}>
               <div style={{ 
                 marginBottom: theme.spacing[3], 
@@ -2744,7 +2744,7 @@ Make it actionable and specific to help guide them through the platform.
                 padding: theme.spacing[3], 
                 backgroundColor: theme.colors.success[50], 
                 borderRadius: theme.borderRadius.lg,
-                border: `1px solid ${theme.colors.green[200]}`
+                border: `1px solid ${theme.colors.success[100]}`
               }}>
                 <div style={{ 
                   fontSize: theme.typography.fontSize.sm, 
@@ -2919,7 +2919,7 @@ Make it actionable and specific to help guide them through the platform.
                   borderRadius: theme.borderRadius.lg, 
                   marginBottom: theme.spacing[4],
                   fontSize: theme.typography.fontSize.sm,
-                  border: `1px solid ${theme.colors.blue[200]}`
+                  border: `1px solid ${theme.colors.primary[100]}`
                 }}>
                   <strong style={{ color: theme.colors.blue[700] }}>💡 Analysis Methods:</strong><br/>
                   • <strong>Simple Radius:</strong> Traditional circular trade area<br/>
