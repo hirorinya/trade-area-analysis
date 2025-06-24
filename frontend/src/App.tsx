@@ -1667,15 +1667,30 @@ Make it actionable and specific to help guide them through the platform.
     });
   };
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    setProjects([]);
-    setSelectedProject(null);
-    setLocations([]);
-    localStorage.removeItem('token');
-    changeView('login');
-    setMessage('Logged out successfully');
+  const logout = async () => {
+    try {
+      // Sign out from Supabase
+      await auth.signOut();
+      
+      // Clear all local state
+      setToken(null);
+      setUser(null);
+      setProjects([]);
+      setSelectedProject(null);
+      setLocations([]);
+      
+      // Clear all localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('currentView');
+      localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token');
+      
+      // Go to login
+      changeView('login');
+      setMessage('Logged out successfully');
+    } catch (error) {
+      console.error('Logout error:', error);
+      setMessage('Logout error: ' + error.message);
+    }
   };
 
   // Using Apple-style design system from theme.js and layouts.js
@@ -2047,6 +2062,45 @@ Make it actionable and specific to help guide them through the platform.
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {currentView === 'map' && !selectedProject && user && (
+        <div style={sectionStyle}>
+          <h2 style={heading2Style}>🗺️ Select a Project to View Map</h2>
+          <p style={bodyTextStyle}>Choose one of your projects to start analyzing locations and trade areas.</p>
+          
+          {projects.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: theme.spacing[6] }}>
+              <p style={bodyTextStyle}>No projects found. Create a project first.</p>
+              <Button onClick={() => changeView('dashboard')} variant="primary">
+                Go to Dashboard
+              </Button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: theme.spacing[4] }}>
+              {projects.map(project => (
+                <div key={project.id} style={projectCardStyle}>
+                  <h3 style={heading3Style}>{project.name}</h3>
+                  <p style={bodyTextStyle}>{project.description || 'No description provided'}</p>
+                  <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[500], marginBottom: theme.spacing[3] }}>
+                    Created: {new Date(project.created_at).toLocaleDateString()}
+                  </div>
+                  <Button 
+                    onClick={() => {
+                      setSelectedProject(project);
+                      loadLocations(project.id);
+                      setMessage(`Selected project: ${project.name}`);
+                    }}
+                    variant="primary"
+                    style={{ width: '100%' }}
+                  >
+                    🗾 View Map & Locations
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
