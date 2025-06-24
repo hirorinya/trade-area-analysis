@@ -36,8 +36,25 @@ import {
 } from './styles/layouts';
 
 function App() {
-  // Environment check (only in development)
+  // Environment and browser compatibility check
   useEffect(() => {
+    // Browser compatibility check
+    const userAgent = navigator.userAgent;
+    const isChrome = userAgent.includes('Chrome');
+    const isEdge = userAgent.includes('Edge');
+    const isSafari = userAgent.includes('Safari') && !userAgent.includes('Chrome');
+    const isFirefox = userAgent.includes('Firefox');
+    
+    console.log('🌐 Browser Check:', {
+      userAgent: userAgent.substring(0, 50) + '...',
+      isChrome,
+      isEdge, 
+      isSafari,
+      isFirefox,
+      webGL: !!window.WebGLRenderingContext,
+      webGL2: !!window.WebGL2RenderingContext
+    });
+    
     if (import.meta.env.MODE === 'development') {
       console.log('🔧 Dev Environment Check:');
       console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL ? '✅ SET' : '❌ NOT SET');
@@ -63,7 +80,21 @@ function App() {
   const [competitorAnalysis, setCompetitorAnalysis] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
-  const [useMapbox, setUseMapbox] = useState(true);
+  const [useMapbox, setUseMapbox] = useState(() => {
+    // Auto-detect browser compatibility for Mapbox
+    const userAgent = navigator.userAgent;
+    const isChrome = userAgent.includes('Chrome');
+    const isEdge = userAgent.includes('Edge');
+    const hasWebGL = !!window.WebGLRenderingContext;
+    
+    // Use Leaflet for Chrome/Edge on Windows as fallback
+    if ((isChrome || isEdge) && !hasWebGL) {
+      console.log('🗺️ Using Leaflet map due to browser compatibility');
+      return false;
+    }
+    
+    return true; // Default to Mapbox
+  });
   const [showAIChat, setShowAIChat] = useState(false);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [showOptimization, setShowOptimization] = useState(false);
@@ -3446,6 +3477,28 @@ Make it actionable and specific to help guide them through the platform.
               height: '600px',
               minHeight: '500px'
             }}>
+              
+              {/* Map Type Toggle */}
+              <div style={{ 
+                position: 'absolute', 
+                top: theme.spacing[3], 
+                right: theme.spacing[3], 
+                zIndex: 1000,
+                display: 'flex',
+                gap: theme.spacing[2]
+              }}>
+                <Button
+                  onClick={() => setUseMapbox(!useMapbox)}
+                  variant="secondary"
+                  size="small"
+                  style={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    fontSize: theme.typography.fontSize.xs
+                  }}
+                >
+                  🗺️ {useMapbox ? 'Switch to Leaflet' : 'Switch to Mapbox'}
+                </Button>
+              </div>
               {useMapbox ? (
                 <MapboxMap
                   locations={[
