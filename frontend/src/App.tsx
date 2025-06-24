@@ -81,9 +81,23 @@ function App() {
   const [dashboardData, setDashboardData] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [useMapbox, setUseMapbox] = useState(() => {
-    // Force Leaflet for ALL browsers due to Mapbox compatibility issues
-    console.log('🗺️ Auto-selected Leaflet map for better compatibility');
-    return false; // Always use Leaflet for now
+    const userAgent = navigator.userAgent;
+    const isSafari = userAgent.includes('Safari') && !userAgent.includes('Chrome');
+    const isFirefox = userAgent.includes('Firefox');
+    const isChrome = userAgent.includes('Chrome') && !userAgent.includes('Safari');
+    const isEdge = userAgent.includes('Edge') || userAgent.includes('Edg/');
+    
+    console.log('🗺️ Browser detection:', { isSafari, isFirefox, isChrome, isEdge });
+    
+    // Use Mapbox for Safari and Firefox (they work well)
+    if (isSafari || isFirefox) {
+      console.log('🛰️ Using Mapbox for Safari/Firefox - better features');
+      return true;
+    }
+    
+    // Use Leaflet for Chrome/Edge (they have Mapbox issues)
+    console.log('🗾 Using Leaflet for Chrome/Edge - better compatibility');
+    return false;
   });
   const [showAIChat, setShowAIChat] = useState(false);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
@@ -2186,8 +2200,7 @@ Make it actionable and specific to help guide them through the platform.
               }}>
                 <select
                   value={useMapbox ? 'mapbox' : 'leaflet'}
-                  onChange={(e) => {}} // Disabled - Leaflet only
-                  disabled={true}
+                  onChange={(e) => setUseMapbox(e.target.value === 'mapbox')}
                   style={{
                     padding: '8px 12px',
                     borderRadius: '6px',
