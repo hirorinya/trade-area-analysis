@@ -30,31 +30,12 @@ import {
   bodyTextStyle,
   captionTextStyle,
   flexBetweenStyle,
-  mapContainerStyle,
-  responsiveFlexStyle,
-  preventOverflowStyle
+  mapContainerStyle
 } from './styles/layouts';
 
 function App() {
-  // Environment and browser compatibility check
+  // Environment check (only in development)
   useEffect(() => {
-    // Browser compatibility check
-    const userAgent = navigator.userAgent;
-    const isChrome = userAgent.includes('Chrome');
-    const isEdge = userAgent.includes('Edge');
-    const isSafari = userAgent.includes('Safari') && !userAgent.includes('Chrome');
-    const isFirefox = userAgent.includes('Firefox');
-    
-    console.log('🌐 Browser Check:', {
-      userAgent: userAgent.substring(0, 50) + '...',
-      isChrome,
-      isEdge, 
-      isSafari,
-      isFirefox,
-      webGL: !!window.WebGLRenderingContext,
-      webGL2: !!window.WebGL2RenderingContext
-    });
-    
     if (import.meta.env.MODE === 'development') {
       console.log('🔧 Dev Environment Check:');
       console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL ? '✅ SET' : '❌ NOT SET');
@@ -80,11 +61,7 @@ function App() {
   const [competitorAnalysis, setCompetitorAnalysis] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
-  const [useMapbox, setUseMapbox] = useState(() => {
-    // Force Mapbox for all browsers to test what broke it
-    console.log('🛰️ Forcing Mapbox for all browsers to debug the issue');
-    return true;
-  });
+  const [useMapbox, setUseMapbox] = useState(true);
   const [showAIChat, setShowAIChat] = useState(false);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [showOptimization, setShowOptimization] = useState(false);
@@ -1688,30 +1665,15 @@ Make it actionable and specific to help guide them through the platform.
     });
   };
 
-  const logout = async () => {
-    try {
-      // Sign out from Supabase
-      await auth.signOut();
-      
-      // Clear all local state
-      setToken(null);
-      setUser(null);
-      setProjects([]);
-      setSelectedProject(null);
-      setLocations([]);
-      
-      // Clear all localStorage
-      localStorage.removeItem('token');
-      localStorage.removeItem('currentView');
-      localStorage.removeItem('sb-' + import.meta.env.VITE_SUPABASE_URL?.split('//')[1]?.split('.')[0] + '-auth-token');
-      
-      // Go to login
-      changeView('login');
-      setMessage('Logged out successfully');
-    } catch (error) {
-      console.error('Logout error:', error);
-      setMessage('Logout error: ' + error.message);
-    }
+  const logout = () => {
+    setToken(null);
+    setUser(null);
+    setProjects([]);
+    setSelectedProject(null);
+    setLocations([]);
+    localStorage.removeItem('token');
+    changeView('login');
+    setMessage('Logged out successfully');
   };
 
   // Using Apple-style design system from theme.js and layouts.js
@@ -1935,33 +1897,13 @@ Make it actionable and specific to help guide them through the platform.
         </nav>
       )}
 
-      {currentView === 'login' && authView === 'login' && (
+      {currentView === 'login' && (
         <ModernLoginForm
           onLogin={handleModernLogin}
           onSwitchToRegister={() => setAuthView('register')}
           loading={false}
           error={message?.includes('Login error') ? message.replace('Login error: ', '') : undefined}
         />
-      )}
-
-      {currentView === 'login' && authView === 'register' && (
-        <div style={sectionStyle}>
-          <h2 style={heading2Style}>Register</h2>
-          <form onSubmit={handleRegister} style={formStyle}>
-            <Input type="email" name="email" placeholder="Email" required />
-            <Input type="password" name="password" placeholder="Password" required />
-            <Input type="text" name="first_name" placeholder="First Name" />
-            <Input type="text" name="last_name" placeholder="Last Name" />
-            <Button type="submit" variant="primary">Register</Button>
-            <Button 
-              type="button" 
-              variant="secondary" 
-              onClick={() => setAuthView('login')}
-            >
-              Back to Login
-            </Button>
-          </form>
-        </div>
       )}
 
       {currentView === 'dashboard' && user && (
@@ -2086,45 +2028,6 @@ Make it actionable and specific to help guide them through the platform.
         </div>
       )}
 
-      {currentView === 'map' && !selectedProject && user && (
-        <div style={sectionStyle}>
-          <h2 style={heading2Style}>🗺️ Select a Project to View Map</h2>
-          <p style={bodyTextStyle}>Choose one of your projects to start analyzing locations and trade areas.</p>
-          
-          {projects.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: theme.spacing[6] }}>
-              <p style={bodyTextStyle}>No projects found. Create a project first.</p>
-              <Button onClick={() => changeView('dashboard')} variant="primary">
-                Go to Dashboard
-              </Button>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: theme.spacing[4] }}>
-              {projects.map(project => (
-                <div key={project.id} style={projectCardStyle}>
-                  <h3 style={heading3Style}>{project.name}</h3>
-                  <p style={bodyTextStyle}>{project.description || 'No description provided'}</p>
-                  <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[500], marginBottom: theme.spacing[3] }}>
-                    Created: {new Date(project.created_at).toLocaleDateString()}
-                  </div>
-                  <Button 
-                    onClick={() => {
-                      setSelectedProject(project);
-                      loadLocations(project.id);
-                      setMessage(`Selected project: ${project.name}`);
-                    }}
-                    variant="primary"
-                    style={{ width: '100%' }}
-                  >
-                    🗾 View Map & Locations
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {currentView === 'map' && selectedProject && (
         <div>
           {/* Natural Language Analysis Prompt */}
@@ -2161,13 +2064,13 @@ Make it actionable and specific to help guide them through the platform.
             {/* Analysis Recommendations */}
             {analysisRecommendations && (
               <div style={{
-                backgroundColor: theme.colors.primary[50],
-                border: `1px solid ${theme.colors.primary[100]}`,
+                backgroundColor: theme.colors.blue[50],
+                border: `1px solid ${theme.colors.blue[200]}`,
                 borderRadius: theme.borderRadius.lg,
                 padding: theme.spacing[4],
                 marginBottom: theme.spacing[4]
               }}>
-                <h4 style={{ ...heading3Style, color: theme.colors.primary[700], marginBottom: theme.spacing[3] }}>
+                <h4 style={{ ...heading3Style, color: theme.colors.blue[700], marginBottom: theme.spacing[3] }}>
                   📋 Recommended Analysis Steps
                 </h4>
                 <div dangerouslySetInnerHTML={{ __html: analysisRecommendations }} />
@@ -2277,24 +2180,24 @@ Make it actionable and specific to help guide them through the platform.
 
             {/* CSV Import Section */}
             <div style={{ 
-              backgroundColor: theme.colors.primary[50], 
+              backgroundColor: theme.colors.blue[50], 
               padding: theme.spacing[4], 
               borderRadius: theme.borderRadius.lg, 
               marginBottom: theme.spacing[4],
-              border: `1px solid ${theme.colors.primary[100]}`
+              border: `1px solid ${theme.colors.blue[200]}`
             }}>
               <div style={{ 
                 marginBottom: theme.spacing[3], 
                 fontSize: theme.typography.fontSize.base, 
                 fontWeight: theme.typography.fontWeight.semibold,
-                color: theme.colors.primary[700]
+                color: theme.colors.blue[700]
               }}>
                 📁 Bulk Import Locations (CSV)
               </div>
               <div style={{ 
                 marginBottom: theme.spacing[3], 
                 fontSize: theme.typography.fontSize.sm, 
-                color: theme.colors.primary[600],
+                color: theme.colors.blue[600],
                 lineHeight: 1.5
               }}>
                 <strong>Required columns:</strong> name, latitude, longitude, type (store/competitor/poi)<br/>
@@ -2312,7 +2215,7 @@ Make it actionable and specific to help guide them through the platform.
               />
               <div style={{ 
                 fontSize: theme.typography.fontSize.xs, 
-                color: theme.colors.primary[600],
+                color: theme.colors.blue[600],
                 fontStyle: 'italic'
               }}>
                 Example CSV: "Shibuya Store,35.6580,139.7016,store,Tokyo Shibuya"
@@ -2813,6 +2716,35 @@ Make it actionable and specific to help guide them through the platform.
                 </div>
                 <Button type="submit" variant="primary" style={{ width: '100%' }}>Add Location</Button>
               </form>
+              
+              <div style={{ 
+                marginTop: theme.spacing[4], 
+                padding: theme.spacing[3], 
+                backgroundColor: theme.colors.green[50], 
+                borderRadius: theme.borderRadius.lg,
+                border: `1px solid ${theme.colors.green[200]}`
+              }}>
+                <div style={{ 
+                  fontSize: theme.typography.fontSize.sm, 
+                  fontWeight: theme.typography.fontWeight.semibold, 
+                  marginBottom: theme.spacing[2], 
+                  color: theme.colors.green[700]
+                }}>
+                  🗾 国土地理院 + Enhanced Geocoding:
+                </div>
+                <div style={{ 
+                  fontSize: theme.typography.fontSize.xs, 
+                  color: theme.colors.green[700],
+                  lineHeight: 1.5
+                }}>
+                  • <strong>Japanese Addresses:</strong> "東京都港区芝浦4-20-2" (via 国土地理院 API)<br/>
+                  • <strong>Coordinates:</strong> "35.6762, 139.6503" (instant)<br/>
+                  • <strong>Major Stations:</strong> "東京駅", "Tokyo Station", "品川駅"<br/>
+                  • <strong>English Names:</strong> "Tokyo Station", "Shinjuku Station"<br/>
+                  • <strong>Auto-geocoding:</strong> Automatically triggers when you finish typing<br/>
+                  • <strong>Delete Locations:</strong> Use the 🗑️ Delete button to remove locations
+                </div>
+              </div>
             </div>
 
             {/* Locations List */}
@@ -2960,14 +2892,14 @@ Make it actionable and specific to help guide them through the platform.
                 </div>
 
                 <div style={{ 
-                  backgroundColor: theme.colors.primary[50], 
+                  backgroundColor: theme.colors.blue[50], 
                   padding: theme.spacing[3], 
                   borderRadius: theme.borderRadius.lg, 
                   marginBottom: theme.spacing[4],
                   fontSize: theme.typography.fontSize.sm,
-                  border: `1px solid ${theme.colors.primary[100]}`
+                  border: `1px solid ${theme.colors.blue[200]}`
                 }}>
-                  <strong style={{ color: theme.colors.primary[700] }}>💡 Analysis Methods:</strong><br/>
+                  <strong style={{ color: theme.colors.blue[700] }}>💡 Analysis Methods:</strong><br/>
                   • <strong>Simple Radius:</strong> Traditional circular trade area<br/>
                   • <strong>Huff Model:</strong> Scientific customer capture probability based on distance decay and competitor locations
                 </div>
@@ -3438,7 +3370,6 @@ Make it actionable and specific to help guide them through the platform.
               height: '600px',
               minHeight: '500px'
             }}>
-              {console.log('🗺️ MAP RENDER CHECK:', { useMapbox, userAgent: navigator.userAgent.substring(0, 50) })}
               {useMapbox ? (
                 <MapboxMap
                   locations={[

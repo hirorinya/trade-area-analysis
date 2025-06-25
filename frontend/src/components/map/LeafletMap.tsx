@@ -27,39 +27,22 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const markersRef = useRef<L.Marker[]>([]);
 
   useEffect(() => {
-    console.log('🗾 LeafletMap: Initializing...', { 
-      hasContainer: !!mapRef.current,
-      locationsCount: locations.length 
-    });
-    
-    if (!mapRef.current) {
-      console.error('🗾 LeafletMap: No container ref!');
-      return;
-    }
+    if (!mapRef.current) return;
 
-    try {
-      // Initialize map with Japan GSI tiles
-      mapInstanceRef.current = L.map(mapRef.current).setView([35.6895, 139.6917], 10);
-      console.log('🗾 LeafletMap: Map instance created');
+    // Initialize map with Japan GSI tiles
+    mapInstanceRef.current = L.map(mapRef.current).setView([35.6895, 139.6917], 10);
 
-    // Add OpenStreetMap tile layer (more reliable than GSI)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-      subdomains: ['a', 'b', 'c']
+    // Add Japan GSI (国土地理院) tile layer
+    L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>',
+      maxZoom: 18
     }).addTo(mapInstanceRef.current);
-    
-    console.log('🗾 LeafletMap: Tiles added successfully');
 
     // Handle map clicks
     if (onMapClick) {
       mapInstanceRef.current.on('click', (e: L.LeafletMouseEvent) => {
         onMapClick([e.latlng.lng, e.latlng.lat]);
       });
-    }
-    
-    } catch (error) {
-      console.error('🗾 LeafletMap: Error initializing map:', error);
     }
 
     return () => {

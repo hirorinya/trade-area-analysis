@@ -38,7 +38,7 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
   onMapClick,
   center = [139.6917, 35.6895], // Tokyo default
   zoom = 10,
-  style = 'mapbox://styles/mapbox/streets-v11',
+  style = 'mapbox://styles/mapbox/streets-v12',
   showDemandGrid = false,
   gridBounds,
   onDemandAnalysis
@@ -65,11 +65,6 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
-    console.log('Initializing Mapbox map...');
-    console.log('Container exists:', !!mapContainer.current);
-    console.log('Token configured:', isTokenConfigured);
-    console.log('Token length:', mapboxToken?.length || 0);
-
     // Check if token is configured
     if (!isTokenConfigured) {
       setMapError('Mapbox token not configured. Please set VITE_MAPBOX_TOKEN environment variable.');
@@ -77,45 +72,13 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
     }
 
     try {
-      // Force clean initialization
-      if (mapContainer.current) {
-        mapContainer.current.innerHTML = '';
-      }
-      
-      // Add browser compatibility check
-      if (!mapboxgl.supported()) {
-        setMapError('Your browser does not support Mapbox GL. Please try Chrome, Firefox, Safari, or Edge.');
-        return;
-      }
-      
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: style,
         center: center,
         zoom: zoom,
-        attributionControl: false,
-        failIfMajorPerformanceCaveat: false, // Allow map to load even with performance issues
-        preserveDrawingBuffer: true, // Help with some Windows rendering issues
-        antialias: true // Improve rendering quality
+        attributionControl: false
       });
-
-    // Add error handler with better sprite error handling
-    map.current.on('error', (e) => {
-      console.error('Mapbox error:', e);
-      
-      // Common Windows Chrome/Edge sprite error - can be safely ignored
-      if (e.error?.message?.includes('setSprite') || 
-          e.error?.message?.includes('Unimplemented') ||
-          e.error?.message?.includes('style diff')) {
-        console.log('Ignoring sprite/style error - this is a known issue on Windows browsers and does not affect map functionality');
-        return;
-      }
-      
-      // Only show critical errors to user
-      if (!e.error?.message?.includes('sprite') && !e.error?.message?.includes('style')) {
-        setMapError('Map loading error: ' + (e.error?.message || 'Unknown error'));
-      }
-    });
 
     // Add navigation controls
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
@@ -134,9 +97,7 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
     }
 
       map.current.on('load', () => {
-        console.log('Mapbox map loaded successfully');
         setMapLoaded(true);
-        setMapError(null); // Clear any errors if map loads successfully
         
         // Add demand grid source and layer
         if (!map.current!.getSource('demand-grid')) {
