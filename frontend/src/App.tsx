@@ -30,7 +30,8 @@ import {
   bodyTextStyle,
   captionTextStyle,
   flexBetweenStyle,
-  mapContainerStyle
+  mapContainerStyle,
+  responsiveFlexStyle
 } from './styles/layouts';
 
 function App() {
