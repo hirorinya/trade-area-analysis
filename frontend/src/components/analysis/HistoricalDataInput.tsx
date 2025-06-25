@@ -160,7 +160,7 @@ const HistoricalDataInput: React.FC<HistoricalDataInputProps> = ({ onDataAdded, 
       {/* CSV Upload Option */}
       <div style={{
         backgroundColor: theme.colors.blue[50],
-        border: `1px solid ${theme.colors.blue[200]}`,
+        border: `1px solid ${theme.colors.primary[100]}`,
         borderRadius: theme.borderRadius.md,
         padding: theme.spacing[3],
         marginBottom: theme.spacing[4]
