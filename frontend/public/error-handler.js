@@ -16,7 +16,9 @@
       'Extension context invalidated',
       'chrome-extension://',
       'moz-extension://',
-      'Unchecked runtime.lastError'
+      'Unchecked runtime.lastError',
+      'message channel closed',
+      'listener indicated an asynchronous response'
     ];
     
     return extensionPatterns.some(pattern => 
@@ -74,5 +76,8 @@
     suppressExtensionErrors();
   });
   
-  console.log('🛡️ Extension error suppression active');
+  // Only log in development
+  if (window.location.hostname === 'localhost') {
+    console.log('🛡️ Extension error suppression active');
+  }
 })();
