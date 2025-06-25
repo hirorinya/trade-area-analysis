@@ -36,12 +36,24 @@ import {
 } from './styles/layouts';
 
 function App() {
-  // Environment check (only in development)
+  // Environment check and browser compatibility
   useEffect(() => {
     if (import.meta.env.MODE === 'development') {
       console.log('🔧 Dev Environment Check:');
       console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL ? '✅ SET' : '❌ NOT SET');
       console.log('Mapbox Token:', import.meta.env.VITE_MAPBOX_TOKEN ? '✅ SET' : '❌ NOT SET');
+    }
+    
+    // Browser compatibility check for Mapbox
+    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    const isEdge = /Edg/.test(navigator.userAgent);
+    
+    if (isChrome || isEdge) {
+      console.log('🌐 Chrome/Edge detected - using Leaflet for better compatibility');
+      setUseMapbox(false);
+    } else {
+      console.log('🗺️ Using Mapbox GL JS');
+      setUseMapbox(true);
     }
     
     // Phase 7 deployment check
@@ -2762,35 +2774,6 @@ Make it actionable and specific to help guide them through the platform.
                 </div>
                 <Button type="submit" variant="primary" style={{ width: '100%' }}>Add Location</Button>
               </form>
-              
-              <div style={{ 
-                marginTop: theme.spacing[4], 
-                padding: theme.spacing[3], 
-                backgroundColor: theme.colors.success[50], 
-                borderRadius: theme.borderRadius.lg,
-                border: `1px solid ${theme.colors.success[100]}`
-              }}>
-                <div style={{ 
-                  fontSize: theme.typography.fontSize.sm, 
-                  fontWeight: theme.typography.fontWeight.semibold, 
-                  marginBottom: theme.spacing[2], 
-                  color: theme.colors.success[600]
-                }}>
-                  🗾 国土地理院 + Enhanced Geocoding:
-                </div>
-                <div style={{ 
-                  fontSize: theme.typography.fontSize.xs, 
-                  color: theme.colors.success[600],
-                  lineHeight: 1.5
-                }}>
-                  • <strong>Japanese Addresses:</strong> "東京都港区芝浦4-20-2" (via 国土地理院 API)<br/>
-                  • <strong>Coordinates:</strong> "35.6762, 139.6503" (instant)<br/>
-                  • <strong>Major Stations:</strong> "東京駅", "Tokyo Station", "品川駅"<br/>
-                  • <strong>English Names:</strong> "Tokyo Station", "Shinjuku Station"<br/>
-                  • <strong>Auto-geocoding:</strong> Automatically triggers when you finish typing<br/>
-                  • <strong>Delete Locations:</strong> Use the 🗑️ Delete button to remove locations
-                </div>
-              </div>
             </div>
 
             {/* Locations List */}
