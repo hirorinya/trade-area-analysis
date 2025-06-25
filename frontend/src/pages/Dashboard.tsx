@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React from 'react';
 import {
   Box,
   Grid,
@@ -12,72 +11,16 @@ import {
   ListItem,
   ListItemText,
   ListItemButton,
-  CircularProgress,
-  Alert,
 } from '@mui/material';
 import { Add, Map, Analytics, Business } from '@mui/icons-material';
 import Layout from '../components/layout/Layout';
-import CreateProjectDialog from '../components/projects/CreateProjectDialog';
-import { RootState, AppDispatch } from '../store';
-import { projectsApi } from '../services/api';
-import { Project } from '../types';
 
 const Dashboard: React.FC = () => {
-  const { user } = useSelector((state: RootState) => state.auth);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        setLoading(true);
-        const response = await projectsApi.getAll();
-        setProjects(response.projects);
-        setError(null);
-      } catch (err: any) {
-        setError(err.response?.data?.error || 'Failed to load projects');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProjects();
-  }, []);
-
-  const handleCreateSuccess = () => {
-    // Refresh projects list
-    const fetchProjects = async () => {
-      try {
-        const response = await projectsApi.getAll();
-        setProjects(response.projects);
-      } catch (err) {
-        console.error('Error fetching projects:', err);
-      }
-    };
-    fetchProjects();
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 1) return 'Created today';
-    if (diffDays === 2) return 'Created yesterday';
-    if (diffDays < 7) return `Created ${diffDays} days ago`;
-    if (diffDays < 14) return 'Created 1 week ago';
-    if (diffDays < 21) return 'Created 2 weeks ago';
-    return `Created ${Math.floor(diffDays / 7)} weeks ago`;
-  };
-
   return (
     <Layout>
       <Box sx={{ p: 3 }}>
         <Typography variant="h4" gutterBottom>
-          Welcome back, {user?.first_name || 'User'}!
+          Dashboard
         </Typography>
         
         <Grid container spacing={3}>
@@ -93,7 +36,6 @@ const Dashboard: React.FC = () => {
                     variant="contained"
                     startIcon={<Add />}
                     fullWidth
-                    onClick={() => setCreateDialogOpen(true)}
                   >
                     New Project
                   </Button>
@@ -121,48 +63,35 @@ const Dashboard: React.FC = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  Your Projects
+                  Recent Projects
                 </Typography>
                 <Paper variant="outlined">
-                  {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                      <CircularProgress />
-                    </Box>
-                  ) : error ? (
-                    <Alert severity="error" sx={{ m: 2 }}>
-                      {error}
-                    </Alert>
-                  ) : projects.length === 0 ? (
-                    <Box sx={{ p: 3, textAlign: 'center' }}>
-                      <Typography variant="body2" color="text.secondary">
-                        No projects yet. Create your first project to get started!
-                      </Typography>
-                    </Box>
-                  ) : (
-                    <List>
-                      {projects.map((project) => (
-                        <ListItem key={project.id} disablePadding>
-                          <ListItemButton>
-                            <ListItemText
-                              primary={project.name}
-                              secondary={
-                                <>
-                                  {project.description && (
-                                    <Typography variant="body2" color="text.secondary">
-                                      {project.description}
-                                    </Typography>
-                                  )}
-                                  <Typography variant="caption" color="text.secondary">
-                                    {formatDate(project.created_at)}
-                                  </Typography>
-                                </>
-                              }
-                            />
-                          </ListItemButton>
-                        </ListItem>
-                      ))}
-                    </List>
-                  )}
+                  <List>
+                    <ListItem disablePadding>
+                      <ListItemButton>
+                        <ListItemText
+                          primary="Downtown Store Analysis"
+                          secondary="Created 2 days ago"
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                    <ListItem disablePadding>
+                      <ListItemButton>
+                        <ListItemText
+                          primary="Mall Location Study"
+                          secondary="Created 1 week ago"
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                    <ListItem disablePadding>
+                      <ListItemButton>
+                        <ListItemText
+                          primary="Competitor Analysis - West Side"
+                          secondary="Created 2 weeks ago"
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  </List>
                 </Paper>
               </CardContent>
             </Card>
@@ -175,7 +104,7 @@ const Dashboard: React.FC = () => {
                 <Card>
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Business color="primary" sx={{ fontSize: 40, mb: 1 }} />
-                    <Typography variant="h4">{projects.length}</Typography>
+                    <Typography variant="h4">12</Typography>
                     <Typography variant="body2" color="text.secondary">
                       Total Projects
                     </Typography>
@@ -186,7 +115,7 @@ const Dashboard: React.FC = () => {
                 <Card>
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Map color="primary" sx={{ fontSize: 40, mb: 1 }} />
-                    <Typography variant="h4">0</Typography>
+                    <Typography variant="h4">48</Typography>
                     <Typography variant="body2" color="text.secondary">
                       Trade Areas
                     </Typography>
@@ -197,7 +126,7 @@ const Dashboard: React.FC = () => {
                 <Card>
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Analytics color="primary" sx={{ fontSize: 40, mb: 1 }} />
-                    <Typography variant="h4">0</Typography>
+                    <Typography variant="h4">156</Typography>
                     <Typography variant="body2" color="text.secondary">
                       Analyses Run
                     </Typography>
@@ -208,7 +137,7 @@ const Dashboard: React.FC = () => {
                 <Card>
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Business color="primary" sx={{ fontSize: 40, mb: 1 }} />
-                    <Typography variant="h4">0</Typography>
+                    <Typography variant="h4">89</Typography>
                     <Typography variant="body2" color="text.secondary">
                       Competitors Tracked
                     </Typography>
@@ -219,12 +148,6 @@ const Dashboard: React.FC = () => {
           </Grid>
         </Grid>
       </Box>
-      
-      <CreateProjectDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-        onSuccess={handleCreateSuccess}
-      />
     </Layout>
   );
 };

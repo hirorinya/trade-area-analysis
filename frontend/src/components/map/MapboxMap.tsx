@@ -38,7 +38,7 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
   onMapClick,
   center = [139.6917, 35.6895], // Tokyo default
   zoom = 10,
-  style = 'mapbox://styles/mapbox/streets-v12',
+  style = 'mapbox://styles/mapbox/light-v11',
   showDemandGrid = false,
   gridBounds,
   onDemandAnalysis
