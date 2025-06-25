@@ -2066,7 +2066,7 @@ Make it actionable and specific to help guide them through the platform.
             {/* Analysis Recommendations */}
             {analysisRecommendations && (
               <div style={{
-                backgroundColor: theme.colors.blue[50],
+                backgroundColor: theme.colors.primary[50],
                 border: `1px solid ${theme.colors.primary[100]}`,
                 borderRadius: theme.borderRadius.lg,
                 padding: theme.spacing[4],
@@ -2182,7 +2182,7 @@ Make it actionable and specific to help guide them through the platform.
 
             {/* CSV Import Section */}
             <div style={{ 
-              backgroundColor: theme.colors.blue[50], 
+              backgroundColor: theme.colors.primary[50], 
               padding: theme.spacing[4], 
               borderRadius: theme.borderRadius.lg, 
               marginBottom: theme.spacing[4],
@@ -2894,7 +2894,7 @@ Make it actionable and specific to help guide them through the platform.
                 </div>
 
                 <div style={{ 
-                  backgroundColor: theme.colors.blue[50], 
+                  backgroundColor: theme.colors.primary[50], 
                   padding: theme.spacing[3], 
                   borderRadius: theme.borderRadius.lg, 
                   marginBottom: theme.spacing[4],

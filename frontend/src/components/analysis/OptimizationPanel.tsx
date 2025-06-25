@@ -423,7 +423,7 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           <div style={{ 
             marginTop: theme.spacing[4], 
             padding: theme.spacing[4], 
-            backgroundColor: theme.colors.yellow[50], 
+            backgroundColor: theme.colors.warning[50], 
             borderRadius: theme.borderRadius.lg,
             border: `1px solid ${theme.colors.warning[100]}`
           }}>
@@ -532,14 +532,14 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                   <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>Demand Captured</div>
                 </div>
                 
-                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.blue[50], borderRadius: theme.borderRadius.lg }}>
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.primary[50], borderRadius: theme.borderRadius.lg }}>
                   <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.primary[600] }}>
                     {(results.coverage || results.summary?.marketCoverage || 0).toFixed(1)}%
                   </div>
                   <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>Market Coverage</div>
                 </div>
 
-                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.purple[50], borderRadius: theme.borderRadius.lg }}>
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.primary[50], borderRadius: theme.borderRadius.lg }}>
                   <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.primary[700] }}>
                     {formatCurrency(results.totalCost || (results.totalStores * params.storeCost) || 0)}
                   </div>
@@ -613,7 +613,7 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
               
               {/* Network-level metrics */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: theme.spacing[3], marginBottom: theme.spacing[4] }}>
-                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.blue[50], borderRadius: theme.borderRadius.lg }}>
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.primary[50], borderRadius: theme.borderRadius.lg }}>
                   <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.primary[600] }}>
                     {results.networkMetrics.averageUtilization}%
                   </div>
@@ -627,7 +627,7 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                   <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>Daily Profit Opportunity</div>
                 </div>
                 
-                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.yellow[50], borderRadius: theme.borderRadius.lg }}>
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.warning[50], borderRadius: theme.borderRadius.lg }}>
                   <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.warning[600] }}>
                     {results.networkMetrics.storesOverCapacity}
                   </div>
@@ -716,7 +716,7 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
               
               {/* Pattern Strength Metrics */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: theme.spacing[3], marginBottom: theme.spacing[4] }}>
-                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.purple[50], borderRadius: theme.borderRadius.lg }}>
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.primary[50], borderRadius: theme.borderRadius.lg }}>
                   <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.primary[700] }}>
                     {results.metadata.totalStoresAnalyzed}
                   </div>
@@ -730,14 +730,14 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                   <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>Pattern Strength</div>
                 </div>
                 
-                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.blue[50], borderRadius: theme.borderRadius.lg }}>
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.primary[50], borderRadius: theme.borderRadius.lg }}>
                   <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.primary[600] }}>
                     {results.performanceCategories.highPerformers.length}
                   </div>
                   <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>High Performers</div>
                 </div>
                 
-                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.orange[50], borderRadius: theme.borderRadius.lg }}>
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.warning[50], borderRadius: theme.borderRadius.lg }}>
                   <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.warning[600] }}>
                     {results.siteRecommendations.length}
                   </div>
@@ -764,7 +764,7 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                         <div style={{
                           width: `${importance * 100}%`,
                           height: '4px',
-                          backgroundColor: theme.colors.blue[500],
+                          backgroundColor: theme.colors.primary[500],
                           borderRadius: '2px',
                           marginRight: theme.spacing[2]
                         }} />

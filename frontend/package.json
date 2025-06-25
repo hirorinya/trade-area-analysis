@@ -29,6 +29,7 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^0.522.0",
     "mapbox-gl": "^3.13.0",
+    "node-fetch": "^3.3.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-redux": "^9.2.0",
