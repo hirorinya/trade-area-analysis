@@ -21,7 +21,7 @@ pool.on('connect', () => {
 
 pool.on('error', (err) => {
   console.error('❌ Database connection error:', err);
-  process.exit(-1);
+  console.log('⚠️  Running without database connection');
 });
 
 export default pool;

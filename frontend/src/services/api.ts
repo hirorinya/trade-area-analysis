@@ -132,4 +132,29 @@ export const tradeAreasApi = {
   },
 };
 
+// Geo API
+export const geoApi = {
+  generateIsochrone: async (coordinates: [number, number], timeMinutes: number = 10) => {
+    const response = await api.post('/geo/isochrone', {
+      coordinates,
+      time_minutes: timeMinutes,
+      mode: 'driving'
+    });
+    return response.data;
+  },
+
+  geocodeAddress: async (address: string) => {
+    const response = await api.post('/geo/geocode', { address });
+    return response.data;
+  },
+
+  getDemographics: async (coordinates: [number, number], radiusKm: number = 1) => {
+    const response = await api.post('/geo/demographics', {
+      coordinates,
+      radius_km: radiusKm
+    });
+    return response.data;
+  },
+};
+
 export default api;
