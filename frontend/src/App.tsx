@@ -436,10 +436,15 @@ Make it actionable and specific to help guide them through the platform.
       setCurrentAddress(''); // Clear the address state
       setFormCoordinates({ lat: '', lng: '' }); // Clear coordinate state
       loadLocations(selectedProject.id);
-      updateMapMarkers();
     } catch (error) {
       setMessage(`Error creating location: ${error.message}`);
     }
+  };
+
+  // Update map markers - no-op as maps update automatically via React props
+  const updateMapMarkers = () => {
+    // Map components automatically update when locations state changes
+    // This function exists for compatibility but doesn't need to do anything
   };
 
   // Delete location functionality
@@ -453,7 +458,6 @@ Make it actionable and specific to help guide them through the platform.
       
       setMessage('Location deleted successfully!');
       loadLocations(selectedProject.id);
-      updateMapMarkers();
     } catch (error) {
       setMessage(`Error deleting location: ${error.message}`);
     }
@@ -1512,7 +1516,6 @@ Make it actionable and specific to help guide them through the platform.
 
       setMessage(`✅ CSV Import complete! ${successCount} locations added, ${errorCount} errors`);
       loadLocations(selectedProject.id);
-      updateMapMarkers();
       
     } catch (error) {
       setMessage(`❌ Error reading CSV file: ${error.message}`);
