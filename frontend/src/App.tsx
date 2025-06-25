@@ -89,10 +89,46 @@ function App() {
     localStorage.setItem('currentView', newView);
   };
 
-  // API calls
+  // Supabase direct API handler for production
+  const handleSupabaseAPI = async (endpoint, options = {}) => {
+    // Map API endpoints to Supabase operations
+    if (endpoint === '/health') {
+      return { status: 'OK', timestamp: new Date().toISOString(), service: 'Supabase Direct' };
+    }
+    
+    if (endpoint === '/auth/login') {
+      const { email, password } = options.body ? JSON.parse(options.body) : {};
+      const { data, error } = await auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      return { user: data.user, token: data.session?.access_token };
+    }
+    
+    if (endpoint === '/projects') {
+      if (options.method === 'POST') {
+        const projectData = options.body ? JSON.parse(options.body) : {};
+        const { data, error } = await db.from('projects').insert(projectData).select().single();
+        if (error) throw error;
+        return data;
+      } else {
+        const { data, error } = await db.from('projects').select('*');
+        if (error) throw error;
+        return data;
+      }
+    }
+    
+    // Default mock response for unimplemented endpoints
+    return { message: 'Supabase direct mode - endpoint not implemented', endpoint };
+  };
+
+  // API calls - use Supabase direct in production
   const apiCall = async (endpoint, options = {}) => {
     try {
-      const response = await fetch(`http://localhost:8000/api${endpoint}`, {
+      // In production, use Supabase directly instead of backend API
+      if (import.meta.env.VITE_USE_SUPABASE_DIRECT === 'true') {
+        return await handleSupabaseAPI(endpoint, options);
+      }
+      
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}${endpoint}`, {
         headers: {
           'Content-Type': 'application/json',
           ...(token && { 'Authorization': `Bearer ${token}` }),
