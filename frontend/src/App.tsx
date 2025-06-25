@@ -2722,7 +2722,7 @@ Make it actionable and specific to help guide them through the platform.
               <div style={{ 
                 marginTop: theme.spacing[4], 
                 padding: theme.spacing[3], 
-                backgroundColor: theme.colors.green[50], 
+                backgroundColor: theme.colors.success[50], 
                 borderRadius: theme.borderRadius.lg,
                 border: `1px solid ${theme.colors.success[100]}`
               }}>

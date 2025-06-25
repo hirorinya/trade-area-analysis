@@ -585,7 +585,7 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
             <div style={{ marginTop: theme.spacing[4] }}>
               <h4 style={{ ...heading3Style, fontSize: theme.typography.fontSize.lg }}>Competitive Analysis</h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: theme.spacing[4] }}>
-                <div style={{ padding: theme.spacing[3], backgroundColor: theme.colors.green[50], borderRadius: theme.borderRadius.lg }}>
+                <div style={{ padding: theme.spacing[3], backgroundColor: theme.colors.success[50], borderRadius: theme.borderRadius.lg }}>
                   <div style={{ fontSize: theme.typography.fontSize.xl, fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.success[600] }}>
                     New Stores
                   </div>
@@ -620,7 +620,7 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                   <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>Avg Utilization</div>
                 </div>
                 
-                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.green[50], borderRadius: theme.borderRadius.lg }}>
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.success[50], borderRadius: theme.borderRadius.lg }}>
                   <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.success[600] }}>
                     {formatCurrency(results.networkMetrics.totalProfitImprovement)}
                   </div>
@@ -723,7 +723,7 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
                   <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.gray[600] }}>Stores Analyzed</div>
                 </div>
                 
-                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.green[50], borderRadius: theme.borderRadius.lg }}>
+                <div style={{ textAlign: 'center', padding: theme.spacing[3], backgroundColor: theme.colors.success[50], borderRadius: theme.borderRadius.lg }}>
                   <div style={{ fontSize: theme.typography.fontSize['2xl'], fontWeight: theme.typography.fontWeight.bold, color: theme.colors.success[600] }}>
                     {Math.round(results.metadata.patternStrength * 100)}%
                   </div>
