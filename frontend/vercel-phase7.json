@@ -1,0 +1,29 @@
+{
+  "name": "trade-area-analysis-phase7",
+  "alias": ["trade-area-analysis-9ipm.vercel.app"],
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "buildCommand": "npm run build:phase7",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "env": {
+    "VITE_DEPLOYMENT_PHASE": "7",
+    "VITE_FEATURES_ENABLED": "analysis,optimization,advanced-map",
+    "VITE_SUPABASE_URL": "@supabase-url",
+    "VITE_SUPABASE_ANON_KEY": "@supabase-anon-key",
+    "VITE_MAPBOX_TOKEN": "@mapbox-token"
+  }
+}

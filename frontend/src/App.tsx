@@ -43,6 +43,14 @@ function App() {
       console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL ? '✅ SET' : '❌ NOT SET');
       console.log('Mapbox Token:', import.meta.env.VITE_MAPBOX_TOKEN ? '✅ SET' : '❌ NOT SET');
     }
+    
+    // Phase 7 deployment check
+    if (import.meta.env.VITE_DEPLOYMENT_PHASE === '7') {
+      console.log('🚀 Phase 7: Analysis & Optimization Environment');
+      console.log('✅ Advanced map features enabled');
+      console.log('✅ AI analysis system active');
+      console.log('✅ Optimization algorithms ready');
+    }
   }, []);
 
   const [currentView, setCurrentView] = useState(() => {
