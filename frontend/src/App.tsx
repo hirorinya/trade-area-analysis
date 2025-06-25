@@ -44,17 +44,9 @@ function App() {
       console.log('Mapbox Token:', import.meta.env.VITE_MAPBOX_TOKEN ? '✅ SET' : '❌ NOT SET');
     }
     
-    // Browser compatibility check for Mapbox
-    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-    const isEdge = /Edg/.test(navigator.userAgent);
-    
-    if (isChrome || isEdge) {
-      console.log('🌐 Chrome/Edge detected - using Leaflet for better compatibility');
-      setUseMapbox(false);
-    } else {
-      console.log('🗺️ Using Mapbox GL JS');
-      setUseMapbox(true);
-    }
+    // Use Leaflet by default for better cross-browser compatibility
+    console.log('🗺️ Using Leaflet maps for reliable cross-browser support');
+    setUseMapbox(false);
     
     // Phase 7 deployment check
     if (import.meta.env.VITE_DEPLOYMENT_PHASE === '7') {

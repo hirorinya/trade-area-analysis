@@ -186,7 +186,11 @@ export const mapContainerStyle = {
   borderRadius: theme.borderRadius['2xl'],      // rounded-2xl (16px)
   overflow: 'hidden',
   boxShadow: theme.shadows.md,
-  backgroundColor: theme.colors.background.default
+  backgroundColor: theme.colors.background.default,
+  height: '500px',                              // Fixed height for map display
+  minHeight: '400px',                           // Minimum height
+  width: '100%',                                // Full width
+  position: 'relative'                          // For proper map rendering
 };
 
 export const mapControlsStyle = {

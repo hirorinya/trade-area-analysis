@@ -30,6 +30,28 @@ body {
   min-height: 100vh;
 }
 
+/* Fix map display issues in Chrome/Edge */
+.leaflet-container, 
+.mapboxgl-map {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.leaflet-tile-pane {
+  z-index: 1 !important;
+}
+
+.leaflet-tile {
+  max-width: none !important;
+}
+
+/* Ensure map containers have proper dimensions */
+div[style*="height"] {
+  min-height: 400px;
+}
+
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
