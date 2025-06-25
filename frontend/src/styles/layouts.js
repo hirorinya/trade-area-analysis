@@ -3,38 +3,38 @@ import { theme } from './theme.js';
 
 // Container (Design Guidelines)
 export const containerStyle = {
-  maxWidth: '1024px',  // max-w-4xl
+  maxWidth: '1280px',  // Slightly wider for better layout
   width: '100%',
   margin: '0 auto',    // mx-auto
-  padding: '2rem 1rem', // py-8 px-4 (mobile)
+  padding: '1rem',     // Reduced padding
   fontFamily: theme.typography.fontFamily.primary,
   backgroundColor: theme.colors.background.default,
-  minHeight: '100vh',
+  // Removed minHeight: '100vh' to prevent vertical stretch
   
   // Responsive padding
   '@media (min-width: 640px)': {
-    padding: '3rem 1.5rem' // py-12 px-6 (sm)
+    padding: '1.5rem'  // Reduced padding
   },
   '@media (min-width: 1024px)': {
-    padding: '4rem 2rem' // py-16 px-8 (lg)
+    padding: '2rem'    // Reduced padding
   }
 };
 
 // Section spacing (Design Guidelines)
 export const sectionStyle = {
-  marginBottom: theme.spacing[8], // space-y-8 (32px between sections)
+  marginBottom: theme.spacing[4], // Reduced from 32px to 16px
 };
 
 export const majorSectionStyle = {
-  marginBottom: theme.spacing[12], // space-y-12 (48px major sections)
+  marginBottom: theme.spacing[6], // Reduced from 48px to 24px
 };
 
 // Header styles
 export const headerStyle = {
   textAlign: 'center',
-  marginBottom: theme.spacing[8],
+  marginBottom: theme.spacing[4],  // Reduced from 32px to 16px
   borderBottom: `1px solid ${theme.colors.gray[200]}`,
-  paddingBottom: theme.spacing[6]
+  paddingBottom: theme.spacing[3]  // Reduced from 24px to 12px
 };
 
 export const titleStyle = {
@@ -127,8 +127,8 @@ export const navStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  marginBottom: theme.spacing[8],
-  padding: theme.spacing[4],
+  marginBottom: theme.spacing[4],  // Reduced from 32px to 16px
+  padding: theme.spacing[3],       // Reduced from 16px to 12px
   backgroundColor: theme.colors.background.default,
   borderBottom: `1px solid ${theme.colors.gray[200]}`,
   position: 'sticky',
@@ -187,8 +187,8 @@ export const mapContainerStyle = {
   overflow: 'hidden',
   boxShadow: theme.shadows.md,
   backgroundColor: theme.colors.background.default,
-  height: '500px',                              // Fixed height for map display
-  minHeight: '400px',                           // Minimum height
+  height: '400px',                              // Reduced from 500px to 400px
+  minHeight: '350px',                           // Reduced from 400px to 350px
   width: '100%',                                // Full width
   position: 'relative'                          // For proper map rendering
 };
