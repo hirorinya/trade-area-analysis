@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { generateDemandGrid, calculateDemandCapture, calculateStorePerformance } from '../../utils/demandGrid';
@@ -33,6 +33,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const gridLayerRef = useRef<L.LayerGroup | null>(null);
+  const lastGridBoundsRef = useRef<string>('');
+  const lastLocationsRef = useRef<string>('');
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -136,8 +138,22 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         mapInstanceRef.current.removeLayer(gridLayerRef.current);
         gridLayerRef.current = null;
       }
+      lastGridBoundsRef.current = '';
+      lastLocationsRef.current = '';
       return;
     }
+
+    // Check if bounds or locations have actually changed
+    const boundsKey = JSON.stringify(gridBounds);
+    const locationsKey = JSON.stringify(locations.map(l => ({ id: l.id, lat: l.latitude, lng: l.longitude })));
+    
+    if (boundsKey === lastGridBoundsRef.current && locationsKey === lastLocationsRef.current) {
+      // No actual change, skip regeneration
+      return;
+    }
+    
+    lastGridBoundsRef.current = boundsKey;
+    lastLocationsRef.current = locationsKey;
 
     console.log('Generating demand grid with bounds:', gridBounds);
     
@@ -156,12 +172,18 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         
         console.log('Store performance analysis:', storePerformance);
         
+        // Only call onDemandAnalysis after a delay to ensure it doesn't trigger re-renders
         if (onDemandAnalysis) {
-          onDemandAnalysis({
+          const analysisData = {
             meshes: updatedMeshes,
             storePerformance,
             totalMeshes: updatedMeshes.length,
             totalDemand: updatedMeshes.reduce((sum, mesh) => sum + mesh.demand, 0)
+          };
+          
+          // Use requestAnimationFrame to defer the callback
+          requestAnimationFrame(() => {
+            onDemandAnalysis(analysisData);
           });
         }
       }
