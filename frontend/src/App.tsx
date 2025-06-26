@@ -79,7 +79,7 @@ function App() {
   const [showAIChat, setShowAIChat] = useState(false);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [showOptimization, setShowOptimization] = useState(false);
-  const [demandMeshes, setDemandMeshes] = useState([]);
+  // const [demandMeshes, setDemandMeshes] = useState([]); // Removed to prevent infinite loop
   const [optimizationResults, setOptimizationResults] = useState(null);
   const [candidateMarkers, setCandidateMarkers] = useState([]);
   const [showDemandGrid, setShowDemandGrid] = useState(false);
@@ -1404,10 +1404,8 @@ Make it actionable and specific to help guide them through the platform.
     setMessage(`Showing ${candidates.length} candidate/optimized locations on map`);
   };
 
-  const handleDemandAnalysis = useCallback((analysis) => {
-    setDemandMeshes(analysis.meshes || []);
-    console.log('Demand analysis updated:', analysis);
-  }, []);
+  // Removed handleDemandAnalysis to prevent infinite loop
+  // Population grid now handles analysis internally
 
   // Get current map bounds for optimization
   const getCurrentMapBounds = () => {
@@ -3445,7 +3443,6 @@ Make it actionable and specific to help guide them through the platform.
                   }}
                   showDemandGrid={showDemandGrid}
                   gridBounds={gridBounds}
-                  onDemandAnalysis={handleDemandAnalysis}
                 />
               ) : (
                 <LeafletMap
@@ -3467,7 +3464,6 @@ Make it actionable and specific to help guide them through the platform.
                   }}
                   showDemandGrid={showDemandGrid}
                   gridBounds={gridBounds}
-                  onDemandAnalysis={handleDemandAnalysis}
                 />
               )}
             </div>
@@ -3502,7 +3498,7 @@ Make it actionable and specific to help guide them through the platform.
               marginTop: theme.spacing[5]
             }}>
               <OptimizationPanel
-                demandMeshes={demandMeshes}
+                demandMeshes={[]} // Temporarily empty to prevent infinite loop
                 existingStores={locations.filter(loc => loc.location_type === 'store')}
                 competitors={locations.filter(loc => loc.location_type === 'competitor')}
                 bounds={getCurrentMapBounds()}

@@ -172,20 +172,15 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         
         console.log('Store performance analysis:', storePerformance);
         
-        // Only call onDemandAnalysis after a delay to ensure it doesn't trigger re-renders
-        if (onDemandAnalysis) {
-          const analysisData = {
-            meshes: updatedMeshes,
-            storePerformance,
-            totalMeshes: updatedMeshes.length,
-            totalDemand: updatedMeshes.reduce((sum, mesh) => sum + mesh.demand, 0)
-          };
-          
-          // Use requestAnimationFrame to defer the callback
-          requestAnimationFrame(() => {
-            onDemandAnalysis(analysisData);
-          });
-        }
+        // Don't call onDemandAnalysis to prevent infinite loop
+        // Store analysis data in console for now
+        const analysisData = {
+          meshes: updatedMeshes,
+          storePerformance,
+          totalMeshes: updatedMeshes.length,
+          totalDemand: updatedMeshes.reduce((sum, mesh) => sum + mesh.demand, 0)
+        };
+        console.log('Demand analysis completed:', analysisData);
       }
 
       // Remove existing grid layer
