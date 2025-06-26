@@ -1411,13 +1411,29 @@ Make it actionable and specific to help guide them through the platform.
 
   // Get current map bounds for optimization
   const getCurrentMapBounds = () => {
-    if (locations.length === 0) return null;
+    if (locations.length === 0) {
+      // Return default bounds for Tokyo area when no locations exist
+      return {
+        north: 35.8,
+        south: 35.5,
+        east: 140.1,
+        west: 139.3
+      };
+    }
     
     // Calculate bounds from existing locations
     const lats = locations.map(loc => loc.coordinates?.coordinates?.[1] || loc.latitude || 0);
     const lngs = locations.map(loc => loc.coordinates?.coordinates?.[0] || loc.longitude || 0);
     
-    if (lats.length === 0 || lngs.length === 0) return null;
+    if (lats.length === 0 || lngs.length === 0) {
+      // Fallback to default bounds if coordinate extraction fails
+      return {
+        north: 35.8,
+        south: 35.5,
+        east: 140.1,
+        west: 139.3
+      };
+    }
     
     const minLat = Math.min(...lats);
     const maxLat = Math.max(...lats);
@@ -3444,6 +3460,9 @@ Make it actionable and specific to help guide them through the platform.
                     console.log('Map clicked at:', coordinates);
                     setMessage(`Clicked at: ${coordinates[1].toFixed(4)}, ${coordinates[0].toFixed(4)}`);
                   }}
+                  showDemandGrid={showDemandGrid}
+                  gridBounds={getCurrentMapBounds()}
+                  onDemandAnalysis={handleDemandAnalysis}
                 />
               )}
             </div>
