@@ -46,7 +46,7 @@ export function generateDemandGrid(bounds, meshSize = 250) {
         population: generatePopulationDensity(lat + metersToLat / 2, lng + metersToLng / 2),
         demand: 0, // Will be calculated based on population and demographics
         capturedBy: [], // Stores that capture demand from this mesh
-        captureRatio: 0 // Ratio of demand captured (0-1)
+        captureRatio: {} // Ratio of demand captured by each store
       };
       
       // Calculate demand based on population (simplified model)
@@ -150,7 +150,7 @@ export function calculateDemandCapture(meshes, stores, maxRadius = 2.0, distance
   // Reset capture data
   meshes.forEach(mesh => {
     mesh.capturedBy = [];
-    mesh.captureRatio = 0; // Fixed: changed from {} to number
+    mesh.captureRatio = {}; // Object to store capture ratios by store ID
   });
   
   // Calculate capture for each mesh
