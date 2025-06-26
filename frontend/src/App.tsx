@@ -1498,26 +1498,52 @@ Make it actionable and specific to help guide them through the platform.
       // Check for required columns - allow either coordinates OR address
       const hasCoordinates = headers.some(h => h.includes('latitude') || h.includes('lat')) && 
                              headers.some(h => h.includes('longitude') || h.includes('lng') || h.includes('lon'));
-      const hasAddress = headers.some(h => h.includes('address'));
-      const hasName = headers.some(h => h.includes('name'));
-      const hasType = headers.some(h => h.includes('type'));
+      const hasAddress = headers.some(h => h.includes('address') || h.includes('住所'));
+      const hasName = headers.some(h => h.includes('name') || h.includes('名前') || h.includes('店舗名'));
+      const hasType = headers.some(h => h.includes('type') || h.includes('タイプ') || h.includes('種類'));
+      
+      // Special handling for CSV files without proper headers
+      // If first row doesn't look like headers, treat it as data
+      const firstDataRow = lines[1]?.split(',').map(v => v.trim());
+      const looksLikeHeaders = headers.some(h => 
+        h.includes('name') || h.includes('latitude') || h.includes('address') ||
+        h.includes('名前') || h.includes('住所') || h.includes('緯度')
+      );
+      
+      // If no proper headers detected and we have 3+ columns, assume: name, address, type
+      if (!looksLikeHeaders && headers.length >= 3 && firstDataRow) {
+        console.log('CSV appears to have no headers, assuming format: name, address, type');
+        setMessage('📋 Detected CSV without headers, assuming format: name, address, type');
+        // Override header detection
+        const assumedHeaders = ['name', 'address', 'type'];
+        for (let i = 0; i < Math.min(assumedHeaders.length, headers.length); i++) {
+          headers[i] = assumedHeaders[i];
+        }
+      }
 
-      if (!hasName || !hasType) {
-        setMessage('❌ CSV must have "name" and "type" columns');
+      // Re-check after potential header override
+      const finalHasCoordinates = headers.some(h => h.includes('latitude') || h.includes('lat')) && 
+                                  headers.some(h => h.includes('longitude') || h.includes('lng') || h.includes('lon'));
+      const finalHasAddress = headers.some(h => h.includes('address') || h.includes('住所'));
+      const finalHasName = headers.some(h => h.includes('name') || h.includes('名前') || h.includes('店舗名'));
+      const finalHasType = headers.some(h => h.includes('type') || h.includes('タイプ') || h.includes('種類'));
+
+      if (!finalHasName || !finalHasType) {
+        setMessage('❌ CSV must have "name" and "type" columns (or 名前/種類 in Japanese)');
         return;
       }
 
-      if (!hasCoordinates && !hasAddress) {
+      if (!finalHasCoordinates && !finalHasAddress) {
         setMessage('❌ CSV must have either coordinates (latitude/longitude) OR address column for automatic geocoding');
         return;
       }
 
-      // Find column indices
-      const nameIndex = headers.findIndex(h => h.includes('name'));
-      const latIndex = headers.findIndex(h => h.includes('latitude') || h.includes('lat'));
-      const lngIndex = headers.findIndex(h => h.includes('longitude') || h.includes('lng') || h.includes('lon'));
-      const typeIndex = headers.findIndex(h => h.includes('type'));
-      const addressIndex = headers.findIndex(h => h.includes('address'));
+      // Find column indices (support both English and Japanese)
+      const nameIndex = headers.findIndex(h => h.includes('name') || h.includes('名前') || h.includes('店舗名'));
+      const latIndex = headers.findIndex(h => h.includes('latitude') || h.includes('lat') || h.includes('緯度'));
+      const lngIndex = headers.findIndex(h => h.includes('longitude') || h.includes('lng') || h.includes('lon') || h.includes('経度'));
+      const typeIndex = headers.findIndex(h => h.includes('type') || h.includes('タイプ') || h.includes('種類'));
+      const addressIndex = headers.findIndex(h => h.includes('address') || h.includes('住所'));
 
       let successCount = 0;
       let errorCount = 0;
@@ -1525,7 +1551,10 @@ Make it actionable and specific to help guide them through the platform.
 
       setMessage('🔄 Processing CSV with automatic geocoding...');
 
-      for (let i = 1; i < lines.length; i++) {
+      // Start from line 0 if no headers detected, line 1 if headers detected
+      const startLine = looksLikeHeaders ? 1 : 0;
+      
+      for (let i = startLine; i < lines.length; i++) {
         const values = lines[i].split(',').map(v => v.trim());
         
         if (values.length < 2) continue;
@@ -1540,7 +1569,18 @@ Make it actionable and specific to help guide them through the platform.
           continue;
         }
 
-        if (!['store', 'competitor', 'poi'].includes(locationType)) {
+        // Map common Japanese/English terms to valid types
+        let validType = locationType;
+        if (locationType === 'eneos' || locationType === 'ガソリンスタンド' || locationType === 'gas station') {
+          validType = 'poi';
+        } else if (locationType === '店舗' || locationType === 'shop') {
+          validType = 'store';
+        } else if (locationType === '競合' || locationType === '競合店') {
+          validType = 'competitor';
+        }
+        
+        if (!['store', 'competitor', 'poi'].includes(validType)) {
+          console.warn(`Invalid location type: ${locationType}, expected: store/competitor/poi`);
           errorCount++;
           continue;
         }
@@ -1584,7 +1624,7 @@ Make it actionable and specific to help guide them through the platform.
             address: address,
             latitude: latitude,
             longitude: longitude,
-            location_type: locationType
+            location_type: validType
           });
           
           if (error) {
@@ -2764,11 +2804,11 @@ Make it actionable and specific to help guide them through the platform.
                     color: theme.colors.primary[600],
                     lineHeight: '1.4'
                   }}>
-                    • <strong>name</strong> - Location name<br/>
-                    • <strong>type</strong> - store, competitor, or poi<br/>
-                    • <strong>address</strong> - Address for auto-geocoding OR<br/>
-                    • <strong>latitude, longitude</strong> - Coordinates<br/>
-                    <em>Either address OR coordinates required</em>
+                    • <strong>name</strong> (名前) - Location name<br/>
+                    • <strong>type</strong> (種類) - store, competitor, poi, ENEOS<br/>
+                    • <strong>address</strong> (住所) - Address for auto-geocoding OR<br/>
+                    • <strong>latitude, longitude</strong> (緯度, 経度) - Coordinates<br/>
+                    <em>Works with or without headers - auto-detects format</em>
                   </div>
                 </div>
 
@@ -2804,7 +2844,8 @@ Make it actionable and specific to help guide them through the platform.
                       fontSize: theme.typography.fontSize.xs,
                       color: theme.colors.gray[500]
                     }}>
-                      Automatic geocoding will convert addresses to coordinates
+                      Automatic geocoding will convert addresses to coordinates<br/>
+                      <strong>Example:</strong> 神田明神下ＳＳ,東京都千代田区外神田２－１５－５,ENEOS
                     </div>
                   </label>
                 </div>
