@@ -289,8 +289,22 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
         cursor: pointer;
       `;
 
+      // Handle different coordinate formats safely
+      let lng, lat;
+      if (location.longitude && location.latitude) {
+        lng = location.longitude;
+        lat = location.latitude;
+      } else if (location.coordinates && Array.isArray(location.coordinates.coordinates) && 
+                 location.coordinates.coordinates.length >= 2) {
+        lng = location.coordinates.coordinates[0];
+        lat = location.coordinates.coordinates[1];
+      } else {
+        console.warn('Location has invalid coordinates format:', location);
+        return; // Skip this location
+      }
+
       const marker = new mapboxgl.Marker(el)
-        .setLngLat([location.longitude, location.latitude])
+        .setLngLat([lng, lat])
         .addTo(map.current!);
 
       // Add popup
@@ -321,7 +335,19 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
     if (locations.length > 0) {
       const bounds = new mapboxgl.LngLatBounds();
       locations.forEach(location => {
-        bounds.extend([location.longitude, location.latitude]);
+        // Handle different coordinate formats safely
+        let lng, lat;
+        if (location.longitude && location.latitude) {
+          lng = location.longitude;
+          lat = location.latitude;
+        } else if (location.coordinates && Array.isArray(location.coordinates.coordinates) && 
+                   location.coordinates.coordinates.length >= 2) {
+          lng = location.coordinates.coordinates[0];
+          lat = location.coordinates.coordinates[1];
+        } else {
+          return; // Skip invalid locations
+        }
+        bounds.extend([lng, lat]);
       });
       
       map.current.fitBounds(bounds, {

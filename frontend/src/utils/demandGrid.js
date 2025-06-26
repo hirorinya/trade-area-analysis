@@ -9,6 +9,17 @@
  * @returns {Array} Array of mesh cells with demand data
  */
 export function generateDemandGrid(bounds, meshSize = 250) {
+  // Validate bounds
+  if (!bounds || typeof bounds !== 'object') {
+    throw new Error('Invalid bounds: bounds must be an object');
+  }
+  if (bounds.north <= bounds.south) {
+    throw new Error('Invalid bounds: north must be greater than south');
+  }
+  if (bounds.east <= bounds.west) {
+    throw new Error('Invalid bounds: east must be greater than west');
+  }
+  
   const meshes = [];
   
   // Convert meters to degrees (approximate)
@@ -35,11 +46,12 @@ export function generateDemandGrid(bounds, meshSize = 250) {
         population: generatePopulationDensity(lat + metersToLat / 2, lng + metersToLng / 2),
         demand: 0, // Will be calculated based on population and demographics
         capturedBy: [], // Stores that capture demand from this mesh
-        captureRatio: {} // Ratio of demand captured by each store
+        captureRatio: 0 // Ratio of demand captured (0-1)
       };
       
       // Calculate demand based on population (simplified model)
-      mesh.demand = Math.round(mesh.population * 0.3); // 30% of population as potential customers
+      // Ensure minimum viable demand even in low-population areas
+      mesh.demand = Math.max(1, Math.round(mesh.population * 0.3)); // 30% of population, min 1
       
       meshes.push(mesh);
     }
@@ -56,6 +68,14 @@ export function generateDemandGrid(bounds, meshSize = 250) {
  * @returns {number} Estimated population in this mesh
  */
 export function generatePopulationDensity(lat, lng) {
+  // Validate input coordinates
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return 0;
+  }
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return 0;
+  }
+  
   // Simulate realistic population patterns
   const basePopulation = 150; // Base population per mesh
   
@@ -70,10 +90,12 @@ export function generatePopulationDensity(lat, lng) {
   // Closer to center = higher density
   const densityFactor = Math.max(0.3, 2 - distance / 10); // Decays with distance
   
-  // Simulate water areas and uninhabitable zones (0 population)
-  if (Math.random() < 0.05) return 0; // 5% chance of uninhabitable area
+  // Simulate water areas and uninhabitable zones (reduced chance for better mapping)
+  if (Math.random() < 0.02) return 0; // 2% chance of uninhabitable area (reduced from 5%)
   
-  return Math.round(basePopulation * randomFactor * densityFactor);
+  // Ensure minimum population in habitable areas for better mapping
+  const population = Math.round(basePopulation * randomFactor * densityFactor);
+  return Math.max(5, population); // Minimum 5 people per mesh in habitable areas
 }
 
 /**
@@ -85,6 +107,18 @@ export function generatePopulationDensity(lat, lng) {
  * @returns {number} Distance in kilometers
  */
 export function getDistance(lat1, lng1, lat2, lng2) {
+  // Validate inputs
+  if (typeof lat1 !== 'number' || typeof lng1 !== 'number' || 
+      typeof lat2 !== 'number' || typeof lng2 !== 'number') {
+    return 0;
+  }
+  
+  // Check for valid coordinate ranges
+  if (lat1 < -90 || lat1 > 90 || lat2 < -90 || lat2 > 90 ||
+      lng1 < -180 || lng1 > 180 || lng2 < -180 || lng2 > 180) {
+    return 0;
+  }
+  
   const R = 6371; // Earth's radius in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
@@ -92,7 +126,10 @@ export function getDistance(lat1, lng1, lat2, lng2) {
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLng/2) * Math.sin(dLng/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
+  const distance = R * c;
+  
+  // Return 0 if calculation resulted in NaN
+  return isNaN(distance) ? 0 : distance;
 }
 
 /**
@@ -104,10 +141,16 @@ export function getDistance(lat1, lng1, lat2, lng2) {
  * @returns {Object} Updated meshes with capture data
  */
 export function calculateDemandCapture(meshes, stores, maxRadius = 2.0, distanceDecay = 1.5) {
+  // Validate inputs
+  if (!Array.isArray(meshes) || !Array.isArray(stores)) {
+    console.error('calculateDemandCapture: meshes and stores must be arrays');
+    return meshes;
+  }
+  
   // Reset capture data
   meshes.forEach(mesh => {
     mesh.capturedBy = [];
-    mesh.captureRatio = {};
+    mesh.captureRatio = 0; // Fixed: changed from {} to number
   });
   
   // Calculate capture for each mesh
@@ -116,10 +159,24 @@ export function calculateDemandCapture(meshes, stores, maxRadius = 2.0, distance
     
     // Find stores within capture radius
     stores.forEach(store => {
+      // Handle different coordinate formats safely
+      let storeLat, storeLng;
+      
+      if (store.latitude && store.longitude) {
+        storeLat = store.latitude;
+        storeLng = store.longitude;
+      } else if (store.coordinates && Array.isArray(store.coordinates.coordinates) && 
+                 store.coordinates.coordinates.length >= 2) {
+        storeLat = store.coordinates.coordinates[1];
+        storeLng = store.coordinates.coordinates[0];
+      } else {
+        console.warn('Store has invalid coordinates format:', store);
+        return; // Skip this store
+      }
+      
       const distance = getDistance(
         mesh.center.lat, mesh.center.lng,
-        store.latitude || store.coordinates?.coordinates?.[1] || 0,
-        store.longitude || store.coordinates?.coordinates?.[0] || 0
+        storeLat, storeLng
       );
       
       if (distance <= maxRadius) {
@@ -255,6 +312,17 @@ export async function loadRealPopulationData(bounds, country = 'JP') {
   // Placeholder for real data integration
   console.log(`Loading population data for ${country} in bounds:`, bounds);
   
-  // For now, return simulated data
-  return generateDemandGrid(bounds);
+  try {
+    // Validate bounds before processing
+    if (!bounds || typeof bounds !== 'object') {
+      throw new Error('Invalid bounds provided');
+    }
+    
+    // For now, return simulated data wrapped in Promise
+    return await Promise.resolve(generateDemandGrid(bounds));
+  } catch (error) {
+    console.error('Error loading population data:', error);
+    // Return empty grid on error
+    return [];
+  }
 }
