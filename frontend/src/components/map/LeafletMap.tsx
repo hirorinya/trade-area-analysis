@@ -19,6 +19,8 @@ interface LeafletMapProps {
   showDemandGrid?: boolean;
   gridBounds?: { north: number; south: number; east: number; west: number } | null;
   onDemandAnalysis?: (analysis: any) => void;
+  meshSize?: number;
+  catchmentRadius?: number;
 }
 
 const LeafletMap: React.FC<LeafletMapProps> = ({
@@ -27,7 +29,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   onMapClick,
   showDemandGrid = false,
   gridBounds = null,
-  onDemandAnalysis
+  onDemandAnalysis,
+  meshSize = 500,
+  catchmentRadius = 2.0
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -167,15 +171,15 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
 
     // Pre-render in background with chunked processing
     prerenderPopulationGrid();
-  }, [showDemandGrid, gridBounds, locations]);
+  }, [showDemandGrid, gridBounds, locations, meshSize, catchmentRadius]);
 
   // Function to pre-render population grid in chunks
   const prerenderPopulationGrid = async () => {
     if (!gridBounds || !mapInstanceRef.current) return;
 
     try {
-      console.log('📊 Generating demand meshes...');
-      const meshes = generateDemandGrid(gridBounds, 500); // Larger 500m meshes for better visibility
+      console.log(`📊 Generating demand meshes with ${meshSize}m size...`);
+      const meshes = generateDemandGrid(gridBounds, meshSize); // Use dynamic mesh size
       console.log(`✅ Generated ${meshes.length} demand meshes`);
 
       // Calculate demand capture
@@ -183,8 +187,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       let updatedMeshes = meshes;
       
       if (storeLocations.length > 0) {
-        console.log('🏪 Calculating demand capture for stores...');
-        updatedMeshes = calculateDemandCapture(meshes, storeLocations, 2.0, 1.5);
+        console.log(`🏪 Calculating demand capture for stores with ${catchmentRadius}km radius...`);
+        updatedMeshes = calculateDemandCapture(meshes, storeLocations, catchmentRadius, 1.5);
         const storePerformance = calculateStorePerformance(updatedMeshes, storeLocations);
         console.log('📈 Store performance analysis completed:', storePerformance);
       }

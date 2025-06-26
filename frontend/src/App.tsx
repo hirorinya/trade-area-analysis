@@ -83,6 +83,8 @@ function App() {
   const [optimizationResults, setOptimizationResults] = useState(null);
   const [candidateMarkers, setCandidateMarkers] = useState([]);
   const [showDemandGrid, setShowDemandGrid] = useState(false);
+  const [meshSize, setMeshSize] = useState(500); // Default 500m mesh size
+  const [catchmentRadius, setCatchmentRadius] = useState(2.0); // Default 2km radius
   const [formCoordinates, setFormCoordinates] = useState({ lat: '', lng: '' });
   const [currentAddress, setCurrentAddress] = useState('');
   const [analysisRecommendations, setAnalysisRecommendations] = useState('');
@@ -2226,6 +2228,69 @@ Make it actionable and specific to help guide them through the platform.
                 </Button>
               </div>
             </div>
+            
+            {/* Population Grid Controls */}
+            {showDemandGrid && (
+              <div style={{
+                display: 'flex',
+                gap: theme.spacing[4],
+                marginTop: theme.spacing[3],
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', color: theme.colors.gray[600], display: 'block', marginBottom: '4px' }}>
+                    Mesh Size: {meshSize}m
+                  </label>
+                  <input
+                    type="range"
+                    min="250"
+                    max="1000"
+                    step="50"
+                    value={meshSize}
+                    onChange={(e) => setMeshSize(Number(e.target.value))}
+                    style={{
+                      width: '100%',
+                      height: '6px',
+                      background: '#e5e7eb',
+                      borderRadius: '3px',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: theme.colors.gray[500], marginTop: '2px' }}>
+                    <span>250m</span>
+                    <span>1000m</span>
+                  </div>
+                </div>
+                
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', color: theme.colors.gray[600], display: 'block', marginBottom: '4px' }}>
+                    Catchment Radius: {catchmentRadius}km
+                  </label>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="5"
+                    step="0.5"
+                    value={catchmentRadius}
+                    onChange={(e) => setCatchmentRadius(Number(e.target.value))}
+                    style={{
+                      width: '100%',
+                      height: '6px',
+                      background: '#e5e7eb',
+                      borderRadius: '3px',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: theme.colors.gray[500], marginTop: '2px' }}>
+                    <span>0.5km</span>
+                    <span>5km</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Professional Analytics Dashboard */}
@@ -3443,6 +3508,8 @@ Make it actionable and specific to help guide them through the platform.
                   }}
                   showDemandGrid={showDemandGrid}
                   gridBounds={gridBounds}
+                  meshSize={meshSize}
+                  catchmentRadius={catchmentRadius}
                 />
               ) : (
                 <LeafletMap
@@ -3464,6 +3531,8 @@ Make it actionable and specific to help guide them through the platform.
                   }}
                   showDemandGrid={showDemandGrid}
                   gridBounds={gridBounds}
+                  meshSize={meshSize}
+                  catchmentRadius={catchmentRadius}
                 />
               )}
             </div>

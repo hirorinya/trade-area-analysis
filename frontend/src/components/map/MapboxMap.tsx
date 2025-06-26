@@ -30,6 +30,8 @@ interface MapboxMapProps {
   showDemandGrid?: boolean;
   gridBounds?: { north: number; south: number; east: number; west: number };
   onDemandAnalysis?: (analysis: any) => void;
+  meshSize?: number;
+  catchmentRadius?: number;
 }
 
 const MapboxMap: React.FC<MapboxMapProps> = ({
@@ -41,7 +43,9 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
   style = 'mapbox://styles/mapbox/light-v11',
   showDemandGrid = false,
   gridBounds,
-  onDemandAnalysis
+  onDemandAnalysis,
+  meshSize = 500,
+  catchmentRadius = 2.0
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -364,13 +368,13 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
     console.log('Generating demand grid with bounds:', gridBounds);
     
     // Generate demand meshes
-    const meshes = generateDemandGrid(gridBounds, 250); // 250m mesh size
+    const meshes = generateDemandGrid(gridBounds, meshSize); // Use dynamic mesh size
     console.log(`Generated ${meshes.length} demand meshes`);
     
     // Calculate demand capture if we have store locations
     const storeLocations = locations.filter(loc => loc.location_type === 'store');
     if (storeLocations.length > 0) {
-      const updatedMeshes = calculateDemandCapture(meshes, storeLocations, 2.0, 1.5);
+      const updatedMeshes = calculateDemandCapture(meshes, storeLocations, catchmentRadius, 1.5);
       const storePerformance = calculateStorePerformance(updatedMeshes, storeLocations);
       
       console.log('Store performance analysis:', storePerformance);
@@ -584,7 +588,7 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
         map.current.setLayoutProperty('demand-flow-animated', 'visibility', 'visible');
       }
     }
-  }, [showDemandGrid, gridBounds, locations, mapLoaded, visualizationMode]);
+  }, [showDemandGrid, gridBounds, locations, mapLoaded, visualizationMode, meshSize, catchmentRadius]);
   
   // Hide demand grid and flow lines when not needed
   useEffect(() => {
