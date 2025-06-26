@@ -2789,22 +2789,22 @@ Make it actionable and specific to help guide them through the platform.
                 </p>
                 
                 <div style={{
-                  backgroundColor: theme.colors.blue[50],
-                  border: `1px solid ${theme.colors.blue[200]}`,
+                  backgroundColor: theme.colors.primary[50],
+                  border: `1px solid ${theme.colors.gray[200]}`,
                   borderRadius: '8px',
                   padding: theme.spacing[3],
                   marginBottom: theme.spacing[3]
                 }}>
                   <div style={{
                     fontSize: theme.typography.fontSize.xs,
-                    color: theme.colors.blue[700],
+                    color: theme.colors.primary[700],
                     marginBottom: theme.spacing[2]
                   }}>
                     <strong>📋 Required CSV Columns:</strong>
                   </div>
                   <div style={{
                     fontSize: theme.typography.fontSize.xs,
-                    color: theme.colors.blue[600],
+                    color: theme.colors.primary[600],
                     lineHeight: '1.4'
                   }}>
                     • <strong>name</strong> - Location name<br/>
@@ -2835,7 +2835,7 @@ Make it actionable and specific to help guide them through the platform.
                     style={{
                       cursor: 'pointer',
                       display: 'block',
-                      color: theme.colors.blue[600],
+                      color: theme.colors.primary[600],
                       fontSize: theme.typography.fontSize.sm,
                       fontWeight: theme.typography.fontWeight.medium
                     }}
