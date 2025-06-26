@@ -15,7 +15,8 @@ Building a comprehensive Trade Area Analysis tool for market analysis, customer 
 2. Make changes, test locally
 3. `git push origin staging` - Auto-deploys to staging URL
 4. Test thoroughly in staging environment
-5. Only after verification: merge to main
+5. Create pull request from staging → main
+6. Review and merge PR to deploy to production
 
 ## Current Status (June 26, 2025)
 ### ✅ **Production Environment (STABLE)**
