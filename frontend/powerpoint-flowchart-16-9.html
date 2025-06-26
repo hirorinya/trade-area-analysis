@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商圏分析ツール - PowerPoint用フローチャート (16:9)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Meiryo UI', 'Meiryo', 'MS Gothic', sans-serif;
+            background: #ffffff;
+            overflow: hidden;
+        }
+        
+        .slide {
+            width: 1920px;
+            height: 1080px;
+            background: #ffffff;
+            position: relative;
+            transform-origin: top left;
+            margin: 20px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .slide-content {
+            width: 100%;
+            height: 100%;
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .main-flow {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 60px 1fr 60px 1fr 60px 1fr;
+            grid-template-rows: auto;
+            align-items: start;
+            gap: 0;
+            margin-top: 20px;
+        }
+        
+        
+        .flow-stage {
+            background: white;
+            border-radius: 16px;
+            padding: 20px 18px;
+            text-align: center;
+            height: 320px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            position: relative;
+            border-top: 6px solid;
+            transition: transform 0.3s ease;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .flow-stage:hover {
+            transform: translateY(-8px);
+        }
+        
+        .stage-input { border-top-color: #be185d; background: #ffffff; }
+        .stage-process { border-top-color: #dc2626; background: #ffffff; }
+        .stage-optimize { border-top-color: #ea580c; background: #ffffff; }
+        .stage-output { border-top-color: #dc2626; background: #ffffff; }
+        
+        
+        .stage-title {
+            font-size: 1.6em;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #1f2937;
+        }
+        
+        .stage-items {
+            list-style: none;
+            text-align: left;
+            color: #4b5563;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+        
+        .stage-items li {
+            margin-bottom: 5px;
+            padding-left: 18px;
+            position: relative;
+        }
+        
+        .stage-items li:before {
+            content: "•";
+            color: #dc2626;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        
+        .arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            color: #dc2626;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+        
+        .function-highlight {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .function-name {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #1e40af;
+        }
+        
+        .tech-badge {
+            position: absolute;
+            top: -12px;
+            right: 18px;
+            background: #dc2626;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ffffff;
+            padding: 12px 20px;
+            border-radius: 10px;
+            display: flex;
+            gap: 30px;
+            border: 1px solid #e5e7eb;
+            white-space: nowrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            color: #374151;
+            font-weight: 500;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+        }
+        
+        
+        /* Responsive scaling for different screen sizes */
+        @media (max-width: 1920px) {
+            .slide {
+                transform: scale(0.8);
+            }
+        }
+        
+        @media (max-width: 1536px) {
+            .slide {
+                transform: scale(0.65);
+            }
+        }
+        
+        @media (max-width: 1280px) {
+            .slide {
+                transform: scale(0.5);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slide">
+        <div class="slide-content">
+            <div class="main-flow">
+                <!-- Stage 1: Input -->
+                <div class="flow-stage stage-input">
+                    <div class="tech-badge">DATA INPUT</div>
+                    <div class="stage-title">入力データ</div>
+                    <ul class="stage-items">
+                        <li>地理境界: 緯度経度座標範囲</li>
+                        <li>店舗位置: GPS座標・魅力度指数</li>
+                        <li>競合店: 位置・市場影響度</li>
+                        <li>CSVバルクアップロード: 住所自動ジオコーディング</li>
+                        <li>パラメータ: メッシュサイズ・商圏半径</li>
+                        <li>ヒストリカルデータ: 売上・利益実績</li>
+                        <li>人口統計: 年齢・所得分布</li>
+                    </ul>
+                </div>
+                
+                <div class="arrow">→</div>
+                
+                <!-- Stage 2: Processing -->
+                <div class="flow-stage stage-process">
+                    <div class="tech-badge">PROCESSING</div>
+                    <div class="stage-title">データ処理</div>
+                    <ul class="stage-items">
+                        <li>住所→緯度経度変換 (Google Maps API)</li>
+                        <li>250m-1000m メッシュグリッド生成</li>
+                        <li>東京都市圏人口密度モデリング</li>
+                        <li>ハフモデル需要捕捉計算</li>
+                        <li>距離減衰・競合影響分析</li>
+                        <li>市場シェア・カバレッジ算出</li>
+                        <li>水域・居住不可地域除外</li>
+                    </ul>
+                </div>
+                
+                <div class="arrow">→</div>
+                
+                <!-- Stage 3: Optimization -->
+                <div class="flow-stage stage-optimize">
+                    <div class="tech-badge">OPTIMIZATION</div>
+                    <div class="stage-title">最適化・分析</div>
+                    <ul class="stage-items">
+                        <li>候補地自動生成 (200m最小間隔)</li>
+                        <li>貪欲法・MIP・競合分析アルゴリズム</li>
+                        <li>AI分析エンジン: 機械学習需要予測・トレンド分析</li>
+                        <li>ヒストリカルデータシミュレーション: 売上実績基盤分析</li>
+                        <li>モンテカルロ1000回シミュレーション</li>
+                        <li>ROI・カニバリゼーション計算</li>
+                        <li>予算制約・リスク評価</li>
+                    </ul>
+                </div>
+                
+                <div class="arrow">→</div>
+                
+                <!-- Stage 4: Output -->
+                <div class="flow-stage stage-output">
+                    <div class="tech-badge">OUTPUT</div>
+                    <div class="stage-title">分析結果出力</div>
+                    <ul class="stage-items">
+                        <li>リアルタイム人口密度マップ</li>
+                        <li>最適店舗配置提案・候補地表示</li>
+                        <li>売上予測・利益シミュレーション</li>
+                        <li>AI分析レポート・市場洞察</li>
+                        <li>ROI・リスク評価ダッシュボード</li>
+                        <li>競合分析・カニバリゼーション可視化</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Legend -->
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #be185d;"></div>
+                    <span>入力データ</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #dc2626;"></div>
+                    <span>データ処理</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ea580c;"></div>
+                    <span>最適化・AI分析</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #dc2626;"></div>
+                    <span>分析結果出力</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-scale for different screen sizes
+        function scaleSlides() {
+            const slides = document.querySelectorAll('.slide');
+            const viewportWidth = window.innerWidth;
+            const targetWidth = 1920;
+            let scale = Math.min(viewportWidth / targetWidth, 1);
+            
+            if (scale < 0.3) scale = 0.3; // Minimum scale
+            
+            slides.forEach(slide => {
+                slide.style.transform = `scale(${scale})`;
+                slide.style.marginBottom = `${(1080 * scale - 1080) + 40}px`;
+            });
+        }
+        
+        window.addEventListener('load', scaleSlides);
+        window.addEventListener('resize', scaleSlides);
+        
+        // Add print-friendly styles
+        const printStyles = `
+            @media print {
+                .slide {
+                    page-break-after: always;
+                    transform: none !important;
+                    margin: 0 !important;
+                    box-shadow: none !important;
+                }
+                body {
+                    background: white !important;
+                }
+            }
+        `;
+        
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = printStyles;
+        document.head.appendChild(styleSheet);
+    </script>
+</body>
+</html>

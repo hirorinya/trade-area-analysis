@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商圏分析ツール - データフロー可視化</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Hiragino Sans', 'Noto Sans CJK JP', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #2563eb, #1d4ed8);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .flowchart {
+            padding: 40px;
+            background: #f8fafc;
+        }
+        
+        .flow-section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #1e40af;
+            margin-bottom: 25px;
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .flow-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .flow-box {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border-left: 5px solid;
+            min-width: 200px;
+            max-width: 300px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .flow-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+        
+        .input-box {
+            border-left-color: #10b981;
+        }
+        
+        .process-box {
+            border-left-color: #3b82f6;
+        }
+        
+        .output-box {
+            border-left-color: #f59e0b;
+        }
+        
+        .optimization-box {
+            border-left-color: #ef4444;
+        }
+        
+        .visualization-box {
+            border-left-color: #8b5cf6;
+        }
+        
+        .box-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .box-title {
+            font-size: 1.2em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #1f2937;
+        }
+        
+        .box-content {
+            font-size: 0.9em;
+            color: #6b7280;
+            line-height: 1.6;
+        }
+        
+        .arrow {
+            font-size: 2em;
+            color: #3b82f6;
+            margin: 0 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        .arrow-down {
+            display: block;
+            text-align: center;
+            font-size: 3em;
+            color: #3b82f6;
+            margin: 20px 0;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .feature-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-top: 4px solid #3b82f6;
+        }
+        
+        .feature-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .function-detail {
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 3px solid #3b82f6;
+        }
+        
+        .code-snippet {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin: 30px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗾 商圏分析ツール</h1>
+            <p>データフロー可視化システム</p>
+        </div>
+        
+        <div class="flowchart">
+            <!-- Legend -->
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #10b981;"></div>
+                    <span>入力データ</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3b82f6;"></div>
+                    <span>処理関数</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ef4444;"></div>
+                    <span>最適化</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #8b5cf6;"></div>
+                    <span>可視化出力</span>
+                </div>
+            </div>
+            
+            <!-- Input Section -->
+            <div class="flow-section">
+                <div class="section-title">📊 1. 入力データ</div>
+                <div class="flow-row">
+                    <div class="flow-box input-box">
+                        <span class="box-icon">🗾</span>
+                        <div class="box-title">地図境界データ</div>
+                        <div class="box-content">
+                            • 北緯・南緯<br>
+                            • 東経・西経<br>
+                            • 分析エリア設定
+                        </div>
+                    </div>
+                    <div class="flow-box input-box">
+                        <span class="box-icon">🏪</span>
+                        <div class="box-title">店舗データ</div>
+                        <div class="box-content">
+                            • 店舗ID・名称<br>
+                            • 緯度・経度<br>
+                            • 魅力度指数
+                        </div>
+                    </div>
+                    <div class="flow-box input-box">
+                        <span class="box-icon">🏢</span>
+                        <div class="box-title">競合店データ</div>
+                        <div class="box-content">
+                            • 競合店位置<br>
+                            • 市場影響度<br>
+                            • 競争分析用
+                        </div>
+                    </div>
+                    <div class="flow-box input-box">
+                        <span class="box-icon">⚙️</span>
+                        <div class="box-title">分析パラメータ</div>
+                        <div class="box-content">
+                            • メッシュサイズ<br>
+                            • 商圏半径<br>
+                            • 距離減衰係数
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="arrow-down">⬇️</div>
+            
+            <!-- Processing Section -->
+            <div class="flow-section">
+                <div class="section-title">🔄 2. コア処理関数</div>
+                
+                <div class="flow-row">
+                    <div class="flow-box process-box">
+                        <span class="box-icon">📍</span>
+                        <div class="box-title">人口メッシュ生成</div>
+                        <div class="function-detail">
+                            <strong>generateDemandGrid()</strong><br>
+                            • メーター→度数変換<br>
+                            • 東京都市圏人口分布<br>
+                            • 水域・居住不可地域除外
+                        </div>
+                        <div class="code-snippet">
+出力: [{
+  id: "mesh_123",
+  population: 850,
+  demand: 255
+}]
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="arrow-down">⬇️</div>
+                
+                <div class="flow-row">
+                    <div class="flow-box process-box">
+                        <span class="box-icon">🎯</span>
+                        <div class="box-title">需要捕捉計算</div>
+                        <div class="function-detail">
+                            <strong>calculateDemandCapture()</strong><br>
+                            • ハフモデル適用<br>
+                            • 店舗魅力度 ÷ 距離^減衰係数<br>
+                            • 競合考慮した需要配分
+                        </div>
+                        <div class="code-snippet">
+出力: {
+  capturedBy: ["store_1"],
+  captureRatio: {"store_1": 0.75}
+}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="arrow-down">⬇️</div>
+                
+                <div class="flow-row">
+                    <div class="flow-box process-box">
+                        <span class="box-icon">📈</span>
+                        <div class="box-title">パフォーマンス分析</div>
+                        <div class="function-detail">
+                            <strong>calculateStorePerformance()</strong><br>
+                            • 総需要捕捉量計算<br>
+                            • 市場シェア算出<br>
+                            • 需要密度分析
+                        </div>
+                        <div class="code-snippet">
+出力: {
+  totalDemand: 12500,
+  marketShare: 15.3,
+  demandDensity: 125.5
+}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="arrow-down">⬇️</div>
+            
+            <!-- Optimization Section -->
+            <div class="flow-section">
+                <div class="section-title">🚀 3. 最適化エンジン</div>
+                <div class="flow-row">
+                    <div class="flow-box optimization-box">
+                        <span class="box-icon">🎯</span>
+                        <div class="box-title">候補地生成</div>
+                        <div class="function-detail">
+                            <strong>generateCandidateSites()</strong><br>
+                            • ランダム座標生成<br>
+                            • 最小距離チェック (200m)<br>
+                            • 有効候補地フィルタリング
+                        </div>
+                    </div>
+                    <span class="arrow">➡️</span>
+                    <div class="flow-box optimization-box">
+                        <span class="box-icon">🔄</span>
+                        <div class="box-title">最適化計算</div>
+                        <div class="function-detail">
+                            <strong>greedyOptimization()</strong><br>
+                            • 需要捕捉ポテンシャル<br>
+                            • カニバリゼーション考慮<br>
+                            • ROI最大化
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <span class="feature-icon">⚡</span>
+                        <h3>貪欲法 (Greedy)</h3>
+                        <p>高速処理 2-15秒<br>近似最適解を迅速に取得</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">🎯</span>
+                        <h3>MIP最適化</h3>
+                        <p>精密計算 5-45秒<br>数学的最適解を保証</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">⚔️</span>
+                        <h3>競合分析</h3>
+                        <p>市場競争 3-30秒<br>競合影響を考慮した配置</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="arrow-down">⬇️</div>
+            
+            <!-- Output Section -->
+            <div class="flow-section">
+                <div class="section-title">🎨 4. 可視化出力</div>
+                <div class="flow-row">
+                    <div class="flow-box visualization-box">
+                        <span class="box-icon">🗺️</span>
+                        <div class="box-title">インタラクティブマップ</div>
+                        <div class="box-content">
+                            • 人口密度メッシュ表示<br>
+                            • 店舗・競合店マーカー<br>
+                            • リアルタイム更新<br>
+                            • 詳細ポップアップ
+                        </div>
+                    </div>
+                    <div class="flow-box visualization-box">
+                        <span class="box-icon">📊</span>
+                        <div class="box-title">分析レポート</div>
+                        <div class="box-content">
+                            • 店舗パフォーマンス指標<br>
+                            • 市場シェア分析<br>
+                            • ROI計算結果<br>
+                            • 最適配置提案
+                        </div>
+                    </div>
+                    <div class="flow-box visualization-box">
+                        <span class="box-icon">⚡</span>
+                        <div class="box-title">リアルタイム分析</div>
+                        <div class="box-content">
+                            • パラメータ調整対応<br>
+                            • 即座の結果更新<br>
+                            • プログレス表示<br>
+                            • エラーハンドリング
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Technical Features -->
+            <div class="flow-section">
+                <div class="section-title">🛠️ 技術的特徴</div>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <span class="feature-icon">⚡</span>
+                        <h3>リアルタイム処理</h3>
+                        <p>• バッチ事前レンダリング<br>• チャンク単位表示<br>• プログレスインジケーター</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">🎯</span>
+                        <h3>精度保証</h3>
+                        <p>• 東京都市圏特化モデル<br>• 水域自動除外<br>• ハフモデル競合考慮</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">🎛️</span>
+                        <h3>ユーザビリティ</h3>
+                        <p>• 調整可能パラメータ<br>• リアルタイム更新<br>• 日本地理院タイル</p>
+                    </div>
+                    <div class="feature-card">
+                        <span class="feature-icon">🔒</span>
+                        <h3>信頼性</h3>
+                        <p>• 複数座標フォーマット対応<br>• エラーハンドリング<br>• クロスブラウザ対応</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Add some interactive animations
+        document.addEventListener('DOMContentLoaded', function() {
+            const boxes = document.querySelectorAll('.flow-box');
+            
+            boxes.forEach(box => {
+                box.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-8px) scale(1.02)';
+                });
+                
+                box.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+            
+            // Animate arrows
+            const arrows = document.querySelectorAll('.arrow-down');
+            arrows.forEach((arrow, index) => {
+                arrow.style.animationDelay = `${index * 0.5}s`;
+            });
+        });
+    </script>
+</body>
+</html>

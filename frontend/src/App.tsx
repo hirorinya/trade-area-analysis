@@ -1479,7 +1479,7 @@ Make it actionable and specific to help guide them through the platform.
     return getCurrentMapBounds();
   }, [locations, useFullMapBounds]);
 
-  // CSV Import Functionality
+  // Enhanced CSV Import with Automatic Geocoding
   const handleCSVImport = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -1494,14 +1494,21 @@ Make it actionable and specific to help guide them through the platform.
       }
 
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-      const requiredHeaders = ['name', 'latitude', 'longitude', 'type'];
       
-      const missingHeaders = requiredHeaders.filter(req => 
-        !headers.some(h => h.includes(req))
-      );
+      // Check for required columns - allow either coordinates OR address
+      const hasCoordinates = headers.some(h => h.includes('latitude') || h.includes('lat')) && 
+                             headers.some(h => h.includes('longitude') || h.includes('lng') || h.includes('lon'));
+      const hasAddress = headers.some(h => h.includes('address'));
+      const hasName = headers.some(h => h.includes('name'));
+      const hasType = headers.some(h => h.includes('type'));
 
-      if (missingHeaders.length > 0) {
-        setMessage(`❌ Missing required columns: ${missingHeaders.join(', ')}. Required: name, latitude, longitude, type`);
+      if (!hasName || !hasType) {
+        setMessage('❌ CSV must have "name" and "type" columns');
+        return;
+      }
+
+      if (!hasCoordinates && !hasAddress) {
+        setMessage('❌ CSV must have either coordinates (latitude/longitude) OR address column for automatic geocoding');
         return;
       }
 
@@ -1514,25 +1521,58 @@ Make it actionable and specific to help guide them through the platform.
 
       let successCount = 0;
       let errorCount = 0;
+      let geocodedCount = 0;
+
+      setMessage('🔄 Processing CSV with automatic geocoding...');
 
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',').map(v => v.trim());
         
-        if (values.length < requiredHeaders.length) continue;
+        if (values.length < 2) continue;
 
         const name = values[nameIndex];
-        const latitude = parseFloat(values[latIndex]);
-        const longitude = parseFloat(values[lngIndex]);
-        const locationType = values[typeIndex].toLowerCase();
+        const locationType = values[typeIndex]?.toLowerCase();
         const address = addressIndex >= 0 ? values[addressIndex] : '';
 
-        // Validate data
-        if (!name || isNaN(latitude) || isNaN(longitude)) {
+        // Validate basic data
+        if (!name) {
           errorCount++;
           continue;
         }
 
         if (!['store', 'competitor', 'poi'].includes(locationType)) {
+          errorCount++;
+          continue;
+        }
+
+        let latitude, longitude;
+
+        // Try to get coordinates
+        if (latIndex >= 0 && lngIndex >= 0) {
+          latitude = parseFloat(values[latIndex]);
+          longitude = parseFloat(values[lngIndex]);
+        }
+
+        // If no valid coordinates but we have address, try geocoding
+        if ((isNaN(latitude) || isNaN(longitude)) && address) {
+          try {
+            setMessage(`🔍 Geocoding "${name}" at "${address}"... (${i}/${lines.length - 1})`);
+            const coords = await geocodeAddress(address);
+            if (coords) {
+              latitude = coords.latitude;
+              longitude = coords.longitude;
+              geocodedCount++;
+              setMessage(`✅ Geocoded "${name}": ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+              // Small delay to avoid rate limiting
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+          } catch (geocodeError) {
+            console.warn(`Geocoding failed for ${name}: ${geocodeError.message}`);
+          }
+        }
+
+        // Final validation
+        if (!latitude || !longitude || isNaN(latitude) || isNaN(longitude)) {
           errorCount++;
           continue;
         }
@@ -1557,7 +1597,7 @@ Make it actionable and specific to help guide them through the platform.
         }
       }
 
-      setMessage(`✅ CSV Import complete! ${successCount} locations added, ${errorCount} errors`);
+      setMessage(`✅ CSV Import complete! ${successCount} locations added, ${geocodedCount} addresses geocoded, ${errorCount} errors`);
       loadLocations(selectedProject.id);
       
     } catch (error) {
@@ -2735,6 +2775,85 @@ Make it actionable and specific to help guide them through the platform.
               gridTemplateColumns: '1fr'
             }
           }}>
+            {/* CSV Bulk Upload */}
+            <div style={formStyle}>
+              <h3 style={formHeaderStyle}>📤 CSV Bulk Upload with Auto-Geocoding</h3>
+              <div style={{ marginBottom: theme.spacing[4] }}>
+                <p style={{
+                  fontSize: theme.typography.fontSize.sm,
+                  color: theme.colors.gray[600],
+                  marginBottom: theme.spacing[3],
+                  lineHeight: '1.5'
+                }}>
+                  Upload a CSV file to add multiple locations at once. Supports automatic address geocoding.
+                </p>
+                
+                <div style={{
+                  backgroundColor: theme.colors.blue[50],
+                  border: `1px solid ${theme.colors.blue[200]}`,
+                  borderRadius: '8px',
+                  padding: theme.spacing[3],
+                  marginBottom: theme.spacing[3]
+                }}>
+                  <div style={{
+                    fontSize: theme.typography.fontSize.xs,
+                    color: theme.colors.blue[700],
+                    marginBottom: theme.spacing[2]
+                  }}>
+                    <strong>📋 Required CSV Columns:</strong>
+                  </div>
+                  <div style={{
+                    fontSize: theme.typography.fontSize.xs,
+                    color: theme.colors.blue[600],
+                    lineHeight: '1.4'
+                  }}>
+                    • <strong>name</strong> - Location name<br/>
+                    • <strong>type</strong> - store, competitor, or poi<br/>
+                    • <strong>address</strong> - Address for auto-geocoding OR<br/>
+                    • <strong>latitude, longitude</strong> - Coordinates<br/>
+                    <em>Either address OR coordinates required</em>
+                  </div>
+                </div>
+
+                <div style={{
+                  border: '2px dashed #e5e7eb',
+                  borderRadius: '8px',
+                  padding: theme.spacing[4],
+                  textAlign: 'center',
+                  backgroundColor: '#fafafa',
+                  transition: 'border-color 0.3s ease'
+                }}>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleCSVImport}
+                    style={{ display: 'none' }}
+                    id="csv-upload"
+                  />
+                  <label 
+                    htmlFor="csv-upload"
+                    style={{
+                      cursor: 'pointer',
+                      display: 'block',
+                      color: theme.colors.blue[600],
+                      fontSize: theme.typography.fontSize.sm,
+                      fontWeight: theme.typography.fontWeight.medium
+                    }}
+                  >
+                    <div style={{ marginBottom: theme.spacing[2] }}>
+                      📁 Click to select CSV file
+                    </div>
+                    <div style={{
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.gray[500]
+                    }}>
+                      Automatic geocoding will convert addresses to coordinates
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
             {/* Add Location Form */}
             <div style={formStyle}>
               <h3 style={formHeaderStyle}>Add New Location</h3>
