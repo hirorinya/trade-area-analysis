@@ -13,17 +13,19 @@ import { generateDemandGrid, calculateDemandCapture, generateCandidateSites, get
  * @param {Object} constraints - Optimization constraints
  * @returns {Object} Optimization results
  */
-export function greedyOptimization(candidateSites, demandMeshes, numStores = 5, constraints = {}) {
+export async function greedyOptimization(candidateSites, demandMeshes, numStores = 5, constraints = {}) {
   const {
     maxRadius = 2.0,           // Maximum capture radius in km
     distanceDecay = 1.5,       // Distance decay exponent
     minDistance = 0.5,         // Minimum distance between stores in km
     maxBudget = Infinity,      // Maximum budget constraint
-    storeCost = 1000000        // Cost per store (default: 1M)
+    storeCost = 1000000,       // Cost per store (default: 1M)
+    timeoutMs = 30000          // 30 second timeout
   } = constraints;
 
   console.log(`Starting Greedy optimization for ${numStores} stores from ${candidateSites.length} candidates`);
   
+  const startTime = Date.now();
   const selectedStores = [];
   const remainingCandidates = [...candidateSites];
   const results = [];
@@ -32,13 +34,31 @@ export function greedyOptimization(candidateSites, demandMeshes, numStores = 5, 
   let totalDemandCaptured = 0;
   let totalCost = 0;
   
+  // Limit candidates to prevent excessive computation
+  const maxCandidates = Math.min(candidateSites.length, 500);
+  if (candidateSites.length > maxCandidates) {
+    console.log(`Limiting candidates from ${candidateSites.length} to ${maxCandidates} for performance`);
+    remainingCandidates.splice(maxCandidates);
+  }
+  
   for (let iteration = 0; iteration < numStores; iteration++) {
+    // Check timeout
+    if (Date.now() - startTime > timeoutMs) {
+      console.warn('Greedy optimization timeout reached');
+      throw new Error(`Optimization timeout after ${timeoutMs/1000} seconds`);
+    }
+    
     if (remainingCandidates.length === 0) break;
     if (totalCost + storeCost > maxBudget) break;
     
     let bestCandidate = null;
     let bestIncrementalDemand = 0;
     let bestAnalysis = null;
+    
+    // Yield control periodically to prevent UI blocking
+    if (iteration % 2 === 0) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
     
     // Evaluate each remaining candidate
     for (let i = 0; i < remainingCandidates.length; i++) {
@@ -59,23 +79,28 @@ export function greedyOptimization(candidateSites, demandMeshes, numStores = 5, 
         attractiveness: 1.0
       }];
       
-      // Calculate demand capture with this candidate
-      const updatedMeshes = calculateDemandCapture([...demandMeshes], testStores, maxRadius, distanceDecay);
-      
-      // Calculate incremental demand (only new demand captured by this store)
-      const incrementalDemand = updatedMeshes.reduce((sum, mesh) => {
-        const newStoreCaptureRatio = mesh.captureRatio[`store_${selectedStores.length}`] || 0;
-        return sum + (mesh.demand * newStoreCaptureRatio);
-      }, 0);
-      
-      if (incrementalDemand > bestIncrementalDemand) {
-        bestIncrementalDemand = incrementalDemand;
-        bestCandidate = candidate;
-        bestAnalysis = {
-          incrementalDemand,
-          totalDemand: updatedMeshes.reduce((sum, mesh) => sum + mesh.demand, 0),
-          meshes: updatedMeshes
-        };
+      try {
+        // Calculate demand capture with this candidate
+        const updatedMeshes = calculateDemandCapture([...demandMeshes], testStores, maxRadius, distanceDecay);
+        
+        // Calculate incremental demand (only new demand captured by this store)
+        const incrementalDemand = updatedMeshes.reduce((sum, mesh) => {
+          const newStoreCaptureRatio = mesh.captureRatio[`store_${selectedStores.length}`] || 0;
+          return sum + (mesh.demand * newStoreCaptureRatio);
+        }, 0);
+        
+        if (incrementalDemand > bestIncrementalDemand) {
+          bestIncrementalDemand = incrementalDemand;
+          bestCandidate = candidate;
+          bestAnalysis = {
+            incrementalDemand,
+            totalDemand: updatedMeshes.reduce((sum, mesh) => sum + mesh.demand, 0),
+            meshes: updatedMeshes
+          };
+        }
+      } catch (error) {
+        console.warn(`Error evaluating candidate ${i}:`, error);
+        continue;
       }
     }
     
@@ -145,20 +170,23 @@ export function greedyOptimization(candidateSites, demandMeshes, numStores = 5, 
  * @param {Object} constraints - Optimization constraints
  * @returns {Object} Optimization results
  */
-export function mipStyleOptimization(candidateSites, demandMeshes, numStores = 5, constraints = {}) {
+export async function mipStyleOptimization(candidateSites, demandMeshes, numStores = 5, constraints = {}) {
   const {
     maxRadius = 2.0,
     distanceDecay = 1.5,
     minDistance = 0.5,
     maxBudget = Infinity,
     storeCost = 1000000,
-    maxIterations = 100
+    maxIterations = 100,
+    timeoutMs = 60000  // 60 second timeout for MIP
   } = constraints;
 
   console.log(`Starting MIP-style optimization for ${numStores} stores`);
   
+  const startTime = Date.now();
+  
   // Start with greedy solution as initial solution
-  let currentSolution = greedyOptimization(candidateSites, demandMeshes, numStores, constraints);
+  let currentSolution = await greedyOptimization(candidateSites, demandMeshes, numStores, constraints);
   let bestSolution = { ...currentSolution };
   let bestObjective = currentSolution.totalDemandCaptured;
   
@@ -166,6 +194,17 @@ export function mipStyleOptimization(candidateSites, demandMeshes, numStores = 5
   
   // Iterative improvement phase
   for (let iteration = 0; iteration < maxIterations; iteration++) {
+    // Check timeout
+    if (Date.now() - startTime > timeoutMs) {
+      console.warn('MIP optimization timeout reached');
+      throw new Error(`MIP optimization timeout after ${timeoutMs/1000} seconds`);
+    }
+    
+    // Yield control periodically to prevent UI blocking
+    if (iteration % 5 === 0) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    
     let improved = false;
     
     // Try swapping each selected store with unselected candidates
@@ -240,7 +279,7 @@ export function mipStyleOptimization(candidateSites, demandMeshes, numStores = 5
     if (!improved && iteration < maxIterations - 10) {
       // Random restart: randomly select different initial stores
       const shuffledCandidates = [...candidateSites].sort(() => Math.random() - 0.5);
-      const randomSolution = greedyOptimization(shuffledCandidates.slice(0, Math.min(50, shuffledCandidates.length)), demandMeshes, numStores, constraints);
+      const randomSolution = await greedyOptimization(shuffledCandidates.slice(0, Math.min(50, shuffledCandidates.length)), demandMeshes, numStores, constraints);
       
       if (randomSolution.totalDemandCaptured > bestObjective) {
         console.log(`Random restart found better solution: ${Math.round(randomSolution.totalDemandCaptured)}`);
@@ -386,19 +425,20 @@ export function competitiveAnalysis(newStores, competitors, demandMeshes, params
  * @param {Array} scenarios - Array of scenario configurations
  * @returns {Object} Comparison results
  */
-export function multiScenarioAnalysis(candidateSites, demandMeshes, scenarios) {
+export async function multiScenarioAnalysis(candidateSites, demandMeshes, scenarios) {
   console.log(`Running multi-scenario analysis for ${scenarios.length} scenarios`);
   
   const results = [];
   
-  scenarios.forEach((scenario, index) => {
+  for (let index = 0; index < scenarios.length; index++) {
+    const scenario = scenarios[index];
     console.log(`\n--- Scenario ${index + 1}: ${scenario.name} ---`);
     
     let result;
     if (scenario.algorithm === 'greedy') {
-      result = greedyOptimization(candidateSites, demandMeshes, scenario.numStores, scenario.constraints);
+      result = await greedyOptimization(candidateSites, demandMeshes, scenario.numStores, scenario.constraints);
     } else if (scenario.algorithm === 'mip') {
-      result = mipStyleOptimization(candidateSites, demandMeshes, scenario.numStores, scenario.constraints);
+      result = await mipStyleOptimization(candidateSites, demandMeshes, scenario.numStores, scenario.constraints);
     }
     
     results.push({

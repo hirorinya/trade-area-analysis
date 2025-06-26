@@ -129,78 +129,83 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     setMessage('');
 
     try {
-      let optimizationResults;
+      // Add a global timeout to prevent infinite hanging
+      const optimizationPromise = (async () => {
+        let optimizationResults;
 
-      switch (params.algorithm) {
-        case 'greedy':
-          setProgressMessage('🔍 Running Greedy optimization... (fast algorithm)');
-          console.log('Running Greedy optimization...');
-          optimizationResults = greedyOptimization(
-            candidateSites, 
-            demandMeshes, 
-            params.numStores,
-            {
+        switch (params.algorithm) {
+          case 'greedy':
+            setProgressMessage('🔍 Running Greedy optimization... (fast algorithm)');
+            console.log('Running Greedy optimization...');
+            optimizationResults = await greedyOptimization(
+              candidateSites, 
+              demandMeshes, 
+              params.numStores,
+              {
+                maxRadius: params.maxRadius,
+                distanceDecay: params.distanceDecay,
+                minDistance: params.minDistance,
+                maxBudget: params.maxBudget,
+                storeCost: params.storeCost,
+                timeoutMs: 30000
+              }
+            );
+            break;
+
+          case 'mip':
+            setProgressMessage('🎯 Running MIP-style optimization... (finding global optimum)');
+            console.log('Running MIP-style optimization...');
+            optimizationResults = await mipStyleOptimization(
+              candidateSites, 
+              demandMeshes, 
+              params.numStores,
+              {
+                maxRadius: params.maxRadius,
+                distanceDecay: params.distanceDecay,
+                minDistance: params.minDistance,
+                maxBudget: params.maxBudget,
+                storeCost: params.storeCost,
+                maxIterations: 50,
+                timeoutMs: 60000
+              }
+            );
+            break;
+
+          case 'competitive':
+            setProgressMessage('⚔️ Running competitive analysis... (analyzing competitor impact)');
+            console.log('Running competitive analysis...');
+            if (competitors.length === 0) {
+              showMessage('No competitors defined for competitive analysis.', 'error');
+              setIsOptimizing(false);
+              setProgressMessage('');
+              return;
+            }
+            
+            // First get optimal sites using greedy
+            const greedyResults = await greedyOptimization(candidateSites, demandMeshes, params.numStores, {
               maxRadius: params.maxRadius,
               distanceDecay: params.distanceDecay,
               minDistance: params.minDistance,
-              maxBudget: params.maxBudget,
-              storeCost: params.storeCost
-            }
-          );
-          break;
+              timeoutMs: 30000
+            });
+            
+            // Then analyze against competition
+            optimizationResults = competitiveAnalysis(
+              greedyResults.selectedStores,
+              competitors,
+              demandMeshes,
+              {
+                maxRadius: params.maxRadius,
+                distanceDecay: params.distanceDecay,
+                newStoreAttractiveness: 1.0,
+                competitorAttractiveness: 0.8
+              }
+            );
+            optimizationResults.baseOptimization = greedyResults;
+            break;
 
-        case 'mip':
-          setProgressMessage('🎯 Running MIP-style optimization... (finding global optimum)');
-          console.log('Running MIP-style optimization...');
-          optimizationResults = mipStyleOptimization(
-            candidateSites, 
-            demandMeshes, 
-            params.numStores,
-            {
-              maxRadius: params.maxRadius,
-              distanceDecay: params.distanceDecay,
-              minDistance: params.minDistance,
-              maxBudget: params.maxBudget,
-              storeCost: params.storeCost,
-              maxIterations: 50
-            }
-          );
-          break;
-
-        case 'competitive':
-          setProgressMessage('⚔️ Running competitive analysis... (analyzing competitor impact)');
-          console.log('Running competitive analysis...');
-          if (competitors.length === 0) {
-            showMessage('No competitors defined for competitive analysis.', 'error');
-            setIsOptimizing(false);
-            setProgressMessage('');
-            return;
-          }
-          
-          // First get optimal sites using greedy
-          const greedyResults = greedyOptimization(candidateSites, demandMeshes, params.numStores, {
-            maxRadius: params.maxRadius,
-            distanceDecay: params.distanceDecay,
-            minDistance: params.minDistance
-          });
-          
-          // Then analyze against competition
-          optimizationResults = competitiveAnalysis(
-            greedyResults.selectedStores,
-            competitors,
-            demandMeshes,
-            {
-              maxRadius: params.maxRadius,
-              distanceDecay: params.distanceDecay,
-              newStoreAttractiveness: 1.0,
-              competitorAttractiveness: 0.8
-            }
-          );
-          optimizationResults.baseOptimization = greedyResults;
-          break;
-
-        case 'multi-scenario':
-          console.log('Running multi-scenario analysis...');
+          case 'multi-scenario':
+            console.log('Running multi-scenario analysis...');
           const scenarios = [
             {
               name: 'Conservative (3 stores)',
@@ -244,7 +249,7 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
             }
           ];
           
-          optimizationResults = multiScenarioAnalysis(candidateSites, demandMeshes, scenarios);
+          optimizationResults = await multiScenarioAnalysis(candidateSites, demandMeshes, scenarios);
           break;
 
         case 'capacity':
@@ -300,7 +305,20 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
 
         default:
           throw new Error('Unknown optimization algorithm');
-      }
+        }
+
+        return optimizationResults;
+      })();
+
+      // Set up a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Optimization timeout after 120 seconds. Try reducing the number of stores or mesh size.'));
+        }, 120000); // 2 minute global timeout
+      });
+
+      // Race between optimization and timeout
+      const optimizationResults = await Promise.race([optimizationPromise, timeoutPromise]);
 
       setResults(optimizationResults);
       onOptimizationComplete(optimizationResults);
