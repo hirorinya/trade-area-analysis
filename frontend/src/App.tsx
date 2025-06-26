@@ -1479,7 +1479,7 @@ Make it actionable and specific to help guide them through the platform.
     return getCurrentMapBounds();
   }, [locations, useFullMapBounds]);
 
-  // Enhanced CSV Import with Automatic Geocoding
+  // CSV Bulk Upload with Automatic Geocoding
   const handleCSVImport = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -1597,7 +1597,7 @@ Make it actionable and specific to help guide them through the platform.
         }
       }
 
-      setMessage(`✅ CSV Import complete! ${successCount} locations added, ${geocodedCount} addresses geocoded, ${errorCount} errors`);
+      setMessage(`✅ CSV bulk upload complete! ${successCount} locations added, ${geocodedCount} addresses geocoded, ${errorCount} errors`);
       loadLocations(selectedProject.id);
       
     } catch (error) {
@@ -2403,49 +2403,6 @@ Make it actionable and specific to help guide them through the platform.
               </div>
             </div>
 
-            {/* CSV Import Section */}
-            <div style={{ 
-              backgroundColor: theme.colors.primary[50], 
-              padding: theme.spacing[4], 
-              borderRadius: theme.borderRadius.lg, 
-              marginBottom: theme.spacing[4],
-              border: `1px solid ${theme.colors.primary[100]}`
-            }}>
-              <div style={{ 
-                marginBottom: theme.spacing[3], 
-                fontSize: theme.typography.fontSize.base, 
-                fontWeight: theme.typography.fontWeight.semibold,
-                color: theme.colors.primary[700]
-              }}>
-                📁 Bulk Import Locations (CSV)
-              </div>
-              <div style={{ 
-                marginBottom: theme.spacing[3], 
-                fontSize: theme.typography.fontSize.sm, 
-                color: theme.colors.primary[600],
-                lineHeight: 1.5
-              }}>
-                <strong>Required columns:</strong> name, latitude, longitude, type (store/competitor/poi)<br/>
-                <strong>Optional:</strong> address
-              </div>
-              <input 
-                type="file" 
-                accept=".csv"
-                onChange={handleCSVImport}
-                style={{ 
-                  ...theme.components.input.base,
-                  marginBottom: theme.spacing[2],
-                  width: '100%'
-                }}
-              />
-              <div style={{ 
-                fontSize: theme.typography.fontSize.xs, 
-                color: theme.colors.primary[600],
-                fontStyle: 'italic'
-              }}>
-                Example CSV: "Shibuya Store,35.6580,139.7016,store,Tokyo Shibuya"
-              </div>
-            </div>
 
             {dashboardData && (
               <div style={{ 
@@ -2647,7 +2604,7 @@ Make it actionable and specific to help guide them through the platform.
                   <div style={{ fontSize: '13px', lineHeight: '1.6' }}>
                     <div style={{ marginBottom: '15px' }}>
                       <strong>🚀 Quick Start:</strong><br/>
-                      1. <strong>Add Locations:</strong> Use the form below or import CSV to add stores, competitors, and points of interest<br/>
+                      1. <strong>Add Locations:</strong> Use the form below or CSV bulk upload to add stores, competitors, and points of interest<br/>
                       2. <strong>Generate Dashboard:</strong> Click "Generate Dashboard" to see portfolio analytics<br/>
                       3. <strong>Create Trade Areas:</strong> Select any location and choose analysis type (Radius or Huff Model)<br/>
                       4. <strong>Optimize Locations:</strong> Use AI-powered site selection to find optimal new store locations<br/>
@@ -2659,7 +2616,7 @@ Make it actionable and specific to help guide them through the platform.
                       • <strong>Manual Entry:</strong> Fill out the location form with name, coordinates, and type<br/>
                       • <strong>Geocoding:</strong> Type Japanese address and click 🔍 to auto-fill coordinates<br/>
                       • <strong>Reverse Geocoding:</strong> Enter coordinates and click 📍→📫 to get address<br/>
-                      • <strong>CSV Import:</strong> Upload CSV file with columns: name, latitude, longitude, type, address (optional)
+                      • <strong>CSV Bulk Upload:</strong> Upload CSV with auto-geocoding (supports coordinates OR addresses)
                     </div>
 
                     <div style={{ marginBottom: '15px' }}>
@@ -2744,7 +2701,7 @@ Make it actionable and specific to help guide them through the platform.
                   <strong style={{ color: '#28a745' }}>💡 Pro Tips / プロのヒント:</strong><br/>
                   <div style={{ fontSize: '12px', marginTop: '8px' }}>
                     • Use competitor analysis before opening new stores / 新店舗開店前に競合分析を使用<br/>
-                    • Import large datasets via CSV for efficiency / 効率のためCSV経由で大規模データセットをインポート<br/>
+                    • Use CSV bulk upload with auto-geocoding for efficiency / 効率のため自動ジオコーディング付きCSV一括アップロードを使用<br/>
                     • Compare Radius vs Huff Model for accuracy / 精度のため半径とハフモデルを比較<br/>
                     • Generate dashboard regularly for portfolio monitoring / ポートフォリオ監視のため定期的にダッシュボードを生成
                   </div>
