@@ -115,10 +115,17 @@ export function generatePopulationDensity(lat, lng) {
   // Simulate water areas and uninhabitable zones (more realistic)
   const inhabitableSeed = Math.abs(Math.sin(lat * 1234.5) * Math.sin(lng * 5678.9)) % 1;
   
-  // Tokyo Bay area (uninhabitable water zones)
-  const tokyoBayCenter = { lat: 35.6, lng: 139.8 };
+  // Tokyo Bay and water areas (more accurate water detection)
+  // Tokyo Bay is roughly south of latitude 35.5 and east of longitude 139.8
+  if (lat < 35.55 && lng > 139.85) {
+    // Higher chance of water in bay area
+    if (inhabitableSeed < 0.7) return 0;
+  }
+  
+  // Coastal areas - areas very close to water
+  const tokyoBayCenter = { lat: 35.5, lng: 139.9 };
   const bayDistance = getDistance(lat, lng, tokyoBayCenter.lat, tokyoBayCenter.lng);
-  if (bayDistance < 15 && inhabitableSeed < 0.3) return 0; // Water areas in Tokyo Bay
+  if (bayDistance < 10 && inhabitableSeed < 0.2) return 0; // Near-water areas
   
   // Other uninhabitable areas (parks, industrial zones, etc.)
   if (inhabitableSeed < 0.05) return 0; // 5% chance of uninhabitable area

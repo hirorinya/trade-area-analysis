@@ -85,6 +85,7 @@ function App() {
   const [showDemandGrid, setShowDemandGrid] = useState(false);
   const [meshSize, setMeshSize] = useState(500); // Default 500m mesh size
   const [catchmentRadius, setCatchmentRadius] = useState(2.0); // Default 2km radius
+  const [useFullMapBounds, setUseFullMapBounds] = useState(false); // Toggle for full map coverage
   const [formCoordinates, setFormCoordinates] = useState({ lat: '', lng: '' });
   const [currentAddress, setCurrentAddress] = useState('');
   const [analysisRecommendations, setAnalysisRecommendations] = useState('');
@@ -1440,9 +1441,10 @@ Make it actionable and specific to help guide them through the platform.
     const minLng = Math.min(...lngs);
     const maxLng = Math.max(...lngs);
     
-    // Add padding
-    const latPadding = (maxLat - minLat) * 0.2 || 0.02;
-    const lngPadding = (maxLng - minLng) * 0.2 || 0.02;
+    // Add much larger padding for better grid coverage
+    // Use 100% padding (double the area) or minimum 0.05 degrees
+    const latPadding = Math.max((maxLat - minLat) * 1.0, 0.05);
+    const lngPadding = Math.max((maxLng - minLng) * 1.0, 0.05);
     
     return {
       north: maxLat + latPadding,
@@ -1452,10 +1454,24 @@ Make it actionable and specific to help guide them through the platform.
     };
   };
 
+  // Get full viewport bounds (hardcoded for now, ideally from map instance)
+  const getFullMapBounds = () => {
+    // This covers a much larger Tokyo metropolitan area
+    return {
+      north: 35.9,
+      south: 35.4,
+      east: 140.2,
+      west: 139.2
+    };
+  };
+
   // Memoize grid bounds to prevent infinite re-renders
   const gridBounds = useMemo(() => {
+    if (useFullMapBounds) {
+      return getFullMapBounds();
+    }
     return getCurrentMapBounds();
-  }, [locations]);
+  }, [locations, useFullMapBounds]);
 
   // CSV Import Functionality
   const handleCSVImport = async (event) => {
@@ -2288,6 +2304,32 @@ Make it actionable and specific to help guide them through the platform.
                     <span>0.5km</span>
                     <span>5km</span>
                   </div>
+                </div>
+                
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  marginLeft: theme.spacing[4],
+                  minWidth: '200px'
+                }}>
+                  <input
+                    type="checkbox"
+                    id="fullMapBounds"
+                    checked={useFullMapBounds}
+                    onChange={(e) => setUseFullMapBounds(e.target.checked)}
+                    style={{ marginRight: '8px', cursor: 'pointer' }}
+                  />
+                  <label 
+                    htmlFor="fullMapBounds" 
+                    style={{ 
+                      fontSize: '12px', 
+                      color: theme.colors.gray[600], 
+                      cursor: 'pointer',
+                      userSelect: 'none'
+                    }}
+                  >
+                    Cover Full Map Area
+                  </label>
                 </div>
               </div>
             )}
