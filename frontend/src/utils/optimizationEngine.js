@@ -446,7 +446,7 @@ export async function multiScenarioAnalysis(candidateSites, demandMeshes, scenar
       scenarioIndex: index + 1,
       results: result
     });
-  });
+  }
   
   // Compare scenarios
   const comparison = {
