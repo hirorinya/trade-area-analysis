@@ -1,142 +1,114 @@
-# Trade Area Analysis Tool - Development Log
+# Trade Area Analysis Tool - Development Rules & Context
 
 ## Project Overview
 Building a comprehensive Trade Area Analysis tool for market analysis, customer catchment areas, and location decision-making.
 
-## Current Status ✅
-**Phase 1: Foundation Setup - COMPLETED**
+## IMPORTANT: Development Workflow (June 26, 2025)
+**🚨 PRODUCTION PROTECTED - USE STAGING FOR ALL DEVELOPMENT**
 
-### What's Been Built:
-1. **Project Structure & Documentation**
-   - Comprehensive project docs at `/trade-area-analysis-docs.md`
-   - Full technical architecture and requirements
-   - 20-week development roadmap
+### Branch Structure:
+- **`main` branch** = PRODUCTION (v1.0-production) - DO NOT MODIFY DIRECTLY
+- **`staging` branch** = DEVELOPMENT - USE THIS FOR ALL CHANGES
 
-2. **Backend (Node.js + Express + TypeScript)**
-   - Complete authentication system with JWT
-   - PostgreSQL database with PostGIS spatial extension
-   - User, Project, Trade Area, Location models
-   - API routes with validation middleware
-   - Docker development environment
+### Workflow:
+1. `git checkout staging` - Always work on staging
+2. Make changes, test locally
+3. `git push origin staging` - Auto-deploys to staging URL
+4. Test thoroughly in staging environment
+5. Only after verification: merge to main
 
-3. **Frontend (React + TypeScript + Material-UI)**
-   - Redux store with auth/project/map slices
-   - Login/Register forms with validation
-   - Protected routes and authentication flow
-   - Dashboard with project overview
-   - Responsive Material-UI design
+## Current Status (June 26, 2025)
+### ✅ **Production Environment (STABLE)**
+- **Version**: v1.0-production 
+- **URL**: https://trade-area-analysis-2png.vercel.app
+- **Features Working**:
+  - ✅ Maps (Leaflet + 国土地理院 tiles)
+  - ✅ Cross-browser compatibility (Chrome, Edge, Safari)
+  - ✅ User authentication & project management
+  - ✅ Location geocoding & management
+  - ✅ Clean, compact layout design
+  - ✅ Supabase integration
 
-4. **Database Schema**
-   - Users, projects, locations, trade_areas, competitors tables
-   - Spatial indexes for geographic queries
-   - Complete database initialization scripts
+### 🧪 **Recent Bug Fixes (In Staging)**
+Fixed 10 critical bugs affecting population mapping:
+- Type mismatches in captureRatio
+- Missing bounds validation
+- Coordinate format handling issues
+- Async function errors
+- Distance calculation NaN issues
+- Minimum population guarantees
 
 ## Tech Stack
-- **Frontend**: React, TypeScript, Redux Toolkit, Material-UI, Mapbox GL
-- **Backend**: Node.js, Express, TypeScript, PostgreSQL, PostGIS
-- **Database**: PostgreSQL 15 with PostGIS 3.3
-- **Development**: Docker Compose, Vite, Nodemon
+- **Frontend**: React, TypeScript, Redux Toolkit, Material-UI, Leaflet
+- **Backend**: Supabase (direct integration)
+- **Database**: PostgreSQL with PostGIS (via Supabase)
+- **Deployment**: Vercel + Supabase
+- **Maps**: Leaflet with 国土地理院 tiles (GSI)
 
-## How to Run
+## Environment URLs
+- **Production**: https://trade-area-analysis-2png.vercel.app
+- **Staging**: Auto-generated Vercel staging URL
+- **Local Dev**: http://localhost:5173
+
+## Key Architecture Decisions
+1. **Frontend-only deployment** - Backend logic moved to Supabase
+2. **Leaflet maps** - Better cross-browser compatibility than Mapbox
+3. **Staging/Production split** - Protect stable version from bugs
+4. **Direct Supabase integration** - Simpler than separate backend
+
+## Critical Files to Know
+- `STAGING-WORKFLOW.md` - Development workflow documentation
+- `frontend/src/App.tsx` - Main application logic
+- `frontend/src/utils/demandGrid.js` - Population mapping logic
+- `frontend/src/components/map/LeafletMap.tsx` - Map component
+- `frontend/.env` - Environment configuration
+
+## Current Issues & Solutions
+1. **Maps work in Safari but not Chrome/Edge** → Fixed with CSP headers
+2. **Layout stretched vertically** → Fixed spacing and removed flex centering
+3. **Population mapping bugs** → Fixed in staging, needs testing
+4. **updateMapMarkers undefined** → Added as no-op function
+
+## Development Guidelines
+1. **ALWAYS use staging branch** for development
+2. **Test in staging environment** before production
+3. **Preserve working features** - don't break what works
+4. **Use Leaflet maps** - proven cross-browser compatibility
+5. **Handle coordinate formats** - support both [lng,lat] and {latitude, longitude}
+
+## Testing Checklist
+Before promoting staging to production:
+- [ ] Maps display in Chrome, Edge, Safari
+- [ ] Location creation/deletion works
+- [ ] Geocoding functions properly
+- [ ] Population mapping displays data
+- [ ] Layout looks correct (not stretched)
+- [ ] No console errors
+
+## Emergency Rollback
+If production breaks:
 ```bash
-# Start database services
-sudo docker-compose up -d
-
-# Start backend (Terminal 1)
-cd backend && npm run dev
-
-# Start frontend (Terminal 2) 
-cd frontend && npm run dev
+git checkout main
+git reset --hard v1.0-production
+git push origin main --force
 ```
 
-**URLs:**
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:8000/api
-- Database: localhost:5432
+## Session Transfer Instructions
+To continue work in another Claude Code session:
+1. Share this CLAUDE.md file
+2. Current branch should be: `staging`
+3. Latest stable version: `v1.0-production`
+4. Check STAGING-WORKFLOW.md for process
 
-## Next Steps (Current Todos)
-### Immediate (Ready to implement)
-1. **Database Integration** - Connect API endpoints to actual PostgreSQL database
-2. **Mapbox Integration** - Replace mock isochrone with real Mapbox API calls
-3. **Frontend Testing** - Test authentication flow and map functionality
-4. **Data Persistence** - Save/load projects and trade areas from database
-
-### Medium-term (Phase 2)
-1. **Real Demographics** - Integrate with census or demographic data APIs
-2. **Advanced Analysis** - Implement competitor analysis and optimization algorithms
-3. **UI/UX Polish** - Improve user interface and experience
-4. **Testing Suite** - Add comprehensive unit and integration tests
-
-### Long-term (Phase 3)
-1. **AI Integration** - Implement real AI analysis capabilities
-2. **Performance Optimization** - Optimize for large datasets
-3. **Deployment** - Production deployment to Vercel/Supabase
-4. **Documentation** - User guides and API documentation
-
-## Recent Updates (Session: June 25, 2025 - 16:00-17:30 JST)
-### ✅ **Major Issues Fixed**
-- ✅ **Backend Express Routing Fixed** - Removed conflicting Joi validation, compilation errors resolved
-- ✅ **TypeScript Build Working** - Backend compiles and runs successfully
-- ✅ **Environment Configuration** - Created .env files for both frontend and backend
-- ✅ **API Endpoints Implemented** - Added trade areas and geo services
-- ✅ **Frontend-Backend Connection** - API service updated with new endpoints
-
-### ✅ **New Features Added**
-- ✅ **Trade Areas API** - CRUD operations for trade areas (`/api/trade-areas`)
-- ✅ **Geo Services API** - Isochrone generation, geocoding, demographics (`/api/geo`)
-- ✅ **Mock Data Responses** - Working endpoints with realistic mock data
-- ✅ **Authentication Middleware** - Endpoints properly protected
-
-### ✅ **Testing Results**
-- ✅ **Backend Server**: Running on http://localhost:8000 
-- ✅ **API Health Check**: `/api/health` responding correctly
-- ✅ **Frontend Build**: Vite development server starts successfully
-- ✅ **Environment Setup**: Both .env files configured properly
-
-## Current Status Summary
-**All critical blocking issues have been resolved!** 🎉
-
-1. **Backend**: ✅ Fully functional with all CRUD endpoints
-2. **Frontend**: ✅ Builds and runs, API service updated
-3. **Database**: ⚠️ Docker requires permissions (graceful fallback implemented)
-4. **Authentication**: ✅ JWT middleware working properly
-
-## Key Files
-- `trade-area-analysis-docs.md` - Complete project documentation
-- `docker-compose.yml` - Database and services setup
-- `backend/src/server.ts` - Main backend application
-- `frontend/src/App.tsx` - Main React application
-- `database/init/` - Database schema and initialization
+## Recent Session Summary (June 26, 2025)
+- Set up staging/production workflow
+- Fixed 10 critical bugs in population mapping
+- Improved layout (removed vertical stretching)
+- Fixed map display issues in Chrome/Edge
+- Created comprehensive workflow documentation
 
 ## Important Notes
-- Database uses PostGIS for spatial operations
-- JWT tokens stored in localStorage
-- Environment variables in `.env` files
-- API base URL: http://localhost:8000/api
-
-## Deployment Credentials
-- **GitHub PAT**: `[Token stored securely - removed for security]`
-- **GitHub Username**: `hirorinya`
-- **Repository**: `https://github.com/hirorinya/trade-area-analysis.git`
-- **Deployment Platform**: Vercel + Supabase
-
-## Useful Commands
-```bash
-# Database management
-sudo docker-compose up -d postgres  # Start DB only
-sudo docker-compose logs postgres   # View DB logs
-
-# Development
-npm run dev     # Start development server
-npm run build   # Build for production
-
-# Testing API
-curl -X GET http://localhost:8000/api/health
-```
-
-## Session Recovery
-If starting a new session, run the applications and verify:
-1. Database containers are running: `sudo docker ps`
-2. Backend is responding: `curl http://localhost:8000/api/health`
-3. Frontend loads without errors: Open http://localhost:5173
-4. Review this file for current progress and next steps
+- Production is stable and working - protect it!
+- All development happens in staging first
+- Test thoroughly before merging to main
+- User email in logs: bananas.go.bananas@gmail.com
