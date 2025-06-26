@@ -76,29 +76,60 @@ export function generatePopulationDensity(lat, lng) {
     return 0;
   }
   
-  // Simulate realistic population patterns
-  const basePopulation = 150; // Base population per mesh
+  // Simulate realistic population patterns for Tokyo area
+  const basePopulation = 800; // Increased base population per mesh (more realistic for urban areas)
   
-  // Use coordinates as seed for deterministic pseudo-random generation
-  const seed = Math.abs(lat * 1000 + lng * 1000) % 1000;
-  const randomFactor = 0.5 + (seed / 1000); // 0.5 to 1.5 multiplier (deterministic)
+  // Create more realistic random variation using multiple seeds
+  const seed1 = Math.abs(Math.sin(lat * 43758.5453123) * 43758.5453123) % 1;
+  const seed2 = Math.abs(Math.sin(lng * 12345.6789012) * 12345.6789012) % 1;
+  const randomFactor = 0.3 + (seed1 + seed2) * 0.7; // 0.3 to 1.7 multiplier (more variation)
   
-  // Simulate urban density patterns (higher near city centers)
-  // For Tokyo area (example coordinates)
+  // Simulate realistic urban density patterns
   const tokyoCenter = { lat: 35.6762, lng: 139.6503 };
   const distance = getDistance(lat, lng, tokyoCenter.lat, tokyoCenter.lng);
   
-  // Closer to center = higher density
-  const densityFactor = Math.max(0.3, 2 - distance / 10); // Decays with distance
+  // Much stronger urban density gradient
+  let densityFactor;
+  if (distance < 5) densityFactor = 3.0; // Very high density in central Tokyo
+  else if (distance < 10) densityFactor = 2.2; // High density in inner suburbs
+  else if (distance < 20) densityFactor = 1.5; // Medium density in outer suburbs
+  else if (distance < 30) densityFactor = 0.8; // Lower density in far suburbs
+  else densityFactor = 0.3; // Rural areas
   
-  // Simulate water areas and uninhabitable zones (deterministic based on location)
-  // Use a different part of the coordinates for this check
-  const inhabitableSeed = Math.abs(lat * 777 + lng * 333) % 100;
-  if (inhabitableSeed < 2) return 0; // 2% chance of uninhabitable area (deterministic)
+  // Add secondary centers (Shibuya, Shinjuku, etc.)
+  const secondaryCenters = [
+    { lat: 35.6580, lng: 139.7016 }, // Shibuya
+    { lat: 35.6896, lng: 139.7006 }, // Shinjuku
+    { lat: 35.7295, lng: 139.7405 }, // Ikebukuro
+    { lat: 35.6652, lng: 139.7747 }  // Shinagawa
+  ];
   
-  // Ensure minimum population in habitable areas for better mapping
+  // Boost density near secondary centers
+  secondaryCenters.forEach(center => {
+    const centerDistance = getDistance(lat, lng, center.lat, center.lng);
+    if (centerDistance < 3) {
+      densityFactor = Math.max(densityFactor, 2.5 - centerDistance * 0.5);
+    }
+  });
+  
+  // Simulate water areas and uninhabitable zones (more realistic)
+  const inhabitableSeed = Math.abs(Math.sin(lat * 1234.5) * Math.sin(lng * 5678.9)) % 1;
+  
+  // Tokyo Bay area (uninhabitable water zones)
+  const tokyoBayCenter = { lat: 35.6, lng: 139.8 };
+  const bayDistance = getDistance(lat, lng, tokyoBayCenter.lat, tokyoBayCenter.lng);
+  if (bayDistance < 15 && inhabitableSeed < 0.3) return 0; // Water areas in Tokyo Bay
+  
+  // Other uninhabitable areas (parks, industrial zones, etc.)
+  if (inhabitableSeed < 0.05) return 0; // 5% chance of uninhabitable area
+  
+  // Calculate final population with more realistic ranges
   const population = Math.round(basePopulation * randomFactor * densityFactor);
-  return Math.max(5, population); // Minimum 5 people per mesh in habitable areas
+  
+  // More realistic minimum populations
+  if (densityFactor > 2.0) return Math.max(400, population); // High density areas
+  if (densityFactor > 1.0) return Math.max(100, population); // Medium density areas
+  return Math.max(20, population); // Low density areas
 }
 
 /**

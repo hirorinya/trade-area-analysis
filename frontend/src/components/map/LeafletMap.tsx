@@ -175,7 +175,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
 
     try {
       console.log('📊 Generating demand meshes...');
-      const meshes = generateDemandGrid(gridBounds, 250);
+      const meshes = generateDemandGrid(gridBounds, 500); // Larger 500m meshes for better visibility
       console.log(`✅ Generated ${meshes.length} demand meshes`);
 
       // Calculate demand capture
@@ -212,14 +212,16 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     }
   };
 
-  // Function to get mesh color based on demand
+  // Function to get mesh color based on demand (updated for higher densities)
   const getMeshColor = (demand: number): string => {
-    if (demand >= 200) return '#1e3a8a'; // Very dark blue
-    if (demand >= 100) return '#1d4ed8'; // Dark blue
-    if (demand >= 50) return '#3b82f6'; // Blue
-    if (demand >= 10) return '#93c5fd'; // Medium blue
-    if (demand > 0) return '#dbeafe'; // Light blue
-    return '#f3f4f6'; // Light gray
+    if (demand >= 800) return '#1e1b4b'; // Very dark blue-purple (very high density)
+    if (demand >= 400) return '#1e3a8a'; // Very dark blue (high density)
+    if (demand >= 200) return '#1d4ed8'; // Dark blue (medium-high density)
+    if (demand >= 100) return '#3b82f6'; // Blue (medium density)
+    if (demand >= 50) return '#60a5fa'; // Medium blue (low-medium density)
+    if (demand >= 20) return '#93c5fd'; // Light blue (low density)
+    if (demand > 0) return '#dbeafe'; // Very light blue (very low density)
+    return '#f3f4f6'; // Light gray (no population)
   };
 
   // Function to display prerendered grid in chunks
@@ -330,11 +332,11 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
             <div style={{ fontWeight: 'bold', marginBottom: '6px', fontSize: '11px' }}>Population Demand</div>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '3px' }}>
               <div style={{ width: '12px', height: '8px', backgroundColor: '#f3f4f6', marginRight: '6px', border: '1px solid #e5e7eb' }}></div>
-              <span style={{ fontSize: '10px' }}>0-10</span>
+              <span style={{ fontSize: '10px' }}>0-20</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '3px' }}>
               <div style={{ width: '12px', height: '8px', backgroundColor: '#dbeafe', marginRight: '6px' }}></div>
-              <span style={{ fontSize: '10px' }}>10-50</span>
+              <span style={{ fontSize: '10px' }}>20-50</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '3px' }}>
               <div style={{ width: '12px', height: '8px', backgroundColor: '#93c5fd', marginRight: '6px' }}></div>
@@ -344,9 +346,17 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
               <div style={{ width: '12px', height: '8px', backgroundColor: '#3b82f6', marginRight: '6px' }}></div>
               <span style={{ fontSize: '10px' }}>100-200</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '3px' }}>
+              <div style={{ width: '12px', height: '8px', backgroundColor: '#1d4ed8', marginRight: '6px' }}></div>
+              <span style={{ fontSize: '10px' }}>200-400</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '3px' }}>
               <div style={{ width: '12px', height: '8px', backgroundColor: '#1e3a8a', marginRight: '6px' }}></div>
-              <span style={{ fontSize: '10px' }}>200+</span>
+              <span style={{ fontSize: '10px' }}>400-800</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ width: '12px', height: '8px', backgroundColor: '#1e1b4b', marginRight: '6px' }}></div>
+              <span style={{ fontSize: '10px' }}>800+</span>
             </div>
           </div>
         )}
