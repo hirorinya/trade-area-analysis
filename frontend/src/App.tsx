@@ -2762,19 +2762,12 @@ Make it actionable and specific to help guide them through the platform.
             )}
           </div>
 
+          {/* CSV Bulk Upload - Moved to top */}
           <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: '1fr 1fr', 
-            gap: theme.spacing[5], 
-            marginBottom: theme.spacing[5],
-            
-            '@media (max-width: 768px)': {
-              gridTemplateColumns: '1fr'
-            }
+            ...formStyle,
+            marginBottom: theme.spacing[5]
           }}>
-            {/* CSV Bulk Upload */}
-            <div style={formStyle}>
-              <h3 style={formHeaderStyle}>📤 CSV Bulk Upload with Auto-Geocoding</h3>
+            <h3 style={formHeaderStyle}>📤 CSV Bulk Upload with Auto-Geocoding</h3>
               <div style={{ marginBottom: theme.spacing[4] }}>
                 <p style={{
                   fontSize: theme.typography.fontSize.sm,
@@ -2844,14 +2837,24 @@ Make it actionable and specific to help guide them through the platform.
                       fontSize: theme.typography.fontSize.xs,
                       color: theme.colors.gray[500]
                     }}>
-                      Automatic geocoding will convert addresses to coordinates<br/>
-                      <strong>Example:</strong> 神田明神下ＳＳ,東京都千代田区外神田２－１５－５,ENEOS
+                      Automatic geocoding will convert addresses to coordinates
                     </div>
                   </label>
                 </div>
               </div>
             </div>
 
+          {/* Add Location and Locations side by side */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '1fr 1fr', 
+            gap: theme.spacing[5], 
+            marginBottom: theme.spacing[5],
+            
+            '@media (max-width: 768px)': {
+              gridTemplateColumns: '1fr'
+            }
+          }}>
             {/* Add Location Form */}
             <div style={formStyle}>
               <h3 style={formHeaderStyle}>Add New Location</h3>
