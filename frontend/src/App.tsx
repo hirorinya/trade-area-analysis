@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import * as turf from '@turf/turf';
 import 'leaflet/dist/leaflet.css';
@@ -1404,10 +1404,10 @@ Make it actionable and specific to help guide them through the platform.
     setMessage(`Showing ${candidates.length} candidate/optimized locations on map`);
   };
 
-  const handleDemandAnalysis = (analysis) => {
+  const handleDemandAnalysis = useCallback((analysis) => {
     setDemandMeshes(analysis.meshes || []);
     console.log('Demand analysis updated:', analysis);
-  };
+  }, []);
 
   // Get current map bounds for optimization
   const getCurrentMapBounds = () => {
@@ -1451,6 +1451,11 @@ Make it actionable and specific to help guide them through the platform.
       west: minLng - lngPadding
     };
   };
+
+  // Memoize grid bounds to prevent infinite re-renders
+  const gridBounds = useMemo(() => {
+    return getCurrentMapBounds();
+  }, [locations]);
 
   // CSV Import Functionality
   const handleCSVImport = async (event) => {
@@ -3439,7 +3444,7 @@ Make it actionable and specific to help guide them through the platform.
                     setMessage(`Clicked at: ${coordinates[1].toFixed(4)}, ${coordinates[0].toFixed(4)}`);
                   }}
                   showDemandGrid={showDemandGrid}
-                  gridBounds={getCurrentMapBounds()}
+                  gridBounds={gridBounds}
                   onDemandAnalysis={handleDemandAnalysis}
                 />
               ) : (
@@ -3461,7 +3466,7 @@ Make it actionable and specific to help guide them through the platform.
                     setMessage(`Clicked at: ${coordinates[1].toFixed(4)}, ${coordinates[0].toFixed(4)}`);
                   }}
                   showDemandGrid={showDemandGrid}
-                  gridBounds={getCurrentMapBounds()}
+                  gridBounds={gridBounds}
                   onDemandAnalysis={handleDemandAnalysis}
                 />
               )}

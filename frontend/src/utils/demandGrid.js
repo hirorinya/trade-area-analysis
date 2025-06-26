@@ -79,8 +79,9 @@ export function generatePopulationDensity(lat, lng) {
   // Simulate realistic population patterns
   const basePopulation = 150; // Base population per mesh
   
-  // Add randomness for realistic variation
-  const randomFactor = 0.5 + Math.random(); // 0.5 to 1.5 multiplier
+  // Use coordinates as seed for deterministic pseudo-random generation
+  const seed = Math.abs(lat * 1000 + lng * 1000) % 1000;
+  const randomFactor = 0.5 + (seed / 1000); // 0.5 to 1.5 multiplier (deterministic)
   
   // Simulate urban density patterns (higher near city centers)
   // For Tokyo area (example coordinates)
@@ -90,8 +91,10 @@ export function generatePopulationDensity(lat, lng) {
   // Closer to center = higher density
   const densityFactor = Math.max(0.3, 2 - distance / 10); // Decays with distance
   
-  // Simulate water areas and uninhabitable zones (reduced chance for better mapping)
-  if (Math.random() < 0.02) return 0; // 2% chance of uninhabitable area (reduced from 5%)
+  // Simulate water areas and uninhabitable zones (deterministic based on location)
+  // Use a different part of the coordinates for this check
+  const inhabitableSeed = Math.abs(lat * 777 + lng * 333) % 100;
+  if (inhabitableSeed < 2) return 0; // 2% chance of uninhabitable area (deterministic)
   
   // Ensure minimum population in habitable areas for better mapping
   const population = Math.round(basePopulation * randomFactor * densityFactor);

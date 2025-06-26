@@ -222,7 +222,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     } catch (error) {
       console.error('Error generating population grid:', error);
     }
-  }, [showDemandGrid, gridBounds, locations, onDemandAnalysis]);
+  }, [showDemandGrid, gridBounds, locations]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
