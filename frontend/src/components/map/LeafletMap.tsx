@@ -35,6 +35,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const gridLayerRef = useRef<L.LayerGroup | null>(null);
   const lastGridBoundsRef = useRef<string>('');
   const lastLocationsRef = useRef<string>('');
+  const prerenderedGridRef = useRef<any>(null);
+  const renderingProgressRef = useRef<number>(0);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -130,7 +132,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     }
   }, [locations, onLocationSelect]);
 
-  // Population grid effect
+  // Batch pre-rendering population grid effect
   useEffect(() => {
     if (!mapInstanceRef.current || !showDemandGrid || !gridBounds) {
       // Remove existing grid if conditions not met
@@ -140,74 +142,108 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       }
       lastGridBoundsRef.current = '';
       lastLocationsRef.current = '';
+      prerenderedGridRef.current = null;
       return;
     }
 
-    // Check if bounds or locations have actually changed
+    // Check if we can reuse prerendered grid
     const boundsKey = JSON.stringify(gridBounds);
     const locationsKey = JSON.stringify(locations.map(l => ({ id: l.id, lat: l.latitude, lng: l.longitude })));
     
-    if (boundsKey === lastGridBoundsRef.current && locationsKey === lastLocationsRef.current) {
-      // No actual change, skip regeneration
+    if (boundsKey === lastGridBoundsRef.current && 
+        locationsKey === lastLocationsRef.current && 
+        prerenderedGridRef.current) {
+      // Reuse cached prerendered grid
+      console.log('🎯 Reusing prerendered population grid');
+      displayPrerenderedGrid();
       return;
     }
-    
+
+    // Start batch pre-rendering
+    console.log('🔄 Starting batch pre-rendering of population grid...');
     lastGridBoundsRef.current = boundsKey;
     lastLocationsRef.current = locationsKey;
+    renderingProgressRef.current = 0;
 
-    console.log('Generating demand grid with bounds:', gridBounds);
-    
+    // Pre-render in background with chunked processing
+    prerenderPopulationGrid();
+  }, [showDemandGrid, gridBounds, locations]);
+
+  // Function to pre-render population grid in chunks
+  const prerenderPopulationGrid = async () => {
+    if (!gridBounds || !mapInstanceRef.current) return;
+
     try {
-      // Generate demand meshes
-      const meshes = generateDemandGrid(gridBounds, 250); // 250m mesh size
-      console.log(`Generated ${meshes.length} demand meshes`);
-      
-      // Calculate demand capture if we have store locations
+      console.log('📊 Generating demand meshes...');
+      const meshes = generateDemandGrid(gridBounds, 250);
+      console.log(`✅ Generated ${meshes.length} demand meshes`);
+
+      // Calculate demand capture
       const storeLocations = locations.filter(loc => loc.location_type === 'store');
       let updatedMeshes = meshes;
       
       if (storeLocations.length > 0) {
+        console.log('🏪 Calculating demand capture for stores...');
         updatedMeshes = calculateDemandCapture(meshes, storeLocations, 2.0, 1.5);
         const storePerformance = calculateStorePerformance(updatedMeshes, storeLocations);
-        
-        console.log('Store performance analysis:', storePerformance);
-        
-        // Don't call onDemandAnalysis to prevent infinite loop
-        // Store analysis data in console for now
-        const analysisData = {
-          meshes: updatedMeshes,
-          storePerformance,
-          totalMeshes: updatedMeshes.length,
-          totalDemand: updatedMeshes.reduce((sum, mesh) => sum + mesh.demand, 0)
-        };
-        console.log('Demand analysis completed:', analysisData);
+        console.log('📈 Store performance analysis completed:', storePerformance);
       }
 
-      // Remove existing grid layer
-      if (gridLayerRef.current) {
-        mapInstanceRef.current.removeLayer(gridLayerRef.current);
-      }
-
-      // Create new grid layer
-      gridLayerRef.current = L.layerGroup();
-
-      // Add mesh rectangles to the layer
-      updatedMeshes.forEach(mesh => {
-        // Create rectangle bounds
-        const bounds = L.latLngBounds(
+      // Pre-render mesh data (no DOM operations yet)
+      console.log('🎨 Pre-rendering mesh visualizations...');
+      const prerenderedMeshes = updatedMeshes.map(mesh => ({
+        bounds: L.latLngBounds(
           [mesh.bounds.south, mesh.bounds.west],
           [mesh.bounds.north, mesh.bounds.east]
-        );
+        ),
+        color: getMeshColor(mesh.demand),
+        mesh: mesh
+      }));
 
-        // Determine color based on demand
-        let color = '#f3f4f6'; // Light gray for no demand
-        if (mesh.demand >= 200) color = '#1e3a8a'; // Very dark blue
-        else if (mesh.demand >= 100) color = '#1d4ed8'; // Dark blue
-        else if (mesh.demand >= 50) color = '#3b82f6'; // Blue
-        else if (mesh.demand >= 10) color = '#93c5fd'; // Medium blue
-        else if (mesh.demand > 0) color = '#dbeafe'; // Light blue
+      // Cache prerendered data
+      prerenderedGridRef.current = prerenderedMeshes;
+      console.log(`✨ Pre-rendering complete! ${prerenderedMeshes.length} meshes ready`);
 
-        // Create rectangle
+      // Display in chunks to avoid blocking UI
+      displayPrerenderedGrid();
+
+    } catch (error) {
+      console.error('❌ Error in batch pre-rendering:', error);
+    }
+  };
+
+  // Function to get mesh color based on demand
+  const getMeshColor = (demand: number): string => {
+    if (demand >= 200) return '#1e3a8a'; // Very dark blue
+    if (demand >= 100) return '#1d4ed8'; // Dark blue
+    if (demand >= 50) return '#3b82f6'; // Blue
+    if (demand >= 10) return '#93c5fd'; // Medium blue
+    if (demand > 0) return '#dbeafe'; // Light blue
+    return '#f3f4f6'; // Light gray
+  };
+
+  // Function to display prerendered grid in chunks
+  const displayPrerenderedGrid = async () => {
+    if (!prerenderedGridRef.current || !mapInstanceRef.current) return;
+
+    console.log('🖼️ Displaying prerendered population grid...');
+
+    // Remove existing grid layer
+    if (gridLayerRef.current) {
+      mapInstanceRef.current.removeLayer(gridLayerRef.current);
+    }
+
+    // Create new grid layer
+    gridLayerRef.current = L.layerGroup();
+    const meshes = prerenderedGridRef.current;
+    const chunkSize = 50; // Process 50 meshes at a time
+
+    // Display meshes in chunks to avoid blocking UI
+    for (let i = 0; i < meshes.length; i += chunkSize) {
+      const chunk = meshes.slice(i, i + chunkSize);
+      
+      // Process chunk
+      chunk.forEach(({ bounds, color, mesh }) => {
         const rectangle = L.rectangle(bounds, {
           color: '#6b7280',
           weight: 0.5,
@@ -233,13 +269,18 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
         gridLayerRef.current!.addLayer(rectangle);
       });
 
-      // Add grid layer to map
-      gridLayerRef.current.addTo(mapInstanceRef.current);
-
-    } catch (error) {
-      console.error('Error generating population grid:', error);
+      // Yield control to browser between chunks
+      if (i + chunkSize < meshes.length) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+        const progress = Math.round(((i + chunkSize) / meshes.length) * 100);
+        console.log(`🔄 Rendering progress: ${progress}%`);
+      }
     }
-  }, [showDemandGrid, gridBounds, locations]);
+
+    // Add completed grid to map
+    gridLayerRef.current.addTo(mapInstanceRef.current);
+    console.log('🎉 Population grid display complete!');
+  };
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
