@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import L from 'leaflet';
 import * as turf from '@turf/turf';
 import 'leaflet/dist/leaflet.css';
@@ -79,7 +79,8 @@ function App() {
   const [showAIChat, setShowAIChat] = useState(false);
   const [authView, setAuthView] = useState('login'); // 'login' or 'register'
   const [showOptimization, setShowOptimization] = useState(false);
-  // const [demandMeshes, setDemandMeshes] = useState([]); // Removed to prevent infinite loop
+  const demandMeshesRef = useRef([]); // Use ref instead of state to prevent loops
+  const [demandDataReady, setDemandDataReady] = useState(false); // Track when data is ready
   const [optimizationResults, setOptimizationResults] = useState(null);
   const [candidateMarkers, setCandidateMarkers] = useState([]);
   const [showDemandGrid, setShowDemandGrid] = useState(false);
@@ -1407,8 +1408,13 @@ Make it actionable and specific to help guide them through the platform.
     setMessage(`Showing ${candidates.length} candidate/optimized locations on map`);
   };
 
-  // Removed handleDemandAnalysis to prevent infinite loop
-  // Population grid now handles analysis internally
+  // Handle demand analysis data without causing re-renders
+  const handleDemandAnalysis = useCallback((analysis) => {
+    // Store in ref to avoid re-renders
+    demandMeshesRef.current = analysis.meshes || [];
+    setDemandDataReady(analysis.meshes && analysis.meshes.length > 0);
+    console.log('Demand analysis updated:', analysis);
+  }, []);
 
   // Get current map bounds for optimization
   const getCurrentMapBounds = () => {
@@ -3552,6 +3558,7 @@ Make it actionable and specific to help guide them through the platform.
                   gridBounds={gridBounds}
                   meshSize={meshSize}
                   catchmentRadius={catchmentRadius}
+                  onDemandAnalysis={handleDemandAnalysis}
                 />
               ) : (
                 <LeafletMap
@@ -3575,6 +3582,7 @@ Make it actionable and specific to help guide them through the platform.
                   gridBounds={gridBounds}
                   meshSize={meshSize}
                   catchmentRadius={catchmentRadius}
+                  onDemandAnalysis={handleDemandAnalysis}
                 />
               )}
             </div>
@@ -3608,8 +3616,21 @@ Make it actionable and specific to help guide them through the platform.
               ...formStyle,
               marginTop: theme.spacing[5]
             }}>
+              {!demandDataReady && (
+                <div style={{
+                  backgroundColor: '#fef3c7',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '6px',
+                  padding: '12px 16px',
+                  marginBottom: '16px',
+                  fontSize: '14px',
+                  color: '#92400e'
+                }}>
+                  ⚠️ <strong>Population Grid Required:</strong> Please enable the Population Grid (📊 button) before running optimization. The optimizer needs demand data to calculate optimal store locations.
+                </div>
+              )}
               <OptimizationPanel
-                demandMeshes={[]} // Temporarily empty to prevent infinite loop
+                demandMeshes={demandMeshesRef.current} // Use ref data
                 existingStores={locations.filter(loc => loc.location_type === 'store')}
                 competitors={locations.filter(loc => loc.location_type === 'competitor')}
                 bounds={getCurrentMapBounds()}

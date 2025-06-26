@@ -208,6 +208,21 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       prerenderedGridRef.current = prerenderedMeshes;
       console.log(`✨ Pre-rendering complete! ${prerenderedMeshes.length} meshes ready`);
 
+      // Call onDemandAnalysis if provided
+      if (onDemandAnalysis && updatedMeshes.length > 0) {
+        const analysisData = {
+          meshes: updatedMeshes,
+          storePerformance: storeLocations.length > 0 ? storePerformance : {},
+          totalMeshes: updatedMeshes.length,
+          totalDemand: updatedMeshes.reduce((sum, mesh) => sum + mesh.demand, 0)
+        };
+        
+        // Defer callback to avoid render issues
+        setTimeout(() => {
+          onDemandAnalysis(analysisData);
+        }, 100);
+      }
+
       // Display in chunks to avoid blocking UI
       displayPrerenderedGrid();
 
