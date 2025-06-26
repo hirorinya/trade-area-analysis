@@ -69,6 +69,8 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [historicalData, setHistoricalData] = useState<any[]>([]);
   const [showHistoricalInput, setShowHistoricalInput] = useState(false);
+  const [progressMessage, setProgressMessage] = useState('');
+  const [estimatedTime, setEstimatedTime] = useState(0);
 
   // Generate candidate sites when bounds change
   useEffect(() => {
@@ -86,6 +88,27 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     setTimeout(() => setMessage(''), 5000);
   };
 
+  // Get performance estimates for different algorithms
+  const getAlgorithmEstimate = (algorithm: string, candidates: number, meshes: number, stores: number) => {
+    const complexity = candidates * meshes * stores;
+    switch (algorithm) {
+      case 'greedy':
+        return Math.max(2, Math.min(15, complexity / 50000)); // 2-15 seconds
+      case 'mip':
+        return Math.max(5, Math.min(45, complexity / 20000)); // 5-45 seconds
+      case 'competitive':
+        return Math.max(3, Math.min(30, complexity / 30000)); // 3-30 seconds
+      case 'multi-scenario':
+        return Math.max(8, Math.min(60, complexity / 15000)); // 8-60 seconds
+      case 'capacity':
+        return Math.max(1, Math.min(10, complexity / 80000)); // 1-10 seconds
+      case 'historical':
+        return Math.max(3, Math.min(25, complexity / 40000)); // 3-25 seconds
+      default:
+        return 10;
+    }
+  };
+
   const runOptimization = async () => {
     if (candidateSites.length === 0) {
       showMessage('No candidate sites available. Please ensure the map area is defined.', 'error');
@@ -97,6 +120,11 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
       return;
     }
 
+    // Calculate and show estimated time
+    const estimatedSeconds = getAlgorithmEstimate(params.algorithm, candidateSites.length, demandMeshes.length, params.numStores);
+    setEstimatedTime(estimatedSeconds);
+    setProgressMessage(`Starting ${params.algorithm.toUpperCase()} optimization... (estimated ${Math.round(estimatedSeconds)}s)`);
+
     setIsOptimizing(true);
     setMessage('');
 
@@ -105,6 +133,7 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
 
       switch (params.algorithm) {
         case 'greedy':
+          setProgressMessage('🔍 Running Greedy optimization... (fast algorithm)');
           console.log('Running Greedy optimization...');
           optimizationResults = greedyOptimization(
             candidateSites, 
@@ -121,6 +150,7 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           break;
 
         case 'mip':
+          setProgressMessage('🎯 Running MIP-style optimization... (finding global optimum)');
           console.log('Running MIP-style optimization...');
           optimizationResults = mipStyleOptimization(
             candidateSites, 
@@ -138,10 +168,12 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           break;
 
         case 'competitive':
+          setProgressMessage('⚔️ Running competitive analysis... (analyzing competitor impact)');
           console.log('Running competitive analysis...');
           if (competitors.length === 0) {
             showMessage('No competitors defined for competitive analysis.', 'error');
             setIsOptimizing(false);
+            setProgressMessage('');
             return;
           }
           
@@ -283,8 +315,11 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
     } catch (error) {
       console.error('Optimization failed:', error);
       showMessage(`Optimization failed: ${error.message}`, 'error');
+      setProgressMessage('');
     } finally {
       setIsOptimizing(false);
+      setProgressMessage('');
+      setEstimatedTime(0);
     }
   };
 
@@ -299,7 +334,16 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   };
 
   return (
-    <div style={containerStyle}>
+    <>
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+      <div style={containerStyle}>
       <div style={sectionStyle}>
         <h2 style={heading2Style}>Store Optimization Engine</h2>
         <p style={bodyTextStyle}>
@@ -509,6 +553,41 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
             </Button>
           )}
         </div>
+        
+        {/* Progress Indicator */}
+        {(isOptimizing || progressMessage) && (
+          <div style={{
+            backgroundColor: '#f0f9ff',
+            border: '1px solid #0ea5e9',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            marginTop: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            {isOptimizing && (
+              <div style={{
+                width: '20px',
+                height: '20px',
+                border: '2px solid #e0e7ff',
+                borderTop: '2px solid #3b82f6',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }} />
+            )}
+            <div>
+              <div style={{ fontWeight: '500', color: '#1e40af', fontSize: '14px' }}>
+                {progressMessage || 'Processing...'}
+              </div>
+              {estimatedTime > 0 && (
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                  Estimated time: {Math.round(estimatedTime)} seconds • {candidateSites.length} candidates • {demandMeshes.length} population meshes
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {results && (
@@ -846,7 +925,8 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
           )}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

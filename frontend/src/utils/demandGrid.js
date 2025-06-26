@@ -203,15 +203,38 @@ export function calculateDemandCapture(meshes, stores, maxRadius = 2.0, distance
       // Handle different coordinate formats safely
       let storeLat, storeLng;
       
-      if (store.latitude && store.longitude) {
+      // Try multiple coordinate formats
+      if (typeof store.latitude === 'number' && typeof store.longitude === 'number') {
         storeLat = store.latitude;
         storeLng = store.longitude;
-      } else if (store.coordinates && Array.isArray(store.coordinates.coordinates) && 
-                 store.coordinates.coordinates.length >= 2) {
-        storeLat = store.coordinates.coordinates[1];
-        storeLng = store.coordinates.coordinates[0];
-      } else {
-        console.warn('Store has invalid coordinates format:', store);
+      } else if (store.coordinates) {
+        // Handle GeoJSON format
+        if (Array.isArray(store.coordinates.coordinates) && store.coordinates.coordinates.length >= 2) {
+          storeLat = store.coordinates.coordinates[1];
+          storeLng = store.coordinates.coordinates[0];
+        } else if (Array.isArray(store.coordinates) && store.coordinates.length >= 2) {
+          // Handle [lng, lat] array format
+          storeLat = store.coordinates[1];
+          storeLng = store.coordinates[0];
+        }
+      } else if (store.lat && store.lng) {
+        // Handle lat/lng format
+        storeLat = store.lat;
+        storeLng = store.lng;
+      }
+      
+      // Validate extracted coordinates
+      if (typeof storeLat !== 'number' || typeof storeLng !== 'number' || 
+          isNaN(storeLat) || isNaN(storeLng)) {
+        // Only warn once per store ID to avoid spam
+        if (!store._coordWarned) {
+          console.warn('Store has invalid coordinates format:', {
+            id: store.id,
+            name: store.name,
+            availableProps: Object.keys(store)
+          });
+          store._coordWarned = true;
+        }
         return; // Skip this store
       }
       
