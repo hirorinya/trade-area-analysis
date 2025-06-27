@@ -118,12 +118,15 @@ export class MeshCodeUtil {
 }
 
 /**
- * Population data cache to reduce API calls
+ * Smart population data cache with failure tracking
+ * Prevents repeated API calls that are known to fail due to CORS
  */
 class PopulationDataCache {
   constructor() {
     this.cache = new Map();
-    this.cacheExpiry = 3600000; // 1 hour
+    this.failureCache = new Map();
+    this.cacheExpiry = 3600000; // 1 hour for successful data
+    this.failureExpiry = 86400000; // 24 hours for failures
   }
   
   getCacheKey(bounds, meshLevel) {
@@ -150,6 +153,36 @@ class PopulationDataCache {
       data,
       timestamp: Date.now()
     });
+  }
+  
+  // Track API failures to prevent repeated attempts
+  setFailure(bounds, meshLevel, error) {
+    const key = this.getCacheKey(bounds, meshLevel);
+    this.failureCache.set(key, {
+      error: error.message,
+      timestamp: Date.now()
+    });
+  }
+  
+  // Check if API call should be skipped due to recent failure
+  hasRecentFailure(bounds, meshLevel) {
+    const key = this.getCacheKey(bounds, meshLevel);
+    const failure = this.failureCache.get(key);
+    
+    if (!failure) return false;
+    
+    if (Date.now() - failure.timestamp > this.failureExpiry) {
+      this.failureCache.delete(key);
+      return false;
+    }
+    
+    return true;
+  }
+  
+  // Clear all caches
+  clear() {
+    this.cache.clear();
+    this.failureCache.clear();
   }
 }
 
@@ -464,7 +497,7 @@ function getMeshAreaCode(bounds, meshLevel) {
 
 /**
  * Main function to fetch real population data
- * Tries multiple sources in order of preference
+ * Currently disabled due to CORS policy restrictions in browser environment
  * @param {Object} bounds - Geographic bounds
  * @param {number} meshLevel - Mesh level (3, 4, or 5)
  * @returns {Promise<Array>} Array of population data by mesh
@@ -479,24 +512,12 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
     throw new Error('Invalid bounds coordinates');
   }
   
-  // Try data sources in order
-  let data = null;
+  // All APIs disabled due to CORS restrictions in browser environment
+  console.log('📊 Population data APIs disabled due to CORS policy restrictions');
+  console.log('💡 Consider implementing server-side batch processing for monthly data updates');
+  console.log('🔄 Using fallback simulation data instead');
   
-  // 1. Try e-Stat API if key is available
-  if (API_CONFIG.E_STAT.appId) {
-    data = await fetchEStatData(bounds, meshLevel);
-    if (data && data.length > 0) {
-      console.log('Using e-Stat API data');
-      return data;
-    }
-  }
-  
-  // 2. Statistics Dashboard API disabled due to CORS restrictions
-  // data = await fetchStatDashboardData(bounds, meshLevel);
-  console.log('Statistics Dashboard API disabled due to CORS policy restrictions');
-  
-  // 3. If all APIs fail, return null (caller should use fallback)
-  console.warn('All population data APIs failed, using fallback');
+  // Return null immediately to use fallback simulation
   return null;
 }
 
@@ -506,4 +527,46 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
  */
 export function setEStatAPIKey(apiKey) {
   API_CONFIG.E_STAT.appId = apiKey;
+}
+
+/**
+ * Future batch processing concept for server-side implementation
+ * 
+ * This approach would solve CORS restrictions by moving API calls to server-side:
+ * 
+ * 1. MONTHLY BATCH PROCESS:
+ *    - Server-side cron job runs monthly
+ *    - Fetches all mesh data for entire Japan from e-Stat API
+ *    - Stores in database with spatial indexing
+ *    - Updates only changed data
+ * 
+ * 2. CLIENT REQUEST FLOW:
+ *    - Frontend sends bounds to backend API
+ *    - Backend queries cached mesh data from database
+ *    - Returns population data without CORS issues
+ * 
+ * 3. BENEFITS:
+ *    - No CORS restrictions (server-to-server calls)
+ *    - Fast client responses (database query vs API call)
+ *    - Data freshness matches e-Stat update cycle
+ *    - Reduced API rate limiting issues
+ * 
+ * 4. IMPLEMENTATION NOTES:
+ *    - Use PostGIS for spatial queries
+ *    - Implement spatial indexing for fast bounds queries
+ *    - Add data versioning for tracking updates
+ *    - Consider data compression for storage efficiency
+ */
+export function getBatchProcessingConcept() {
+  return {
+    schedule: 'monthly',
+    source: 'e-Stat API',
+    storage: 'PostGIS database',
+    benefits: [
+      'No CORS restrictions',
+      'Fast client responses',
+      'Matches data update cycle',
+      'Reduced rate limiting'
+    ]
+  };
 }
