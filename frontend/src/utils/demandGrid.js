@@ -1,14 +1,16 @@
 // Mesh-based Demand Grid System for Trade Area Analysis
 // Based on research from retail optimization studies
+import { fetchRealPopulationData } from './populationDataAPI.js';
 
 /**
- * Generates a mesh grid for demand analysis
+ * Generates a mesh grid for demand analysis using real population data
  * Creates population density cells similar to e-Stat 250m meshes
  * @param {Object} bounds - Geographic bounds {north, south, east, west}
  * @param {number} meshSize - Size of each mesh in meters (default: 250)
- * @returns {Array} Array of mesh cells with demand data
+ * @param {boolean} useRealData - Whether to fetch real population data (default: true)
+ * @returns {Promise<Array>} Promise resolving to array of mesh cells with demand data
  */
-export function generateDemandGrid(bounds, meshSize = 250) {
+export async function generateDemandGrid(bounds, meshSize = 250, useRealData = true) {
   // Validate bounds
   if (!bounds || typeof bounds !== 'object') {
     throw new Error('Invalid bounds: bounds must be an object');
@@ -20,13 +22,55 @@ export function generateDemandGrid(bounds, meshSize = 250) {
     throw new Error('Invalid bounds: east must be greater than west');
   }
   
-  const meshes = [];
+  let meshes = [];
+  
+  // Try to fetch real population data first
+  if (useRealData) {
+    try {
+      // Determine mesh level based on mesh size
+      let meshLevel = 5; // 250m mesh
+      if (meshSize >= 1000) meshLevel = 3; // 1km mesh
+      else if (meshSize >= 500) meshLevel = 4; // 500m mesh
+      
+      console.log('Fetching real population data...');
+      const realPopulationData = await fetchRealPopulationData(bounds, meshLevel);
+      
+      if (realPopulationData && realPopulationData.length > 0) {
+        console.log(`Successfully loaded ${realPopulationData.length} mesh cells with real population data`);
+        
+        // Convert real data to mesh format
+        meshes = realPopulationData.map((data, index) => ({
+          id: `mesh_${index}`,
+          meshCode: data.meshCode,
+          center: {
+            lat: data.center.lat,
+            lng: data.center.lng
+          },
+          bounds: calculateMeshBounds(data.center, meshSize),
+          population: data.population,
+          demand: Math.max(1, Math.round(data.population * 0.3)), // 30% of population, min 1
+          capturedBy: [], // Stores that capture demand from this mesh
+          captureRatio: {} // Ratio of demand captured by each store
+        }));
+        
+        return meshes;
+      } else {
+        console.warn('Real population data not available, falling back to simulated data');
+      }
+    } catch (error) {
+      console.error('Error fetching real population data:', error);
+      console.log('Falling back to simulated data');
+    }
+  }
+  
+  // Fallback to simulated data if real data is not available
+  console.log('Using simulated population data');
   
   // Convert meters to degrees (approximate)
   const metersToLat = meshSize / 111320; // 1 degree lat ≈ 111.32km
   const metersToLng = meshSize / (111320 * Math.cos(bounds.north * Math.PI / 180));
   
-  // Generate mesh grid
+  // Generate mesh grid with simulated data
   let meshId = 0;
   for (let lat = bounds.south; lat < bounds.north; lat += metersToLat) {
     for (let lng = bounds.west; lng < bounds.east; lng += metersToLng) {
@@ -42,7 +86,7 @@ export function generateDemandGrid(bounds, meshSize = 250) {
           east: lng + metersToLng,
           west: lng
         },
-        // Simulate population density (in practice, this would come from census data)
+        // Use simulated population density as fallback
         population: generatePopulationDensity(lat + metersToLat / 2, lng + metersToLng / 2),
         demand: 0, // Will be calculated based on population and demographics
         capturedBy: [], // Stores that capture demand from this mesh
@@ -58,6 +102,24 @@ export function generateDemandGrid(bounds, meshSize = 250) {
   }
   
   return meshes;
+}
+
+/**
+ * Calculates mesh bounds from center point and size
+ * @param {Object} center - {lat, lng}
+ * @param {number} meshSize - Size in meters
+ * @returns {Object} Bounds object
+ */
+function calculateMeshBounds(center, meshSize) {
+  const metersToLat = meshSize / 111320 / 2; // Half size for radius
+  const metersToLng = meshSize / (111320 * Math.cos(center.lat * Math.PI / 180)) / 2;
+  
+  return {
+    north: center.lat + metersToLat,
+    south: center.lat - metersToLat,
+    east: center.lng + metersToLng,
+    west: center.lng - metersToLng
+  };
 }
 
 /**
@@ -365,16 +427,15 @@ export function generateCandidateSites(bounds, count = 100, existingStores = [])
 }
 
 /**
- * Real-world population data integration (placeholder)
- * In production, this would integrate with:
- * - Japan: e-Stat API for population census data
- * - US: Census Bureau API
- * - EU: Eurostat data
- * - Custom: User-uploaded demographic data
+ * Real-world population data integration
+ * Integrates with Japanese government APIs for census data
+ * @param {Object} bounds - Geographic bounds
+ * @param {string} country - Country code (currently supports 'JP')
+ * @param {number} meshSize - Mesh size in meters
+ * @returns {Promise<Array>} Array of mesh cells with real population data
  */
-export async function loadRealPopulationData(bounds, country = 'JP') {
-  // Placeholder for real data integration
-  console.log(`Loading population data for ${country} in bounds:`, bounds);
+export async function loadRealPopulationData(bounds, country = 'JP', meshSize = 250) {
+  console.log(`Loading real population data for ${country} in bounds:`, bounds);
   
   try {
     // Validate bounds before processing
@@ -382,11 +443,11 @@ export async function loadRealPopulationData(bounds, country = 'JP') {
       throw new Error('Invalid bounds provided');
     }
     
-    // For now, return simulated data wrapped in Promise
-    return await Promise.resolve(generateDemandGrid(bounds));
+    // Use the new async generateDemandGrid with real data
+    return await generateDemandGrid(bounds, meshSize, true);
   } catch (error) {
     console.error('Error loading population data:', error);
-    // Return empty grid on error
-    return [];
+    // Return fallback simulated data on error
+    return await generateDemandGrid(bounds, meshSize, false);
   }
 }

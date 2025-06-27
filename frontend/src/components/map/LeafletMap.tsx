@@ -179,7 +179,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
 
     try {
       console.log(`📊 Generating demand meshes with ${meshSize}m size...`);
-      const meshes = generateDemandGrid(gridBounds, meshSize); // Use dynamic mesh size
+      const meshes = await generateDemandGrid(gridBounds, meshSize); // Use dynamic mesh size with real data
       console.log(`✅ Generated ${meshes.length} demand meshes`);
 
       // Calculate demand capture

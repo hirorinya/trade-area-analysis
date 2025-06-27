@@ -365,33 +365,34 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
   useEffect(() => {
     if (!map.current || !mapLoaded || !showDemandGrid || !gridBounds) return;
     
-    console.log('Generating demand grid with bounds:', gridBounds);
-    
-    // Generate demand meshes
-    const meshes = generateDemandGrid(gridBounds, meshSize); // Use dynamic mesh size
-    console.log(`Generated ${meshes.length} demand meshes`);
-    
-    // Calculate demand capture if we have store locations
-    const storeLocations = locations.filter(loc => loc.location_type === 'store');
-    if (storeLocations.length > 0) {
-      const updatedMeshes = calculateDemandCapture(meshes, storeLocations, catchmentRadius, 1.5);
-      const storePerformance = calculateStorePerformance(updatedMeshes, storeLocations);
+    const generateGrid = async () => {
+      console.log('Generating demand grid with bounds:', gridBounds);
       
-      console.log('Store performance analysis:', storePerformance);
+      // Generate demand meshes with real data
+      const meshes = await generateDemandGrid(gridBounds, meshSize); // Use dynamic mesh size with real data
+      console.log(`Generated ${meshes.length} demand meshes`);
       
-      if (onDemandAnalysisRef.current) {
-        onDemandAnalysisRef.current({
-          meshes: updatedMeshes,
-          storePerformance,
-          totalMeshes: updatedMeshes.length,
-          totalDemand: updatedMeshes.reduce((sum, mesh) => sum + mesh.demand, 0)
-        });
-      }
-      
-      setDemandMeshes(updatedMeshes);
-      
-      // Generate demand flow lines from meshes to stores
-      const flowLines = updatedMeshes
+      // Calculate demand capture if we have store locations
+      const storeLocations = locations.filter(loc => loc.location_type === 'store');
+      if (storeLocations.length > 0) {
+        const updatedMeshes = calculateDemandCapture(meshes, storeLocations, catchmentRadius, 1.5);
+        const storePerformance = calculateStorePerformance(updatedMeshes, storeLocations);
+        
+        console.log('Store performance analysis:', storePerformance);
+        
+        if (onDemandAnalysisRef.current) {
+          onDemandAnalysisRef.current({
+            meshes: updatedMeshes,
+            storePerformance,
+            totalMeshes: updatedMeshes.length,
+            totalDemand: updatedMeshes.reduce((sum, mesh) => sum + mesh.demand, 0)
+          });
+        }
+        
+        setDemandMeshes(updatedMeshes);
+        
+        // Generate demand flow lines from meshes to stores
+        const flowLines = updatedMeshes
         .filter(mesh => mesh.capturedBy.length > 0 && mesh.demand > 0)
         .flatMap(mesh => 
           mesh.capturedBy.map(storeId => {
@@ -588,6 +589,9 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
         map.current.setLayoutProperty('demand-flow-animated', 'visibility', 'visible');
       }
     }
+    };
+    
+    generateGrid();
   }, [showDemandGrid, gridBounds, locations, mapLoaded, visualizationMode, meshSize, catchmentRadius]);
   
   // Hide demand grid and flow lines when not needed
