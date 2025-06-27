@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Direct Login - Test Census Data</title>
+    <style>
+        body { font-family: Arial; padding: 20px; max-width: 500px; margin: 0 auto; }
+        .button { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin: 10px 0; }
+        .button:hover { background: #218838; }
+        .message { padding: 15px; margin: 15px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .step { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Direct Access to Test Census Data</h1>
+    
+    <div class="info message">
+        <strong>Issue:</strong> Sign-up is having technical issues.<br>
+        <strong>Solution:</strong> Create a mock session to test the census data directly.
+    </div>
+    
+    <button class="button" onclick="createMockSession()">
+        🎯 Create Test Session & Access Census Data
+    </button>
+    
+    <div class="step">
+        <h3>📊 What you'll test:</h3>
+        <ul>
+            <li><strong>Real Japanese Census Data:</strong> 32,173+ mesh records</li>
+            <li><strong>Population Density:</strong> High areas (15,000+ people), medium (5,000-10,000)</li>
+            <li><strong>Tokyo Coverage:</strong> Shibuya, Shinjuku, Ginza areas</li>
+            <li><strong>Accurate Analysis:</strong> No more simulated/random data</li>
+        </ul>
+    </div>
+    
+    <div id="result"></div>
+    
+    <script>
+        function createMockSession() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="message info">🔄 Creating test session...</div>';
+            
+            try {
+                // Create a mock user session for testing
+                const mockUser = {
+                    id: 'test-user-' + Date.now(),
+                    email: 'test@trade-area.app',
+                    first_name: 'Test',
+                    last_name: 'User',
+                    created_at: new Date().toISOString()
+                };
+                
+                const mockToken = 'test-token-' + Date.now();
+                
+                // Set up localStorage to simulate authenticated state
+                localStorage.setItem('currentView', 'dashboard');
+                localStorage.setItem('token', mockToken);
+                localStorage.setItem('user', JSON.stringify(mockUser));
+                
+                // Clear any auth errors
+                localStorage.removeItem('authError');
+                
+                resultDiv.innerHTML = `
+                    <div class="message success">
+                        <h3>✅ Test Session Created!</h3>
+                        <p><strong>Mock User:</strong> ${mockUser.email}</p>
+                        <p><strong>Session ID:</strong> ${mockUser.id}</p>
+                        <p><strong>Ready to test:</strong> Real census data with 32,173+ records</p>
+                        <p>🔄 Redirecting to main app...</p>
+                    </div>
+                    
+                    <div class="step">
+                        <h3>🧪 Testing Steps:</h3>
+                        <ol>
+                            <li>Create a new project (e.g., "Tokyo Store Analysis")</li>
+                            <li>Add locations in Tokyo:
+                                <ul>
+                                    <li>Shibuya: 35.6595, 139.7006</li>
+                                    <li>Shinjuku: 35.6896, 139.6917</li>
+                                    <li>Ginza: 35.6762, 139.7648</li>
+                                </ul>
+                            </li>
+                            <li>Check population analysis - should show real census numbers!</li>
+                            <li>Look for populations like 15,000, 13,087, 12,092 instead of random numbers</li>
+                        </ol>
+                    </div>
+                `;
+                
+                // Redirect after 3 seconds
+                setTimeout(() => {
+                    window.location.href = '/?test=census';
+                }, 3000);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="message error">
+                        <h3>❌ Error Creating Session</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Auto-create session if URL has ?auto parameter
+        if (window.location.search.includes('auto=true')) {
+            createMockSession();
+        }
+    </script>
+    
+    <div class="step">
+        <h3>🔍 Alternative: Manual Testing</h3>
+        <p>If the session doesn't work, you can also test the census data directly:</p>
+        <ul>
+            <li><a href="/quick-test.html" target="_blank">Quick Census Data Test</a> - Verify 32,173 records</li>
+            <li><a href="/debug-supabase.html" target="_blank">Supabase Debug</a> - Check data access</li>
+        </ul>
+    </div>
+</body>
+</html>
