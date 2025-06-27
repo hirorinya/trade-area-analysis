@@ -38,7 +38,7 @@ import {
   RulerIcon,
   EyeIcon,
   StarIcon,
-  TargetIcon,
+  CursorArrowRaysIcon,
   PresentationChartLineIcon,
   CircleStackIcon
 } from '@heroicons/react/24/outline';
@@ -2426,7 +2426,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                   variant={showOptimization ? 'primary' : 'secondary'}
                   size="small"
                 >
-                  <Icon icon={TargetIcon} size={16} className="mr-1" /> Store Optimizer
+                  <Icon icon={CursorArrowRaysIcon} size={16} className="mr-1" /> Store Optimizer
                 </Button>
                 <Button 
                   onClick={() => setShowDemandGrid(!showDemandGrid)} 
