@@ -118,15 +118,13 @@ export class MeshCodeUtil {
 }
 
 /**
- * Smart population data cache with failure tracking
- * Prevents repeated API calls that are known to fail due to CORS
+ * Simple memory cache for database queries
+ * No failure tracking needed since we query Supabase database
  */
 class PopulationDataCache {
   constructor() {
     this.cache = new Map();
-    this.failureCache = new Map();
-    this.cacheExpiry = 3600000; // 1 hour for successful data
-    this.failureExpiry = 86400000; // 24 hours for failures
+    this.cacheExpiry = 1800000; // 30 minutes for database queries
   }
   
   getCacheKey(bounds, meshLevel) {
@@ -155,34 +153,9 @@ class PopulationDataCache {
     });
   }
   
-  // Track API failures to prevent repeated attempts
-  setFailure(bounds, meshLevel, error) {
-    const key = this.getCacheKey(bounds, meshLevel);
-    this.failureCache.set(key, {
-      error: error.message,
-      timestamp: Date.now()
-    });
-  }
-  
-  // Check if API call should be skipped due to recent failure
-  hasRecentFailure(bounds, meshLevel) {
-    const key = this.getCacheKey(bounds, meshLevel);
-    const failure = this.failureCache.get(key);
-    
-    if (!failure) return false;
-    
-    if (Date.now() - failure.timestamp > this.failureExpiry) {
-      this.failureCache.delete(key);
-      return false;
-    }
-    
-    return true;
-  }
-  
-  // Clear all caches
+  // Clear cache when needed
   clear() {
     this.cache.clear();
-    this.failureCache.clear();
   }
 }
 
@@ -496,8 +469,8 @@ function getMeshAreaCode(bounds, meshLevel) {
 }
 
 /**
- * Main function to fetch real population data
- * Currently disabled due to CORS policy restrictions in browser environment
+ * Fetch population data from Supabase database
+ * Uses pre-loaded mesh data from batch process
  * @param {Object} bounds - Geographic bounds
  * @param {number} meshLevel - Mesh level (3, 4, or 5)
  * @returns {Promise<Array>} Array of population data by mesh
@@ -512,13 +485,61 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
     throw new Error('Invalid bounds coordinates');
   }
   
-  // All APIs disabled due to CORS restrictions in browser environment
-  console.log('📊 Population data APIs disabled due to CORS policy restrictions');
-  console.log('💡 Consider implementing server-side batch processing for monthly data updates');
-  console.log('🔄 Using fallback simulation data instead');
+  // Check cache first
+  const cached = populationCache.get(bounds, meshLevel);
+  if (cached) {
+    console.log('Using cached population data from database');
+    return cached;
+  }
   
-  // Return null immediately to use fallback simulation
-  return null;
+  try {
+    // Import Supabase client
+    const { supabase } = await import('../lib/supabase.js');
+    
+    console.log(`Fetching population data from database for mesh level ${meshLevel}`);
+    
+    // Query population mesh data within bounds
+    const { data, error } = await supabase
+      .from('population_mesh')
+      .select('mesh_code, center_lat, center_lng, population, mesh_level')
+      .eq('mesh_level', meshLevel)
+      .gte('center_lat', bounds.south)
+      .lte('center_lat', bounds.north)
+      .gte('center_lng', bounds.west)
+      .lte('center_lng', bounds.east)
+      .gt('population', 0); // Only get meshes with population data
+    
+    if (error) {
+      console.warn('Database query error:', error);
+      return null; // Use fallback simulation
+    }
+    
+    if (!data || data.length === 0) {
+      console.log('No population data found in database for these bounds');
+      return null; // Use fallback simulation
+    }
+    
+    // Convert to expected format
+    const results = data.map(row => ({
+      meshCode: row.mesh_code,
+      center: {
+        lat: row.center_lat,
+        lng: row.center_lng
+      },
+      population: row.population
+    }));
+    
+    console.log(`Retrieved ${results.length} mesh data points from database`);
+    
+    // Cache the results
+    populationCache.set(bounds, meshLevel, results);
+    
+    return results;
+    
+  } catch (error) {
+    console.error('Error fetching population data from database:', error);
+    return null; // Use fallback simulation
+  }
 }
 
 /**
