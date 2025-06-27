@@ -103,5 +103,7 @@ ORDER BY mesh_level;
 -- Grant access to the view
 GRANT SELECT ON population_mesh_summary TO authenticated;
 
--- Show table info
-\d population_mesh
+-- Query to verify table creation (remove the psql-specific \d command)
+-- To check table structure after creation, use:
+-- SELECT column_name, data_type, is_nullable FROM information_schema.columns 
+-- WHERE table_name = 'population_mesh' ORDER BY ordinal_position;
