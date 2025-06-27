@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Population Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+        }
+        .success { 
+            background-color: #d4edda; 
+            color: #155724; 
+        }
+        .error { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+        }
+        .info { 
+            background-color: #d1ecf1; 
+            color: #0c5460; 
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Population Data Test</h1>
+    
+    <div id="status"></div>
+    
+    <h2>Test Results:</h2>
+    <div id="results"></div>
+    
+    <script type="module">
+        const SUPABASE_URL = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
+        
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        
+        function addStatus(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            statusDiv.appendChild(div);
+        }
+        
+        function addResult(title, data) {
+            const section = document.createElement('div');
+            section.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            resultsDiv.appendChild(section);
+        }
+        
+        async function testPopulationData() {
+            addStatus('Starting population data tests...', 'info');
+            
+            // Test 1: Check if table exists
+            try {
+                const url = `${SUPABASE_URL}/rest/v1/population_mesh?limit=1`;
+                const response = await fetch(url, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                
+                if (response.ok) {
+                    addStatus('✅ Table exists and is accessible', 'success');
+                } else {
+                    addStatus(`❌ Table access failed: ${response.status} ${response.statusText}`, 'error');
+                    const error = await response.text();
+                    addResult('Error Response', error);
+                    return;
+                }
+            } catch (error) {
+                addStatus(`❌ Connection failed: ${error.message}`, 'error');
+                return;
+            }
+            
+            // Test 2: Count total records
+            try {
+                const countUrl = `${SUPABASE_URL}/rest/v1/population_mesh?select=count`;
+                const response = await fetch(countUrl, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Range': '0-0',
+                        'Range-Unit': 'items',
+                        'Prefer': 'count=exact'
+                    }
+                });
+                
+                const count = response.headers.get('content-range');
+                if (count) {
+                    const total = count.split('/')[1];
+                    addStatus(`✅ Total records in database: ${total}`, 'success');
+                }
+            } catch (error) {
+                addStatus(`⚠️ Could not count records: ${error.message}`, 'error');
+            }
+            
+            // Test 3: Get sample data
+            try {
+                const sampleUrl = `${SUPABASE_URL}/rest/v1/population_mesh?limit=5&order=population.desc`;
+                const response = await fetch(sampleUrl, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                
+                const data = await response.json();
+                addStatus(`✅ Retrieved ${data.length} sample records`, 'success');
+                addResult('Sample High-Population Areas', data);
+            } catch (error) {
+                addStatus(`❌ Failed to get sample data: ${error.message}`, 'error');
+            }
+            
+            // Test 4: Test spatial query (Tokyo area)
+            try {
+                const tokyoBounds = {
+                    north: 35.7,
+                    south: 35.6,
+                    east: 139.8,
+                    west: 139.7
+                };
+                
+                const spatialUrl = `${SUPABASE_URL}/rest/v1/population_mesh?` + 
+                    `center_lat=gte.${tokyoBounds.south}&` +
+                    `center_lat=lte.${tokyoBounds.north}&` +
+                    `center_lng=gte.${tokyoBounds.west}&` +
+                    `center_lng=lte.${tokyoBounds.east}&` +
+                    `limit=10`;
+                
+                const response = await fetch(spatialUrl, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                
+                const data = await response.json();
+                addStatus(`✅ Spatial query returned ${data.length} records for Tokyo area`, 'success');
+                addResult('Tokyo Area Sample Data', data);
+            } catch (error) {
+                addStatus(`❌ Spatial query failed: ${error.message}`, 'error');
+            }
+            
+            // Test 5: Check data statistics
+            try {
+                const statsUrl = `${SUPABASE_URL}/rest/v1/rpc/get_population_stats`;
+                const response = await fetch(statsUrl, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: '{}'
+                });
+                
+                if (response.ok) {
+                    const stats = await response.json();
+                    addStatus('✅ Statistics function available', 'success');
+                    addResult('Population Statistics', stats);
+                } else {
+                    addStatus('ℹ️ Statistics function not available (optional)', 'info');
+                }
+            } catch (error) {
+                addStatus('ℹ️ Statistics function not available (optional)', 'info');
+            }
+            
+            addStatus('✅ All tests completed!', 'success');
+        }
+        
+        // Run tests on page load
+        testPopulationData();
+    </script>
+</body>
+</html>
