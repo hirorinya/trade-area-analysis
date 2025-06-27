@@ -275,7 +275,87 @@ function App() {
     }
   };
 
+  // AI Analysis Handler using OpenAI API
+  const handleAIAnalysis = async () => {
+    if (!currentAddress.trim()) {
+      setMessage('Please enter your analysis goal first.');
+      return;
+    }
 
+    try {
+      setMessage('Analyzing your request with AI...');
+      
+      const prompt = `
+You are an expert retail location analyst. A user wants help with: "${currentAddress}"
+
+Available analysis tools:
+- Store location mapping and management
+- Population density visualization (250m grid cells)
+- Store optimization algorithms (find optimal locations)
+- Competitive analysis vs existing competitors
+- Multi-scenario planning and comparison
+- AI-powered insights and recommendations
+
+Provide a clear, actionable response in HTML format with:
+- Brief interpretation of their goal
+- 3-4 specific steps they should take
+- Expected insights they'll gain
+
+Keep it concise and practical. Use <strong> for emphasis and <ul><li> for steps.
+`;
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert retail location analyst. Provide clear, actionable guidance.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 500,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const recommendations = data.choices[0].message.content;
+      
+      setAnalysisRecommendations(recommendations);
+      setMessage('AI analysis complete! See recommendations below.');
+      
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+      
+      // Simple fallback
+      const fallbackRecommendations = `
+        <p><strong>Analysis Goal:</strong> ${currentAddress}</p>
+        <ul>
+          <li><strong>Step 1:</strong> Add your store and competitor locations using the form below</li>
+          <li><strong>Step 2:</strong> Enable "Population Grid" to visualize customer density</li>
+          <li><strong>Step 3:</strong> Use "Store Optimizer" to find the best new locations</li>
+          <li><strong>Step 4:</strong> Review results and run "AI Analyst" for detailed insights</li>
+        </ul>
+        <p><em>For advanced AI analysis, check your OpenAI API configuration.</em></p>
+      `;
+      
+      setAnalysisRecommendations(fallbackRecommendations);
+      setMessage('Basic workflow generated. For AI analysis, configure OpenAI API key.');
+    }
+  };
 
   // Locations
   const loadLocations = async (projectId) => {
@@ -2080,7 +2160,7 @@ function App() {
 
       {currentView === 'map' && selectedProject && (
         <div>
-          {/* Quick Guide - Static */}
+          {/* Quick Guide with AI Analysis */}
           <div style={formStyle}>
             <h3 style={heading3Style}>Quick Guide</h3>
             
@@ -2106,6 +2186,49 @@ function App() {
                 </li>
               </ul>
             </div>
+
+            {/* AI Analysis Input */}
+            <div style={{ marginBottom: theme.spacing[4] }}>
+              <Input
+                type="text"
+                placeholder="Describe your analysis goals (e.g., 'Find best locations for coffee shops in Tokyo')"
+                value={currentAddress}
+                onChange={(e) => setCurrentAddress(e.target.value)}
+                label="Get AI Analysis"
+              />
+              <div style={{ marginTop: theme.spacing[2], display: 'flex', gap: theme.spacing[2] }}>
+                <Button 
+                  onClick={handleAIAnalysis}
+                  variant="primary"
+                  size="small"
+                >
+                  🔍 Analyze & Guide Me
+                </Button>
+                <Button 
+                  onClick={() => setCurrentAddress('')}
+                  variant="secondary"
+                  size="small"
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+
+            {/* AI Analysis Results */}
+            {analysisRecommendations && (
+              <div style={{
+                backgroundColor: theme.colors.primary[50],
+                border: `1px solid ${theme.colors.primary[100]}`,
+                borderRadius: theme.borderRadius.lg,
+                padding: theme.spacing[4],
+                marginBottom: theme.spacing[4]
+              }}>
+                <h4 style={{ ...heading3Style, color: theme.colors.primary[700], marginBottom: theme.spacing[3] }}>
+                  📋 AI Analysis Results
+                </h4>
+                <div dangerouslySetInnerHTML={{ __html: analysisRecommendations }} />
+              </div>
+            )}
 
           </div>
 
