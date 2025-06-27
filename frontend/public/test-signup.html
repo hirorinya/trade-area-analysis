@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Sign Up Button</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .button { padding: 15px 30px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px; }
+        .test-result { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Sign Up Button</h1>
+    
+    <div class="test-result" id="status">
+        Testing if the sign-up button in the main app can be triggered...
+    </div>
+    
+    <button class="button" onclick="testSignUp()">Test Sign Up Button</button>
+    <button class="button" onclick="manualSignUp()" style="background: #28a745;">Manual Sign Up</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        function testSignUp() {
+            document.getElementById('status').innerHTML = '🔍 Opening main app and trying to click sign-up button...';
+            
+            // Open main app in new window and try to click sign-up
+            const mainApp = window.open('/', '_blank');
+            
+            setTimeout(() => {
+                try {
+                    // Try to find and click the sign-up button
+                    const signUpButton = mainApp.document.querySelector('button[type="button"]');
+                    if (signUpButton && signUpButton.textContent.includes('Sign up')) {
+                        signUpButton.click();
+                        document.getElementById('status').className = 'test-result success';
+                        document.getElementById('status').innerHTML = '✅ Found and clicked sign-up button!';
+                    } else {
+                        document.getElementById('status').className = 'test-result error';
+                        document.getElementById('status').innerHTML = '❌ Could not find sign-up button';
+                    }
+                } catch (error) {
+                    document.getElementById('status').className = 'test-result error';
+                    document.getElementById('status').innerHTML = '❌ Error: ' + error.message;
+                }
+            }, 3000);
+        }
+        
+        async function manualSignUp() {
+            document.getElementById('result').innerHTML = '<div style="background: #007bff; padding: 15px; border-radius: 5px; color: white;">🧪 Creating test account directly...</div>';
+            
+            const testEmail = 'test-' + Date.now() + '@trade-area.app';
+            const testPassword = 'TestPassword123!';
+            
+            try {
+                // Try to sign up directly using Supabase
+                const response = await fetch('https://vjbhwtwxjhyufvjrnhyu.supabase.co/auth/v1/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww'
+                    },
+                    body: JSON.stringify({
+                        email: testEmail,
+                        password: testPassword,
+                        data: {
+                            first_name: 'Test',
+                            last_name: 'User'
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.user) {
+                    document.getElementById('result').innerHTML = `
+                        <div style="background: #28a745; padding: 15px; border-radius: 5px; color: white;">
+                            <h3>✅ Account Created Successfully!</h3>
+                            <p><strong>Email:</strong> ${testEmail}</p>
+                            <p><strong>Password:</strong> ${testPassword}</p>
+                            <p><strong>User ID:</strong> ${data.user.id}</p>
+                            <p>You can now use these credentials to log into the main app!</p>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('result').innerHTML = `
+                        <div style="background: #f8d7da; padding: 15px; border-radius: 5px; color: #721c24;">
+                            <h3>❌ Signup Failed</h3>
+                            <p>${data.error_description || data.message || 'Unknown error'}</p>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <div style="background: #f8d7da; padding: 15px; border-radius: 5px; color: #721c24;">
+                        <h3>❌ Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
