@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Sign Up</title>
+    <style>
+        body { font-family: Arial; padding: 20px; max-width: 400px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; }
+        .button { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+        .button:hover { background: #0056b3; }
+        .message { padding: 15px; margin: 15px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>✨ Create Test Account</h1>
+    <p>This will create an account and automatically log you in to test the census data.</p>
+    
+    <form id="signupForm">
+        <div class="form-group">
+            <label>Email:</label>
+            <input type="email" id="email" required value="test@trade-area.app">
+        </div>
+        
+        <div class="form-group">
+            <label>Password:</label>
+            <input type="password" id="password" required value="TestPassword123!">
+        </div>
+        
+        <button type="submit" class="button">Create Account & Test Census Data</button>
+    </form>
+    
+    <div id="result"></div>
+    
+    <script type="module">
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<div class="message info">🔄 Creating account...</div>';
+            
+            try {
+                // Import Supabase client
+                const supabaseUrl = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
+                const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
+                
+                // Create Supabase client
+                const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+                const supabase = createClient(supabaseUrl, supabaseKey);
+                
+                // Try to sign up
+                const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            first_name: 'Test',
+                            last_name: 'User'
+                        }
+                    }
+                });
+                
+                if (signUpError) {
+                    // If signup fails (user exists), try to sign in instead
+                    if (signUpError.message.includes('already registered')) {
+                        resultDiv.innerHTML = '<div class="message info">🔄 User exists, signing in...</div>';
+                        
+                        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                            email: email,
+                            password: password
+                        });
+                        
+                        if (signInError) throw signInError;
+                        
+                        resultDiv.innerHTML = `
+                            <div class="message success">
+                                <h3>✅ Signed In Successfully!</h3>
+                                <p><strong>Email:</strong> ${email}</p>
+                                <p><strong>User ID:</strong> ${signInData.user.id}</p>
+                                <p>Redirecting to main app...</p>
+                            </div>
+                        `;
+                        
+                        // Store auth data and redirect
+                        localStorage.setItem('currentView', 'dashboard');
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 2000);
+                        
+                    } else {
+                        throw signUpError;
+                    }
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="message success">
+                            <h3>✅ Account Created Successfully!</h3>
+                            <p><strong>Email:</strong> ${email}</p>
+                            <p><strong>User ID:</strong> ${signUpData.user.id}</p>
+                            <p>Redirecting to main app...</p>
+                        </div>
+                    `;
+                    
+                    // Store auth data and redirect
+                    localStorage.setItem('currentView', 'dashboard');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="message error">
+                        <h3>❌ Error</h3>
+                        <p>${error.message}</p>
+                        <details>
+                            <summary>Error Details</summary>
+                            <pre>${JSON.stringify(error, null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
