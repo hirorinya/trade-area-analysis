@@ -320,71 +320,88 @@ export async function fetchEStatData(bounds, meshLevel = 5, retryCount = 0) {
     
     console.log(`Fetching e-Stat data with mesh level ${meshLevel} (attempt ${retryCount + 1})`);
     
-    // Build API request
-    const params = new URLSearchParams({
-      appId: API_CONFIG.E_STAT.appId,
-      statsDataId: API_CONFIG.E_STAT.censusTableIds['2020'],
-      cdArea: getMeshAreaCode(bounds, meshLevel),
-      cdCat01: '#A03503', // Total population
-      lang: 'J',
-      limit: '10000' // Increase limit for larger datasets
-    });
-    
-    const url = `${API_CONFIG.E_STAT.baseUrl}/getStatsData?${params}`;
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout for e-Stat
-    
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'TradeAreaAnalysis/1.0'
-      }
-    });
-    
-    clearTimeout(timeoutId);
-    
-    if (!response.ok) {
-      throw new Error(`e-Stat API request failed: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    
-    // Validate response structure
-    if (!data || typeof data !== 'object') {
-      throw new Error('Invalid e-Stat API response format');
-    }
-    
-    // Check for API errors
-    if (data.GET_STATS_DATA?.RESULT?.ERROR_MSG) {
-      throw new Error(`e-Stat API error: ${data.GET_STATS_DATA.RESULT.ERROR_MSG}`);
-    }
-    
-    // Parse e-Stat response
+    // Get mesh code batches to avoid URI too long errors
+    const meshBatches = getMeshAreaCodeBatches(bounds, meshLevel, 50);
     const results = [];
     
-    if (data.GET_STATS_DATA && data.GET_STATS_DATA.STATISTICAL_DATA) {
-      const dataInf = data.GET_STATS_DATA.STATISTICAL_DATA.DATA_INF;
+    // Process each batch sequentially to avoid rate limiting
+    for (let i = 0; i < meshBatches.length; i++) {
+      const batch = meshBatches[i];
+      console.log(`Processing batch ${i + 1}/${meshBatches.length} with ${batch.split(',').length} mesh codes`);
       
-      if (dataInf && dataInf.VALUE && Array.isArray(dataInf.VALUE)) {
-        dataInf.VALUE.forEach(item => {
-          if (item['@area'] && item.$) {
-            const meshCode = item['@area'];
-            const population = parseFloat(item.$) || 0;
-            
-            try {
-              const center = MeshCodeUtil.meshCodeToLatLng(meshCode);
-              results.push({
-                meshCode,
-                center,
-                population
-              });
-            } catch (meshError) {
-              console.warn(`Invalid mesh code: ${meshCode}`, meshError);
-            }
+      // Build API request for this batch
+      const params = new URLSearchParams({
+        appId: API_CONFIG.E_STAT.appId,
+        statsDataId: API_CONFIG.E_STAT.censusTableIds['2020'],
+        cdArea: batch,
+        cdCat01: '#A03503', // Total population
+        lang: 'J',
+        limit: '10000'
+      });
+      
+      const url = `${API_CONFIG.E_STAT.baseUrl}/getStatsData?${params}`;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
+      
+      try {
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'TradeAreaAnalysis/1.0'
           }
         });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          console.warn(`e-Stat batch ${i + 1} failed: ${response.status} ${response.statusText}`);
+          continue; // Skip this batch and continue with next
+        }
+        
+        const data = await response.json();
+        
+        // Check for API errors
+        if (data.GET_STATS_DATA?.RESULT?.ERROR_MSG) {
+          console.warn(`e-Stat batch ${i + 1} API error: ${data.GET_STATS_DATA.RESULT.ERROR_MSG}`);
+          continue;
+        }
+        
+        // Parse batch response
+        if (data.GET_STATS_DATA && data.GET_STATS_DATA.STATISTICAL_DATA) {
+          const dataInf = data.GET_STATS_DATA.STATISTICAL_DATA.DATA_INF;
+          
+          if (dataInf && dataInf.VALUE && Array.isArray(dataInf.VALUE)) {
+            dataInf.VALUE.forEach(item => {
+              if (item['@area'] && item.$) {
+                const meshCode = item['@area'];
+                const population = parseFloat(item.$) || 0;
+                
+                try {
+                  const center = MeshCodeUtil.meshCodeToLatLng(meshCode);
+                  results.push({
+                    meshCode,
+                    center,
+                    population
+                  });
+                } catch (meshError) {
+                  console.warn(`Invalid mesh code: ${meshCode}`, meshError);
+                }
+              }
+            });
+          }
+        }
+        
+        // Add delay between requests to be respectful to the API
+        if (i < meshBatches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+      } catch (batchError) {
+        console.warn(`e-Stat batch ${i + 1} failed:`, batchError.message);
+        clearTimeout(timeoutId);
+        continue; // Continue with next batch
       }
     }
     
@@ -413,8 +430,9 @@ export async function fetchEStatData(bounds, meshLevel = 5, retryCount = 0) {
 
 /**
  * Helper function to get mesh area codes for e-Stat API
+ * Returns array of batches to avoid URI too long errors
  */
-function getMeshAreaCode(bounds, meshLevel) {
+function getMeshAreaCodeBatches(bounds, meshLevel, maxBatchSize = 50) {
   const meshCodes = [];
   const meshSize = meshLevel === 3 ? 0.0125 : meshLevel === 4 ? 0.00625 : 0.003125;
   
@@ -425,8 +443,23 @@ function getMeshAreaCode(bounds, meshLevel) {
     }
   }
   
-  // e-Stat API accepts comma-separated mesh codes
-  return meshCodes.join(',');
+  // Split into batches to avoid URI too long (414) errors
+  const batches = [];
+  for (let i = 0; i < meshCodes.length; i += maxBatchSize) {
+    const batch = meshCodes.slice(i, i + maxBatchSize);
+    batches.push(batch.join(','));
+  }
+  
+  console.log(`Generated ${meshCodes.length} mesh codes in ${batches.length} batches`);
+  return batches;
+}
+
+/**
+ * Legacy function for backward compatibility
+ */
+function getMeshAreaCode(bounds, meshLevel) {
+  const batches = getMeshAreaCodeBatches(bounds, meshLevel, 50);
+  return batches[0] || ''; // Return first batch only
 }
 
 /**
@@ -458,12 +491,9 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
     }
   }
   
-  // 2. Try Statistics Dashboard API (no key required)
-  data = await fetchStatDashboardData(bounds, meshLevel);
-  if (data && data.length > 0) {
-    console.log('Using Statistics Dashboard API data');
-    return data;
-  }
+  // 2. Statistics Dashboard API disabled due to CORS restrictions
+  // data = await fetchStatDashboardData(bounds, meshLevel);
+  console.log('Statistics Dashboard API disabled due to CORS policy restrictions');
   
   // 3. If all APIs fail, return null (caller should use fallback)
   console.warn('All population data APIs failed, using fallback');

@@ -427,7 +427,7 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
         .filter(line => line !== null);
       
       // Add or update demand flow source
-      if (!map.current.getSource('demand-flows')) {
+      if (map.current && !map.current.getSource('demand-flows')) {
         map.current.addSource('demand-flows', {
           type: 'geojson',
           data: {
@@ -483,13 +483,15 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
             ]
           }
         });
-      } else {
+      } else if (map.current) {
         // Update existing flow source
         const flowSource = map.current.getSource('demand-flows') as mapboxgl.GeoJSONSource;
-        flowSource.setData({
-          type: 'FeatureCollection',
-          features: flowLines
-        });
+        if (flowSource) {
+          flowSource.setData({
+            type: 'FeatureCollection',
+            features: flowLines
+          });
+        }
       }
     } else {
       setDemandMeshes(meshes);
@@ -545,43 +547,45 @@ const MapboxMap: React.FC<MapboxMapProps> = ({
       }));
 
     // Update demand grid source
-    const source = map.current.getSource('demand-grid') as mapboxgl.GeoJSONSource;
-    if (source) {
-      source.setData({
-        type: 'FeatureCollection',
-        features: geoJsonFeatures
-      });
-      
-      // Show grid layers based on visualization mode
-      if (visualizationMode === 'grid') {
-        map.current.setLayoutProperty('demand-grid-fill', 'visibility', 'visible');
-        map.current.setLayoutProperty('demand-grid-stroke', 'visibility', 'visible');
-      } else {
-        map.current.setLayoutProperty('demand-grid-fill', 'visibility', 'none');
-        map.current.setLayoutProperty('demand-grid-stroke', 'visibility', 'none');
+    if (map.current) {
+      const source = map.current.getSource('demand-grid') as mapboxgl.GeoJSONSource;
+      if (source) {
+        source.setData({
+          type: 'FeatureCollection',
+          features: geoJsonFeatures
+        });
+        
+        // Show grid layers based on visualization mode
+        if (visualizationMode === 'grid') {
+          map.current.setLayoutProperty('demand-grid-fill', 'visibility', 'visible');
+          map.current.setLayoutProperty('demand-grid-stroke', 'visibility', 'visible');
+        } else {
+          map.current.setLayoutProperty('demand-grid-fill', 'visibility', 'none');
+          map.current.setLayoutProperty('demand-grid-stroke', 'visibility', 'none');
+        }
       }
-    }
 
-    // Update heat-map source
-    const heatmapSource = map.current.getSource('demand-heatmap') as mapboxgl.GeoJSONSource;
-    if (heatmapSource) {
-      heatmapSource.setData({
-        type: 'FeatureCollection',
-        features: heatmapPoints
-      });
-      
-      // Show heat-map layers based on visualization mode
-      if (visualizationMode === 'heatmap') {
-        map.current.setLayoutProperty('demand-heatmap-layer', 'visibility', 'visible');
-        map.current.setLayoutProperty('demand-points', 'visibility', 'visible');
-      } else {
-        map.current.setLayoutProperty('demand-heatmap-layer', 'visibility', 'none');
-        map.current.setLayoutProperty('demand-points', 'visibility', 'none');
+      // Update heat-map source
+      const heatmapSource = map.current.getSource('demand-heatmap') as mapboxgl.GeoJSONSource;
+      if (heatmapSource) {
+        heatmapSource.setData({
+          type: 'FeatureCollection',
+          features: heatmapPoints
+        });
+        
+        // Show heat-map layers based on visualization mode
+        if (visualizationMode === 'heatmap') {
+          map.current.setLayoutProperty('demand-heatmap-layer', 'visibility', 'visible');
+          map.current.setLayoutProperty('demand-points', 'visibility', 'visible');
+        } else {
+          map.current.setLayoutProperty('demand-heatmap-layer', 'visibility', 'none');
+          map.current.setLayoutProperty('demand-points', 'visibility', 'none');
+        }
       }
     }
     
     // Show flow lines if stores exist
-    if (storeLocations.length > 0) {
+    if (storeLocations.length > 0 && map.current) {
       if (map.current.getLayer('demand-flow-lines')) {
         map.current.setLayoutProperty('demand-flow-lines', 'visibility', 'visible');
       }
