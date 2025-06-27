@@ -319,19 +319,19 @@ function App() {
       return;
     }
 
+    // Current project context (moved outside try block)
+    const projectContext = {
+      projectName: selectedProject?.name || 'Project',
+      locationsCount: locations.length,
+      storesCount: locations.filter(l => l.location_type === 'store').length,
+      competitorsCount: locations.filter(l => l.location_type === 'competitor').length,
+      poisCount: locations.filter(l => l.location_type === 'poi').length,
+      hasPopulationGrid: showDemandGrid,
+      hasTradeAreas: tradeAreas.length > 0
+    };
+
     try {
       setMessage('Analyzing your request with AI...');
-      
-      // Current project context
-      const projectContext = {
-        projectName: selectedProject?.name || 'Project',
-        locationsCount: locations.length,
-        storesCount: locations.filter(l => l.location_type === 'store').length,
-        competitorsCount: locations.filter(l => l.location_type === 'competitor').length,
-        poisCount: locations.filter(l => l.location_type === 'poi').length,
-        hasPopulationGrid: showDemandGrid,
-        hasTradeAreas: tradeAreas.length > 0
-      };
 
       const prompt = `
 You are an expert retail location analyst helping with trade area analysis. 
