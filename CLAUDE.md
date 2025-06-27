@@ -40,11 +40,11 @@ Fixed 10 critical bugs affecting population mapping:
 - Minimum population guarantees
 
 ## Tech Stack
-- **Frontend**: React, TypeScript, Redux Toolkit, Material-UI, Leaflet
+- **Frontend**: React, TypeScript, Redux Toolkit, Material-UI, Mapbox GL JS
 - **Backend**: Supabase (direct integration)
 - **Database**: PostgreSQL with PostGIS (via Supabase)
 - **Deployment**: Vercel + Supabase
-- **Maps**: Leaflet with 国土地理院 tiles (GSI)
+- **Maps**: Mapbox GL JS (primary), Leaflet fallback option
 
 ## Environment URLs
 - **Production**: https://trade-area-analysis-2png.vercel.app
@@ -53,7 +53,7 @@ Fixed 10 critical bugs affecting population mapping:
 
 ## Key Architecture Decisions
 1. **Frontend-only deployment** - Backend logic moved to Supabase
-2. **Leaflet maps** - Better cross-browser compatibility than Mapbox
+2. **Mapbox GL JS maps** - Primary mapping solution with valid token
 3. **Staging/Production split** - Protect stable version from bugs
 4. **Direct Supabase integration** - Simpler than separate backend
 
@@ -61,7 +61,8 @@ Fixed 10 critical bugs affecting population mapping:
 - `STAGING-WORKFLOW.md` - Development workflow documentation
 - `frontend/src/App.tsx` - Main application logic
 - `frontend/src/utils/demandGrid.js` - Population mapping logic
-- `frontend/src/components/map/LeafletMap.tsx` - Map component
+- `frontend/src/components/map/MapboxMap.tsx` - Primary map component
+- `frontend/src/components/map/LeafletMap.tsx` - Fallback map component
 - `frontend/.env` - Environment configuration
 
 ## Current Issues & Solutions
@@ -74,7 +75,7 @@ Fixed 10 critical bugs affecting population mapping:
 1. **ALWAYS use staging branch** for development
 2. **Test in staging environment** before production
 3. **Preserve working features** - don't break what works
-4. **Use Leaflet maps** - proven cross-browser compatibility
+4. **Use Mapbox GL JS maps** - primary solution with valid token
 5. **Handle coordinate formats** - support both [lng,lat] and {latitude, longitude}
 
 ## Testing Checklist

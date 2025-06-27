@@ -81,9 +81,9 @@ function App() {
       console.log('Mapbox Token:', import.meta.env.VITE_MAPBOX_TOKEN ? '✅ SET' : '❌ NOT SET');
     }
     
-    // Use Leaflet by default for better cross-browser compatibility
-    console.log('🗺️ Using Leaflet maps for reliable cross-browser support');
-    setUseMapbox(false);
+    // Use Mapbox preferentially with valid token
+    console.log('🗺️ Using Mapbox maps with valid token');
+    setUseMapbox(true);
     
     // Phase 7 deployment check
     if (import.meta.env.VITE_DEPLOYMENT_PHASE === '7') {
@@ -2271,9 +2271,18 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                     </div>
                     <Button 
                       onClick={() => {
-                        // Clear candidate sites and optimization results from previous project
+                        // Clear all project-specific data from previous project
                         setCandidateMarkers([]);
                         setOptimizationResults(null);
+                        setLocations([]);
+                        setTradeAreas([]);
+                        setCompetitorAnalysis(null);
+                        setDashboardData(null);
+                        setSelectedLocation(null);
+                        setShowDemandGrid(false);
+                        setAnalysisRecommendations('');
+                        setCurrentAddress('');
+                        demandMeshesRef.current = []; // Clear demand mesh data
                         
                         // Switch to new project
                         setSelectedProject(project);
