@@ -2157,13 +2157,215 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
         </nav>
       )}
 
-      {currentView === 'login' && (
+      {currentView === 'login' && authView === 'login' && (
         <ModernLoginForm
           onLogin={handleModernLogin}
           onSwitchToRegister={() => setAuthView('register')}
           loading={false}
           error={message?.includes('Login error') ? message.replace('Login error: ', '') : undefined}
         />
+      )}
+
+      {currentView === 'login' && authView === 'register' && (
+        <div style={{
+          minHeight: '100vh',
+          background: `linear-gradient(135deg, ${theme.colors.primary[500]} 0%, ${theme.colors.primary[700]} 100%)`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: theme.spacing[4],
+          fontFamily: theme.typography.fontFamily.primary
+        }}>
+          <div style={{ 
+            position: 'relative', 
+            zIndex: 1,
+            width: '100%',
+            maxWidth: '400px'
+          }}>
+            <div style={{ 
+              textAlign: 'center', 
+              marginBottom: theme.spacing[8],
+              color: 'white'
+            }}>
+              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+                Create Account
+              </h1>
+              <p style={{ opacity: 0.8 }}>
+                Join Trade Area Analysis Platform
+              </p>
+            </div>
+
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '1rem',
+              padding: '2rem',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+            }}>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const email = formData.get('email');
+                const password = formData.get('password');
+                const confirmPassword = formData.get('confirmPassword');
+                
+                if (password !== confirmPassword) {
+                  setMessage('❌ Passwords do not match');
+                  return;
+                }
+                
+                try {
+                  setMessage('🔄 Creating account...');
+                  const { data, error } = await auth.signUp({
+                    email,
+                    password,
+                    options: {
+                      data: {
+                        first_name: formData.get('firstName') || '',
+                        last_name: formData.get('lastName') || ''
+                      }
+                    }
+                  });
+                  
+                  if (error) throw error;
+                  
+                  if (data.user) {
+                    setMessage('✅ Account created! Please check your email to verify.');
+                    setTimeout(() => setAuthView('login'), 3000);
+                  }
+                } catch (error) {
+                  setMessage(`❌ Signup error: ${error.message}`);
+                }
+              }}>
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                  <input
+                    name="firstName"
+                    type="text"
+                    placeholder="First Name"
+                    style={{
+                      flex: 1,
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.5rem',
+                      fontSize: '1rem'
+                    }}
+                  />
+                  <input
+                    name="lastName"
+                    type="text"
+                    placeholder="Last Name"
+                    style={{
+                      flex: 1,
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.5rem',
+                      fontSize: '1rem'
+                    }}
+                  />
+                </div>
+                
+                <input
+                  name="email"
+                  type="email"
+                  placeholder="Email Address"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem',
+                    marginBottom: '1rem'
+                  }}
+                />
+                
+                <input
+                  name="password"
+                  type="password"
+                  placeholder="Password"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem',
+                    marginBottom: '1rem'
+                  }}
+                />
+                
+                <input
+                  name="confirmPassword"
+                  type="password"
+                  placeholder="Confirm Password"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem',
+                    marginBottom: '1.5rem'
+                  }}
+                />
+                
+                <button
+                  type="submit"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    backgroundColor: theme.colors.primary[600],
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    marginBottom: '1rem'
+                  }}
+                >
+                  Create Account
+                </button>
+              </form>
+              
+              {message && (
+                <div style={{
+                  padding: '0.75rem',
+                  backgroundColor: message.includes('❌') ? '#fee2e2' : '#dcfce7',
+                  color: message.includes('❌') ? '#dc2626' : '#16a34a',
+                  borderRadius: '0.5rem',
+                  marginBottom: '1rem',
+                  fontSize: '0.875rem'
+                }}>
+                  {message}
+                </div>
+              )}
+              
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+                  Already have an account?{' '}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthView('login');
+                    setMessage('');
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: theme.colors.primary[600],
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  Sign In
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {currentView === 'dashboard' && user && (
