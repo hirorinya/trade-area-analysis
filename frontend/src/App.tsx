@@ -275,6 +275,70 @@ function App() {
     }
   };
 
+  // Generate dynamic prompts based on current project state
+  const getDynamicPrompt = () => {
+    const hasLocations = locations.length > 0;
+    const hasStores = locations.filter(l => l.location_type === 'store').length > 0;
+    const hasCompetitors = locations.filter(l => l.location_type === 'competitor').length > 0;
+    const hasPOIs = locations.filter(l => l.location_type === 'poi').length > 0;
+    
+    // Base prompts for different states
+    if (!hasLocations) {
+      return {
+        heading: "🚀 Let's get started with your analysis!",
+        prompt: "Start by telling me about your business goals. For example: 'I want to open 3 new coffee shops in Tokyo' or 'Help me analyze competitor density in Shibuya'",
+        tips: [
+          "📍 First, we'll add your existing locations (if any)",
+          "🏢 Then map out your competitors",
+          "📊 Finally, analyze the best opportunities"
+        ]
+      };
+    } else if (hasStores && !hasCompetitors) {
+      return {
+        heading: "🎯 Ready to analyze your competition!",
+        prompt: `You have ${locations.filter(l => l.location_type === 'store').length} store(s) mapped. Now describe what competitive insights you need. For example: 'Show me all convenience stores within 2km of my locations'`,
+        tips: [
+          "🏢 Add competitor locations for market share analysis",
+          "📊 Enable population grid to see customer density",
+          "🎯 Use the optimizer to find gaps in the market"
+        ]
+      };
+    } else if (hasStores && hasCompetitors) {
+      return {
+        heading: "🧠 Full analysis toolkit ready!",
+        prompt: `With ${locations.filter(l => l.location_type === 'store').length} store(s) and ${locations.filter(l => l.location_type === 'competitor').length} competitor(s) mapped, what insights do you need? Try: 'Find the best location for expansion' or 'Analyze market share in each district'`,
+        tips: [
+          "🎯 Run Store Optimizer for expansion recommendations",
+          "📊 Use Multi-scenario Analysis to compare strategies",
+          "💰 Try Capacity Optimizer for revenue projections"
+        ]
+      };
+    } else if (!hasStores && hasCompetitors) {
+      return {
+        heading: "🔍 Competition mapped - where's your opportunity?",
+        prompt: `You've mapped ${locations.filter(l => l.location_type === 'competitor').length} competitor(s). Describe your market entry strategy. For example: 'Find underserved areas with high population density'`,
+        tips: [
+          "📊 Enable population grid to spot high-demand areas",
+          "🎯 Use Store Optimizer to find market gaps",
+          "📍 Add potential store locations for comparison"
+        ]
+      };
+    } else {
+      return {
+        heading: "📊 Advanced analysis mode",
+        prompt: "Describe your specific analysis needs. I can help with site selection, market share analysis, capacity planning, or competitive strategy.",
+        tips: [
+          "🧪 Try different scenarios with Multi-scenario Analysis",
+          "💰 Optimize store capacity and revenue projections",
+          "🤖 Get AI-powered insights on your network"
+        ]
+      };
+    }
+  };
+
+  // Get current dynamic prompt
+  const dynamicPromptData = getDynamicPrompt();
+
   // Natural Language Analysis Query Handler
   const handleNaturalLanguageQuery = async () => {
     if (!currentAddress.trim()) {
@@ -316,27 +380,48 @@ function App() {
         ]
       };
 
+      // Add current state context
+      const currentState = {
+        projectName: selectedProject?.name || 'Unknown Project',
+        locationsCount: locations.length,
+        storesCount: locations.filter(l => l.location_type === 'store').length,
+        competitorsCount: locations.filter(l => l.location_type === 'competitor').length,
+        poisCount: locations.filter(l => l.location_type === 'poi').length,
+        hasTradeAreas: tradeAreas.length > 0,
+        tradeAreasCount: tradeAreas.length
+      };
+
       const prompt = `
 You are an expert retail location analyst helping a user plan their store network analysis. 
 
 User Request: "${currentAddress}"
+
+Current Project State:
+- Project: ${currentState.projectName}
+- Total Locations: ${currentState.locationsCount}
+- Stores: ${currentState.storesCount}
+- Competitors: ${currentState.competitorsCount}
+- Points of Interest: ${currentState.poisCount}
+- Trade Areas Created: ${currentState.tradeAreasCount}
 
 Available Platform Features:
 ${Object.entries(availableFeatures).map(([category, features]) => 
   `${category}:\n${features.map(f => `  - ${f}`).join('\n')}`
 ).join('\n\n')}
 
-Based on the user's request, provide:
+Based on the user's request and current state, provide:
 1. A clear interpretation of what they want to accomplish
 2. Step-by-step recommended workflow using the available features
 3. Specific UI actions they should take (which buttons to click, what data to enter)
 4. Expected insights they'll gain from each step
+5. ${currentState.locationsCount === 0 ? 'Since they have no locations yet, start with data collection steps' : 'Build upon their existing data with advanced analysis'}
 
 Format your response in HTML with:
 - Clear section headers (<h5>)
 - Bulleted action steps (<ul><li>)
 - Highlighted key features (<strong>)
 - Call-out boxes for important tips (<div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 8px 0;">)
+- Progress indicators showing what's already done vs. what's next
 
 Make it actionable and specific to help guide them through the platform.
 `;
@@ -377,24 +462,84 @@ Make it actionable and specific to help guide them through the platform.
     } catch (error) {
       console.error('Natural language query failed:', error);
       
-      // Fallback recommendations if API fails
-      const fallbackRecommendations = `
+      // Generate context-aware fallback recommendations
+      const currentState = {
+        locationsCount: locations.length,
+        storesCount: locations.filter(l => l.location_type === 'store').length,
+        competitorsCount: locations.filter(l => l.location_type === 'competitor').length
+      };
+
+      let fallbackRecommendations = `
         <h5>🎯 Analysis Workflow Recommendations</h5>
         <p>Based on your request: "<em>${currentAddress}</em>"</p>
-        
-        <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 8px 0;">
-          <strong>💡 Quick Start Guide:</strong>
-        </div>
-        
-        <ul>
-          <li><strong>Step 1:</strong> Add your store locations using the "Add Location" form below</li>
-          <li><strong>Step 2:</strong> Click <strong>"📊 Population Grid"</strong> to see demand patterns</li>
-          <li><strong>Step 3:</strong> Use <strong>"🎯 Store Optimizer"</strong> to find optimal locations</li>
-          <li><strong>Step 4:</strong> Try <strong>"🤖 AI Analyst"</strong> for detailed insights</li>
-        </ul>
-        
+      `;
+
+      if (currentState.locationsCount === 0) {
+        fallbackRecommendations += `
+          <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 8px 0;">
+            <strong>🚀 Getting Started - No Locations Yet</strong>
+          </div>
+          
+          <ul>
+            <li><strong>Step 1:</strong> Add your first location using the form below
+              <ul>
+                <li>Enter a name (e.g., "Tokyo Main Store")</li>
+                <li>Enter an address or coordinates</li>
+                <li>Select the type (Store, Competitor, or POI)</li>
+              </ul>
+            </li>
+            <li><strong>Step 2:</strong> Add competitor locations to understand the market</li>
+            <li><strong>Step 3:</strong> Enable <strong>"📊 Population Grid"</strong> to see customer density</li>
+            <li><strong>Step 4:</strong> Use <strong>"🎯 Store Optimizer"</strong> to find the best new locations</li>
+          </ul>
+        `;
+      } else if (currentState.storesCount > 0 && currentState.competitorsCount === 0) {
+        fallbackRecommendations += `
+          <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 8px 0;">
+            <strong>🏪 You have ${currentState.storesCount} store(s) - Time to analyze competition!</strong>
+          </div>
+          
+          <ul>
+            <li><strong>Next Step:</strong> Add competitor locations
+              <ul>
+                <li>Use CSV upload for bulk competitor data</li>
+                <li>Or add them individually via the form</li>
+              </ul>
+            </li>
+            <li><strong>Then:</strong> Create trade areas for your stores (click "📊 Create Trade Area")</li>
+            <li><strong>Enable:</strong> <strong>"📊 Population Grid"</strong> to see where customers are</li>
+            <li><strong>Analyze:</strong> Use <strong>"🎯 Store Optimizer"</strong> for expansion opportunities</li>
+          </ul>
+        `;
+      } else if (currentState.storesCount > 0 && currentState.competitorsCount > 0) {
+        fallbackRecommendations += `
+          <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 8px 0;">
+            <strong>🧠 Full dataset ready! ${currentState.storesCount} store(s) & ${currentState.competitorsCount} competitor(s)</strong>
+          </div>
+          
+          <ul>
+            <li><strong>Advanced Analysis:</strong>
+              <ul>
+                <li><strong>🎯 Store Optimizer:</strong> Find optimal locations for expansion</li>
+                <li><strong>📊 Multi-scenario:</strong> Compare different expansion strategies</li>
+                <li><strong>💰 Capacity Optimizer:</strong> Maximize revenue with store sizing</li>
+              </ul>
+            </li>
+            <li><strong>Visualization:</strong> Enable all map layers for comprehensive view</li>
+            <li><strong>AI Insights:</strong> Use <strong>"🤖 AI Analyst"</strong> for strategic recommendations</li>
+          </ul>
+        `;
+      }
+
+      fallbackRecommendations += `
         <div style="background: #fff3e0; padding: 12px; border-radius: 6px; margin: 8px 0;">
-          <strong>🔧 Pro Tip:</strong> Start by adding a few existing store locations, then enable the population grid to visualize demand patterns in your area.
+          <strong>🔧 Pro Tip:</strong> ${
+            currentState.locationsCount === 0 
+              ? "Start with just 2-3 locations to explore the platform's capabilities"
+              : currentState.competitorsCount === 0
+              ? "Adding competitor data unlocks powerful market share analysis features"
+              : "Try different analysis tools to discover hidden market opportunities"
+          }
         </div>
       `;
       
@@ -2206,18 +2351,39 @@ Make it actionable and specific to help guide them through the platform.
 
       {currentView === 'map' && selectedProject && (
         <div>
-          {/* Natural Language Analysis Prompt */}
+          {/* Natural Language Analysis Prompt - Dynamic */}
           <div style={formStyle}>
-            <h3 style={heading3Style}>🤖 What do you want to do?</h3>
-            <p style={bodyTextStyle}>Describe your analysis goals in plain language, and I'll guide you through the process.</p>
+            <h3 style={heading3Style}>{dynamicPromptData.heading}</h3>
+            <p style={bodyTextStyle}>{dynamicPromptData.prompt}</p>
+            
+            {/* Quick Tips */}
+            <div style={{
+              backgroundColor: theme.colors.gray[50],
+              border: `1px solid ${theme.colors.gray[200]}`,
+              borderRadius: theme.borderRadius.md,
+              padding: theme.spacing[3],
+              marginBottom: theme.spacing[4]
+            }}>
+              <div style={{ ...captionTextStyle, fontWeight: theme.typography.fontWeight.semibold, marginBottom: theme.spacing[2] }}>
+                💡 Quick Tips:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: theme.spacing[6], ...captionTextStyle }}>
+                {dynamicPromptData.tips.map((tip, index) => (
+                  <li key={index} style={{ marginBottom: theme.spacing[1] }}>{tip}</li>
+                ))}
+              </ul>
+            </div>
             
             <div style={{ marginBottom: theme.spacing[4] }}>
               <Input
                 type="text"
-                placeholder="e.g., Find the best location for a new coffee shop in Tokyo, Analyze competitor density in Shibuya, or Optimize my existing store network"
+                placeholder={locations.length === 0 ? 
+                  "e.g., 'Open 3 coffee shops in Tokyo' or 'Analyze convenience store market in Shibuya'" :
+                  "e.g., 'Find expansion opportunities' or 'Optimize store capacity for maximum revenue'"
+                }
                 value={currentAddress}
                 onChange={(e) => setCurrentAddress(e.target.value)}
-                label="Analysis Goal"
+                label="What would you like to analyze?"
               />
               <div style={{ marginTop: theme.spacing[2], display: 'flex', gap: theme.spacing[2] }}>
                 <Button 
