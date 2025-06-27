@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Census Data Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .result { padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Quick Census Data Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        const resultsDiv = document.getElementById('results');
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+        
+        async function testCensusData() {
+            addResult('🧪 Testing census data access...', 'info');
+            
+            // Test the correct Supabase instance where we loaded the data
+            const supabaseUrl = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
+            
+            try {
+                // Test table access
+                const response = await fetch(`${supabaseUrl}/rest/v1/population_mesh?limit=5&order=population.desc`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`✅ Census data is accessible!<br>Found ${data.length} sample records`, 'success');
+                    
+                    // Show sample data
+                    const samples = data.map(record => 
+                        `Mesh: ${record.mesh_code}, Population: ${record.population}, Location: ${record.center_lat},${record.center_lng}`
+                    ).join('<br>');
+                    addResult(`📊 Sample records:<br>${samples}`, 'info');
+                    
+                    // Test count
+                    const countResponse = await fetch(`${supabaseUrl}/rest/v1/population_mesh?select=count`, {
+                        headers: {
+                            'apikey': supabaseKey,
+                            'Authorization': `Bearer ${supabaseKey}`,
+                            'Range': '0-0',
+                            'Prefer': 'count=exact'
+                        }
+                    });
+                    
+                    const countHeader = countResponse.headers.get('content-range');
+                    if (countHeader) {
+                        const totalRecords = countHeader.split('/')[1];
+                        addResult(`📈 Total census records in database: ${totalRecords}`, 'success');
+                    }
+                    
+                } else {
+                    addResult(`❌ Failed to access census data: ${response.status} ${response.statusText}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Connection error: ${error.message}`, 'error');
+            }
+            
+            // Check if environment variables are available
+            addResult('<hr><h3>Environment Check:</h3>', 'info');
+            try {
+                // This will only work if the app was built with proper env vars
+                if (typeof window !== 'undefined' && window.location.hostname.includes('vercel')) {
+                    addResult('🚨 This is a Vercel deployment. If census data is accessible above but the main app shows simulated data, the Vercel environment variables need to be configured.', 'info');
+                    addResult(`
+                        <strong>To fix:</strong><br>
+                        1. Go to <a href="https://vercel.com/dashboard" target="_blank">Vercel Dashboard</a><br>
+                        2. Find your project → Settings → Environment Variables<br>
+                        3. Add: VITE_SUPABASE_URL=${supabaseUrl}<br>
+                        4. Add: VITE_SUPABASE_ANON_KEY=${supabaseKey}<br>
+                        5. Redeploy
+                    `, 'info');
+                }
+            } catch (e) {
+                console.log('Environment check error:', e);
+            }
+        }
+        
+        testCensusData();
+    </script>
+</body>
+</html>
