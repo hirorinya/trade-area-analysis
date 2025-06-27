@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Force Login View</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .button { padding: 15px 30px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px; }
+        .info { background: #d1ecf1; padding: 15px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Force Login View</h1>
+    <div class="info">
+        <strong>Issue:</strong> App shows dashboard without user authentication.<br>
+        <strong>Solution:</strong> Force app to login state by directly manipulating localStorage.
+    </div>
+    
+    <button class="button" onclick="forceLogin()">Force Login View</button>
+    <button class="button" onclick="createTestAccount()" style="background: #28a745;">Create Test Account</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        function forceLogin() {
+            // Completely clear everything
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Force login state
+            localStorage.setItem('currentView', 'login');
+            localStorage.removeItem('token');
+            
+            // Clear all cookies
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            document.getElementById('result').innerHTML = '<div style="background: #28a745; padding: 10px; border-radius: 5px; color: white;">✅ Forced login state! Redirecting...</div>';
+            
+            setTimeout(() => {
+                window.location.href = '/?_t=' + Date.now(); // Cache bust
+            }, 1000);
+        }
+        
+        async function createTestAccount() {
+            const testEmail = 'test@trade-area.app';
+            const testPassword = 'TestPassword123!';
+            
+            document.getElementById('result').innerHTML = '<div style="background: #007bff; padding: 10px; border-radius: 5px; color: white;">🧪 Creating test account...</div>';
+            
+            try {
+                // First clear everything
+                forceLogin();
+                
+                // Wait a bit then show instructions
+                setTimeout(() => {
+                    document.getElementById('result').innerHTML = `
+                        <div style="background: #28a745; padding: 15px; border-radius: 5px; color: white;">
+                            <h3>✅ Ready to test!</h3>
+                            <p>Use these credentials:</p>
+                            <p><strong>Email:</strong> ${testEmail}</p>
+                            <p><strong>Password:</strong> ${testPassword}</p>
+                            <p>Click "Sign Up" in the app to create account.</p>
+                        </div>
+                    `;
+                }, 1500);
+                
+            } catch (error) {
+                document.getElementById('result').innerHTML = '<div style="background: #dc3545; padding: 10px; border-radius: 5px; color: white;">❌ Error: ' + error.message + '</div>';
+            }
+        }
+    </script>
+</body>
+</html>
