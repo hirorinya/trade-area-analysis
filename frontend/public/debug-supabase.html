@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Supabase Data</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .result { padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .warning { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Supabase Data Debug</h1>
+    <div id="results"></div>
+    
+    <script>
+        const resultsDiv = document.getElementById('results');
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+        
+        async function debugSupabase() {
+            const supabaseUrl = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
+            
+            addResult('🔍 Debugging Supabase data issue...', 'info');
+            
+            // Test 1: Check if population_mesh table exists
+            try {
+                const response = await fetch(`${supabaseUrl}/rest/v1/population_mesh?limit=1`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+                
+                if (response.ok) {
+                    addResult('✅ population_mesh table exists and is accessible', 'success');
+                } else {
+                    addResult(`❌ population_mesh table access failed: ${response.status}`, 'error');
+                    const errorText = await response.text();
+                    addResult(`Error details: ${errorText}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Connection error: ${error.message}`, 'error');
+            }
+            
+            // Test 2: Check all tables to see what exists
+            try {
+                addResult('📋 Checking all available tables...', 'info');
+                
+                // Try to get schema information
+                const tablesResponse = await fetch(`${supabaseUrl}/rest/v1/?select=*`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+                
+                addResult(`Schema endpoint status: ${tablesResponse.status}`, 'info');
+                
+                // Try common table names
+                const tablesToCheck = ['population_mesh', 'projects', 'locations', 'users'];
+                
+                for (const table of tablesToCheck) {
+                    try {
+                        const response = await fetch(`${supabaseUrl}/rest/v1/${table}?limit=1`, {
+                            headers: {
+                                'apikey': supabaseKey,
+                                'Authorization': `Bearer ${supabaseKey}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            addResult(`✅ Table '${table}' exists (${data.length} sample records)`, 'success');
+                        } else {
+                            addResult(`❌ Table '${table}' not accessible: ${response.status}`, 'warning');
+                        }
+                    } catch (error) {
+                        addResult(`❌ Error checking table '${table}': ${error.message}`, 'error');
+                    }
+                }
+                
+            } catch (error) {
+                addResult(`❌ Schema check error: ${error.message}`, 'error');
+            }
+            
+            // Test 3: Check RLS policies
+            try {
+                addResult('🔒 Testing RLS (Row Level Security)...', 'info');
+                
+                // Try with count to see if RLS is blocking
+                const countResponse = await fetch(`${supabaseUrl}/rest/v1/population_mesh?select=count`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Range': '0-0',
+                        'Prefer': 'count=exact'
+                    }
+                });
+                
+                if (countResponse.ok) {
+                    const countHeader = countResponse.headers.get('content-range');
+                    if (countHeader) {
+                        const total = countHeader.split('/')[1];
+                        if (total === '0') {
+                            addResult('⚠️ RLS might be blocking access - table exists but shows 0 records', 'warning');
+                        } else {
+                            addResult(`✅ Found ${total} records in population_mesh`, 'success');
+                        }
+                    }
+                } else {
+                    addResult(`❌ Count query failed: ${countResponse.status}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ RLS test error: ${error.message}`, 'error');
+            }
+            
+            // Test 4: Try to insert a test record to check permissions
+            try {
+                addResult('🧪 Testing insert permissions...', 'info');
+                
+                const testRecord = {
+                    mesh_code: 'TEST001',
+                    center_lat: 35.6762,
+                    center_lng: 139.6503,
+                    population: 1000,
+                    mesh_level: 4
+                };
+                
+                const insertResponse = await fetch(`${supabaseUrl}/rest/v1/population_mesh`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify(testRecord)
+                });
+                
+                if (insertResponse.ok) {
+                    addResult('✅ Insert permissions work - RLS allows writes', 'success');
+                    
+                    // Clean up test record
+                    await fetch(`${supabaseUrl}/rest/v1/population_mesh?mesh_code=eq.TEST001`, {
+                        method: 'DELETE',
+                        headers: {
+                            'apikey': supabaseKey,
+                            'Authorization': `Bearer ${supabaseKey}`
+                        }
+                    });
+                } else {
+                    const errorText = await insertResponse.text();
+                    addResult(`❌ Insert failed: ${insertResponse.status} - ${errorText}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult(`❌ Insert test error: ${error.message}`, 'error');
+            }
+            
+            addResult('<hr><h3>🔧 Possible Solutions:</h3>', 'info');
+            addResult(`
+                <strong>If RLS is blocking:</strong><br>
+                1. Go to Supabase Dashboard → Authentication → Settings<br>
+                2. Temporarily disable RLS for population_mesh table<br>
+                3. Or create RLS policy to allow public reads<br><br>
+                
+                <strong>If data is missing:</strong><br>
+                1. Re-run the census data loading scripts<br>
+                2. Check if data was loaded to different table<br>
+                3. Verify correct Supabase project instance
+            `, 'info');
+        }
+        
+        debugSupabase();
+    </script>
+</body>
+</html>
