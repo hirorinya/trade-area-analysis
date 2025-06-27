@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reset Authentication</title>
+    <style>
+        body { font-family: Arial; padding: 20px; text-align: center; }
+        .button { padding: 15px 30px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px; }
+        .success { background: #28a745; padding: 10px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Reset Authentication State</h1>
+    <p>This will clear all cached authentication data and force the app to show the login page.</p>
+    
+    <button class="button" onclick="resetAuth()">Reset & Go to Login</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        function resetAuth() {
+            // Clear all authentication-related localStorage
+            localStorage.removeItem('token');
+            localStorage.removeItem('currentView');
+            localStorage.removeItem('user');
+            localStorage.removeItem('supabase.auth.token');
+            
+            // Clear any Supabase session storage
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('sb-') || key.startsWith('supabase')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            
+            // Also clear sessionStorage
+            sessionStorage.clear();
+            
+            document.getElementById('result').innerHTML = '<div class="success">✅ Authentication state cleared!</div>';
+            
+            // Redirect to main app after a short delay
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
