@@ -10,7 +10,44 @@ import OptimizationPanel from './components/analysis/OptimizationPanel';
 import ModernLoginForm from './components/auth/ModernLoginForm';
 import Button from './components/ui/Button';
 import Input from './components/ui/Input';
+
+// Hero Icons imports
+import {
+  MapPinIcon,
+  ChartBarIcon,
+  BuildingStorefrontIcon,
+  BuildingOfficeIcon,
+  MagnifyingGlassIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ArrowPathIcon,
+  RocketLaunchIcon,
+  LightBulbIcon,
+  CpuChipIcon,
+  BoltIcon,
+  BanknotesIcon,
+  BeakerIcon,
+  GlobeAltIcon,
+  UsersIcon,
+  ScaleIcon,
+  TrophyIcon,
+  TrendingUpIcon,
+  TrashIcon,
+  ClipboardDocumentListIcon,
+  EnvelopeIcon,
+  RulerIcon,
+  EyeIcon,
+  StarIcon,
+  TargetIcon,
+  PresentationChartLineIcon,
+  CircleStackIcon
+} from '@heroicons/react/24/outline';
 import { theme } from './styles/theme';
+
+// Icon utility component
+const Icon = ({ icon: IconComponent, size = 16, className = "" }) => (
+  <IconComponent className={`inline-block ${className}`} style={{ width: size, height: size }} />
+);
 import { 
   containerStyle, 
   headerStyle, 
@@ -350,10 +387,10 @@ AVAILABLE PLATFORM FUNCTIONS & TOOLS:
 - Performance Tracking: Monitor key metrics across different time periods
 
 **UI BUTTON REFERENCES:**
-- "📊 Population Grid" = Enable/disable population density visualization
-- "🎯 Store Optimizer" = Launch optimization panel with algorithm selection
-- "🤖 AI Analyst" = Open interactive AI chat for strategic guidance
-- "📊 Create Trade Area" = Create trade areas for specific locations
+- "Population Grid" = Enable/disable population density visualization (ChartBar icon)
+- "Store Optimizer" = Launch optimization panel with algorithm selection (Target icon)
+- "AI Analyst" = Open interactive AI chat for strategic guidance (CpuChip icon)
+- "Create Trade Area" = Create trade areas for specific locations (PresentationChart icon)
 
 Based on the user's request and current project state, provide specific, actionable guidance in HTML format with:
 - Clear interpretation of their goal
@@ -409,15 +446,15 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
         <ul>
           ${projectContext.locationsCount === 0 ? `
             <li><strong>Step 1:</strong> Add locations using the "Add Location" form below or CSV bulk upload</li>
-            <li><strong>Step 2:</strong> Click <strong>"📊 Population Grid"</strong> to enable population density visualization</li>
+            <li><strong>Step 2:</strong> Click <strong>"Population Grid"</strong> to enable population density visualization</li>
           ` : ''}
           
           ${projectContext.locationsCount > 0 && !projectContext.hasPopulationGrid ? `
-            <li><strong>Next:</strong> Click <strong>"📊 Population Grid"</strong> to see customer demand patterns</li>
+            <li><strong>Next:</strong> Click <strong>"Population Grid"</strong> to see customer demand patterns</li>
           ` : ''}
           
           ${projectContext.storesCount > 0 ? `
-            <li><strong>Analysis:</strong> Click <strong>"🎯 Store Optimizer"</strong> and choose algorithm:
+            <li><strong>Analysis:</strong> Click <strong>"Store Optimizer"</strong> and choose algorithm:
               <ul>
                 <li>Greedy: Fast optimization for new locations</li>
                 <li>Multi-scenario: Compare 4 different strategies</li>
@@ -426,10 +463,10 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
             </li>
           ` : ''}
           
-          <li><strong>AI Insights:</strong> Use <strong>"🤖 AI Analyst"</strong> for interactive strategic guidance</li>
+          <li><strong>AI Insights:</strong> Use <strong>"AI Analyst"</strong> for interactive strategic guidance</li>
           
           ${!projectContext.hasTradeAreas && projectContext.locationsCount > 0 ? `
-            <li><strong>Trade Areas:</strong> Click <strong>"📊 Create Trade Area"</strong> for each location to analyze market coverage</li>
+            <li><strong>Trade Areas:</strong> Click <strong>"Create Trade Area"</strong> for each location to analyze market coverage</li>
           ` : ''}
         </ul>
         
@@ -2300,7 +2337,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                   variant="primary"
                   size="small"
                 >
-                  🔍 Analyze & Guide Me
+                  <Icon icon={MagnifyingGlassIcon} size={16} className="mr-1" /> Analyze & Guide Me
                 </Button>
                 <Button 
                   onClick={() => setCurrentAddress('')}
@@ -2331,7 +2368,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
           </div>
 
           <div style={responsiveFlexStyle}>
-            <h2 style={heading2Style}>📍 {selectedProject.name} - Locations & Map</h2>
+            <h2 style={heading2Style}><Icon icon={MapPinIcon} size={20} className="mr-2" /> {selectedProject.name} - Locations & Map</h2>
             <div style={preventOverflowStyle}>
               <div style={{
                 display: 'flex',
@@ -2382,21 +2419,21 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                   variant={showAIChat ? 'primary' : 'secondary'}
                   size="small"
                 >
-                  🤖 AI Analyst
+                  <Icon icon={CpuChipIcon} size={16} className="mr-1" /> AI Analyst
                 </Button>
                 <Button 
                   onClick={() => setShowOptimization(!showOptimization)} 
                   variant={showOptimization ? 'primary' : 'secondary'}
                   size="small"
                 >
-                  🎯 Store Optimizer
+                  <Icon icon={TargetIcon} size={16} className="mr-1" /> Store Optimizer
                 </Button>
                 <Button 
                   onClick={() => setShowDemandGrid(!showDemandGrid)} 
                   variant={showDemandGrid ? 'primary' : 'secondary'}
                   size="small"
                 >
-                  📊 Population Grid
+                  <Icon icon={ChartBarIcon} size={16} className="mr-1" /> Population Grid
                 </Button>
                 <Button onClick={() => changeView('dashboard')} variant="secondary" size="small">
                   ← Back to Dashboard
@@ -3000,7 +3037,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                     }}
                     title="Get coordinates from address"
                   >
-                    🔍 Find
+                    <Icon icon={MagnifyingGlassIcon} size={14} /> Find
                   </Button>
                 </div>
 
@@ -3072,7 +3109,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                       size="small"
                       title="Get address from coordinates"
                     >
-                      📍→📫
+                      <Icon icon={EnvelopeIcon} size={14} />
                     </Button>
                   </div>
                 </div>
@@ -3090,9 +3127,9 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                   </label>
                   <select name="locationType" required style={theme.components.input.base}>
                     <option value="">Select Type</option>
-                    <option value="store">🏪 Store (店舗)</option>
-                    <option value="competitor">🏢 Competitor (競合)</option>
-                    <option value="poi">📍 Point of Interest</option>
+                    <option value="store">Store (店舗)</option>
+                    <option value="competitor">Competitor (競合)</option>
+                    <option value="poi">Point of Interest</option>
                   </select>
                 </div>
                 <Button type="submit" variant="primary" style={{ width: '100%' }}>Add Location</Button>
@@ -3124,8 +3161,11 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                         fontSize: theme.typography.fontSize.base,
                         marginBottom: theme.spacing[2]
                       }}>
-                        {location.location_type === 'store' ? '🏪' : 
-                         location.location_type === 'competitor' ? '🏢' : '📍'} {location.name}
+                        {location.location_type === 'store' ? 
+                          <Icon icon={BuildingStorefrontIcon} size={16} className="mr-1" /> : 
+                         location.location_type === 'competitor' ? 
+                          <Icon icon={BuildingOfficeIcon} size={16} className="mr-1" /> : 
+                          <Icon icon={MapPinIcon} size={16} className="mr-1" />} {location.name}
                       </div>
                       {location.address && (
                         <div style={{
@@ -3148,7 +3188,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                           variant="primary"
                           size="small"
                         >
-                          📊 Create Trade Area
+                          <Icon icon={PresentationChartLineIcon} size={16} className="mr-1" /> Create Trade Area
                         </Button>
                         <Button 
                           onClick={() => {
@@ -3159,7 +3199,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                           variant="danger"
                           size="small"
                         >
-                          🗑️ Delete
+                          <Icon icon={TrashIcon} size={16} className="mr-1" /> Delete
                         </Button>
                       </div>
                     </div>
