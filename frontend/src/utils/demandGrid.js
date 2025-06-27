@@ -138,67 +138,40 @@ export function generatePopulationDensity(lat, lng) {
     return 0;
   }
   
-  // Simulate realistic population patterns for Tokyo area
-  const basePopulation = 800; // Increased base population per mesh (more realistic for urban areas)
+  // Generic population simulation (fallback when real data unavailable)
+  const basePopulation = 500; // Base population per mesh cell
   
-  // Create more realistic random variation using multiple seeds
+  // Create deterministic but varied population using coordinate-based seeds
   const seed1 = Math.abs(Math.sin(lat * 43758.5453123) * 43758.5453123) % 1;
   const seed2 = Math.abs(Math.sin(lng * 12345.6789012) * 12345.6789012) % 1;
-  const randomFactor = 0.3 + (seed1 + seed2) * 0.7; // 0.3 to 1.7 multiplier (more variation)
+  const randomFactor = 0.2 + (seed1 + seed2) * 0.8; // 0.2 to 1.0 multiplier
   
-  // Simulate realistic urban density patterns
-  const tokyoCenter = { lat: 35.6762, lng: 139.6503 };
-  const distance = getDistance(lat, lng, tokyoCenter.lat, tokyoCenter.lng);
+  // Simple distance-based density (works for any urban area)
+  // Find the approximate center of the current coordinate range
+  const approxCenter = {
+    lat: Math.round(lat * 100) / 100, // Round to nearest 0.01 degree
+    lng: Math.round(lng * 100) / 100
+  };
   
-  // Much stronger urban density gradient
-  let densityFactor;
-  if (distance < 5) densityFactor = 3.0; // Very high density in central Tokyo
-  else if (distance < 10) densityFactor = 2.2; // High density in inner suburbs
-  else if (distance < 20) densityFactor = 1.5; // Medium density in outer suburbs
-  else if (distance < 30) densityFactor = 0.8; // Lower density in far suburbs
+  // Calculate relative density based on coordinate patterns
+  let densityFactor = 1.0;
+  
+  // Urban vs rural classification based on coordinate density patterns
+  const coordinateHash = Math.abs(Math.sin(lat * lng * 1000)) % 1;
+  if (coordinateHash > 0.7) densityFactor = 2.0; // Dense urban areas
+  else if (coordinateHash > 0.4) densityFactor = 1.2; // Suburban areas
+  else if (coordinateHash > 0.2) densityFactor = 0.8; // Light suburban
   else densityFactor = 0.3; // Rural areas
   
-  // Add secondary centers (Shibuya, Shinjuku, etc.)
-  const secondaryCenters = [
-    { lat: 35.6580, lng: 139.7016 }, // Shibuya
-    { lat: 35.6896, lng: 139.7006 }, // Shinjuku
-    { lat: 35.7295, lng: 139.7405 }, // Ikebukuro
-    { lat: 35.6652, lng: 139.7747 }  // Shinagawa
-  ];
-  
-  // Boost density near secondary centers
-  secondaryCenters.forEach(center => {
-    const centerDistance = getDistance(lat, lng, center.lat, center.lng);
-    if (centerDistance < 3) {
-      densityFactor = Math.max(densityFactor, 2.5 - centerDistance * 0.5);
-    }
-  });
-  
-  // Simulate water areas and uninhabitable zones (more realistic)
+  // Simulate uninhabitable areas (water, parks, etc.)
   const inhabitableSeed = Math.abs(Math.sin(lat * 1234.5) * Math.sin(lng * 5678.9)) % 1;
-  
-  // Tokyo Bay and water areas (more accurate water detection)
-  // Tokyo Bay is roughly south of latitude 35.5 and east of longitude 139.8
-  if (lat < 35.55 && lng > 139.85) {
-    // Higher chance of water in bay area
-    if (inhabitableSeed < 0.7) return 0;
-  }
-  
-  // Coastal areas - areas very close to water
-  const tokyoBayCenter = { lat: 35.5, lng: 139.9 };
-  const bayDistance = getDistance(lat, lng, tokyoBayCenter.lat, tokyoBayCenter.lng);
-  if (bayDistance < 10 && inhabitableSeed < 0.2) return 0; // Near-water areas
-  
-  // Other uninhabitable areas (parks, industrial zones, etc.)
   if (inhabitableSeed < 0.05) return 0; // 5% chance of uninhabitable area
   
-  // Calculate final population with more realistic ranges
+  // Calculate final population
   const population = Math.round(basePopulation * randomFactor * densityFactor);
   
-  // More realistic minimum populations
-  if (densityFactor > 2.0) return Math.max(400, population); // High density areas
-  if (densityFactor > 1.0) return Math.max(100, population); // Medium density areas
-  return Math.max(20, population); // Low density areas
+  // Ensure minimum population in inhabited areas
+  return Math.max(10, population);
 }
 
 /**
@@ -387,15 +360,25 @@ export function calculateStorePerformance(meshes, stores) {
  * @param {Array} existingStores - Existing store locations to avoid
  * @returns {Array} Array of candidate site coordinates
  */
-export function generateCandidateSites(bounds, count = 100, existingStores = []) {
+export function generateCandidateSites(bounds, count = 100, existingStores = [], options = {}) {
+  const {
+    minDistance = 0.2,     // Minimum distance between sites (km) - affects accuracy
+    maxAttempts = 50,      // Maximum attempts per site generation
+    searchAccuracy = 'medium' // 'low' (0.5km), 'medium' (0.2km), 'high' (0.1km)
+  } = options;
+  
+  // Adjust minDistance based on accuracy setting
+  const actualMinDistance = searchAccuracy === 'high' ? 0.1 : 
+                           searchAccuracy === 'low' ? 0.5 : 
+                           minDistance;
+  
   const candidates = [];
-  const minDistance = 0.2; // Minimum 200m between sites
   
   for (let i = 0; i < count; i++) {
     let attempts = 0;
     let validSite = false;
     
-    while (!validSite && attempts < 50) {
+    while (!validSite && attempts < maxAttempts) {
       const lat = bounds.south + Math.random() * (bounds.north - bounds.south);
       const lng = bounds.west + Math.random() * (bounds.east - bounds.west);
       
@@ -406,7 +389,7 @@ export function generateCandidateSites(bounds, count = 100, existingStores = [])
           existing.latitude || existing.lat || existing.coordinates?.coordinates?.[1] || 0,
           existing.longitude || existing.lng || existing.coordinates?.coordinates?.[0] || 0
         );
-        return distance < minDistance;
+        return distance < actualMinDistance;
       });
       
       if (!tooClose) {

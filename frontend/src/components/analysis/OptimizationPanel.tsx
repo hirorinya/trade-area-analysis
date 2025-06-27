@@ -71,16 +71,27 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
   const [showHistoricalInput, setShowHistoricalInput] = useState(false);
   const [progressMessage, setProgressMessage] = useState('');
   const [estimatedTime, setEstimatedTime] = useState(0);
+  
+  // Candidate site configuration
+  const [candidateConfig, setCandidateConfig] = useState({
+    count: 200,
+    accuracy: 'medium' as 'low' | 'medium' | 'high'
+  });
 
-  // Generate candidate sites when bounds change
+  // Generate candidate sites when bounds or config changes
   useEffect(() => {
     if (bounds && demandMeshes.length > 0) {
       console.log('Generating candidate sites for optimization...');
-      const candidates = generateCandidateSites(bounds, 200, existingStores);
+      const candidates = generateCandidateSites(
+        bounds, 
+        candidateConfig.count, 
+        existingStores,
+        { searchAccuracy: candidateConfig.accuracy }
+      );
       setCandidateSites(candidates);
-      console.log(`Generated ${candidates.length} candidate sites`);
+      console.log(`Generated ${candidates.length} candidate sites with ${candidateConfig.accuracy} accuracy`);
     }
-  }, [bounds, demandMeshes, existingStores]);
+  }, [bounds, demandMeshes, existingStores, candidateConfig]);
 
   const showMessage = (text: string, type: 'success' | 'error' = 'success') => {
     setMessage(text);
@@ -428,6 +439,119 @@ const OptimizationPanel: React.FC<OptimizationPanelProps> = ({
             max={5}
             step={0.1}
           />
+        </div>
+
+        {/* Candidate Site Configuration */}
+        <div style={{ 
+          marginTop: theme.spacing[4], 
+          padding: theme.spacing[4], 
+          backgroundColor: theme.colors.blue[50], 
+          borderRadius: theme.borderRadius.lg,
+          border: `1px solid ${theme.colors.blue[200]}`
+        }}>
+          <h4 style={{ 
+            ...heading3Style, 
+            color: theme.colors.blue[700], 
+            marginBottom: theme.spacing[3] 
+          }}>
+            Candidate Site Settings
+          </h4>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+            gap: theme.spacing[4] 
+          }}>
+            <Input
+              label="Number of Candidates"
+              type="number"
+              value={candidateConfig.count}
+              onChange={(e) => setCandidateConfig(prev => ({ 
+                ...prev, 
+                count: Math.min(Math.max(parseInt(e.target.value) || 50, 50), 1000)
+              }))}
+              min={50}
+              max={1000}
+              step={50}
+              helper="More candidates = better coverage but slower optimization"
+            />
+
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: theme.spacing[2],
+                fontSize: theme.typography.fontSize.sm,
+                fontWeight: theme.typography.fontWeight.medium,
+                color: theme.colors.gray[700],
+                fontFamily: theme.typography.fontFamily.primary
+              }}>
+                Search Accuracy
+              </label>
+              <select
+                value={candidateConfig.accuracy}
+                onChange={(e) => setCandidateConfig(prev => ({ 
+                  ...prev, 
+                  accuracy: e.target.value as 'low' | 'medium' | 'high'
+                }))}
+                style={{
+                  ...theme.components.input.base,
+                  width: '100%'
+                }}
+              >
+                <option value="low">Low (0.5km spacing - Fast)</option>
+                <option value="medium">Medium (0.2km spacing - Balanced)</option>
+                <option value="high">High (0.1km spacing - Precise)</option>
+              </select>
+              <div style={{
+                fontSize: theme.typography.fontSize.xs,
+                color: theme.colors.gray[500],
+                marginTop: theme.spacing[1]
+              }}>
+                Higher accuracy finds better locations but takes longer
+              </div>
+            </div>
+          </div>
+          
+          <div style={{
+            marginTop: theme.spacing[3],
+            display: 'flex',
+            gap: theme.spacing[2],
+            flexWrap: 'wrap'
+          }}>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={() => setCandidateConfig({ count: 100, accuracy: 'low' })}
+            >
+              Fast (100 candidates)
+            </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={() => setCandidateConfig({ count: 200, accuracy: 'medium' })}
+            >
+              Balanced (200 candidates)
+            </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={() => setCandidateConfig({ count: 500, accuracy: 'high' })}
+            >
+              Precise (500 candidates)
+            </Button>
+          </div>
+
+          <div style={{
+            marginTop: theme.spacing[3],
+            padding: theme.spacing[3],
+            backgroundColor: theme.colors.gray[50],
+            borderRadius: theme.borderRadius.md,
+            fontSize: theme.typography.fontSize.sm,
+            color: theme.colors.gray[600]
+          }}>
+            <strong>Current Config:</strong> {candidateConfig.count} candidates with {candidateConfig.accuracy} accuracy
+            <br />
+            <strong>Est. Processing Time:</strong> {getAlgorithmEstimate(params.algorithm, candidateConfig.count, demandMeshes.length, params.numStores)} seconds
+          </div>
         </div>
 
         <div style={buttonGroupStyle}>

@@ -8,7 +8,7 @@ import fetch from 'node-fetch';
 
 const SITE_URL = 'https://trade-area-analysis.vercel.app';
 const TEST_USER = {
-  email: 'bananas.go.bananas@gmail.com',
+  email: 'test.user@example.com',
   // Note: Password would be needed for full testing
 };
 

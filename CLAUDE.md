@@ -112,4 +112,3 @@ To continue work in another Claude Code session:
 - Production is stable and working - protect it!
 - All development happens in staging first
 - Test thoroughly before merging to main
-- User email in logs: bananas.go.bananas@gmail.com

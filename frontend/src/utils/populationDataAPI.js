@@ -156,16 +156,30 @@ class PopulationDataCache {
 const populationCache = new PopulationDataCache();
 
 /**
- * Fetches population data from Statistics Dashboard API
+ * Fetches population data from Statistics Dashboard API with retry logic
  * @param {Object} bounds - Geographic bounds
  * @param {number} meshLevel - Mesh level (3, 4, or 5)
+ * @param {number} retryCount - Current retry attempt
  * @returns {Promise<Array>} Array of population data by mesh
  */
-export async function fetchStatDashboardData(bounds, meshLevel = 5) {
+export async function fetchStatDashboardData(bounds, meshLevel = 5, retryCount = 0) {
+  const maxRetries = 3;
+  const retryDelay = 1000 * Math.pow(2, retryCount); // Exponential backoff
+  
   try {
     // Check cache first
     const cached = populationCache.get(bounds, meshLevel);
-    if (cached) return cached;
+    if (cached) {
+      console.log('Using cached Statistics Dashboard data');
+      return cached;
+    }
+    
+    // Validate bounds for reasonable size
+    const boundsArea = (bounds.north - bounds.south) * (bounds.east - bounds.west);
+    if (boundsArea > 1.0) { // Limit to ~110km x 110km area
+      console.warn('Bounds too large for detailed mesh data, using coarser resolution');
+      meshLevel = Math.max(3, meshLevel - 1);
+    }
     
     // Calculate mesh codes for the bounds
     const meshCodes = [];
@@ -178,11 +192,20 @@ export async function fetchStatDashboardData(bounds, meshLevel = 5) {
       }
     }
     
+    // Limit mesh codes to prevent API overload
+    if (meshCodes.length > 1000) {
+      console.warn(`Too many mesh codes (${meshCodes.length}), sampling to 1000`);
+      const step = Math.ceil(meshCodes.length / 1000);
+      meshCodes.splice(0, meshCodes.length, ...meshCodes.filter((_, i) => i % step === 0));
+    }
+    
+    console.log(`Fetching Statistics Dashboard data for ${meshCodes.length} mesh codes (attempt ${retryCount + 1})`);
+    
     // Build API request
     const params = new URLSearchParams({
       IndicatorCode: API_CONFIG.STAT_DASHBOARD.indicatorCode,
       Time: '2020', // Latest census year
-      RegionalRank: '5', // Mesh level
+      RegionalRank: meshLevel.toString(),
       IsSeasonalAdjustment: 'false',
       MetaGetFlg: 'N',
       SectionHeaderFlg: '1'
@@ -190,27 +213,48 @@ export async function fetchStatDashboardData(bounds, meshLevel = 5) {
     
     const url = `${API_CONFIG.STAT_DASHBOARD.baseUrl}/data?${params}`;
     
-    const response = await fetch(url);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    const response = await fetch(url, { 
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'TradeAreaAnalysis/1.0'
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.json();
+    
+    // Validate response structure
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid API response format');
+    }
     
     // Parse response and map to mesh structure
     const populationByMesh = new Map();
     
     if (data.GET_STATS && data.GET_STATS.STATISTICAL_DATA) {
-      const values = data.GET_STATS.STATISTICAL_DATA.DATA_INF.DATA_OBJ;
+      const values = data.GET_STATS.STATISTICAL_DATA.DATA_INF?.DATA_OBJ || [];
       
-      values.forEach(item => {
-        if (item.VALUE && item.VALUE['@'] && item.VALUE['@'].regionCode) {
-          const meshCode = item.VALUE['@'].regionCode;
-          const population = parseFloat(item.VALUE.$) || 0;
-          populationByMesh.set(meshCode, population);
-        }
-      });
+      if (Array.isArray(values)) {
+        values.forEach(item => {
+          if (item.VALUE && item.VALUE['@'] && item.VALUE['@'].regionCode) {
+            const meshCode = item.VALUE['@'].regionCode;
+            const population = parseFloat(item.VALUE.$) || 0;
+            populationByMesh.set(meshCode, population);
+          }
+        });
+      }
     }
+    
+    console.log(`Successfully parsed ${populationByMesh.size} mesh population values`);
     
     // Convert to array format
     const results = meshCodes.map(meshCode => {
@@ -222,32 +266,59 @@ export async function fetchStatDashboardData(bounds, meshLevel = 5) {
       };
     });
     
-    // Cache results
-    populationCache.set(bounds, meshLevel, results);
+    // Only cache if we got meaningful data
+    if (results.length > 0 && populationByMesh.size > 0) {
+      populationCache.set(bounds, meshLevel, results);
+    }
     
     return results;
+    
   } catch (error) {
-    console.error('Error fetching Statistics Dashboard data:', error);
+    console.error(`Statistics Dashboard API error (attempt ${retryCount + 1}):`, error);
+    
+    // Retry logic
+    if (retryCount < maxRetries && !error.name === 'AbortError') {
+      console.log(`Retrying in ${retryDelay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      return fetchStatDashboardData(bounds, meshLevel, retryCount + 1);
+    }
+    
     return null;
   }
 }
 
 /**
- * Fetches population data from e-Stat API (requires API key)
+ * Fetches population data from e-Stat API with enhanced error handling
  * @param {Object} bounds - Geographic bounds
  * @param {number} meshLevel - Mesh level (3, 4, or 5)
+ * @param {number} retryCount - Current retry attempt
  * @returns {Promise<Array>} Array of population data by mesh
  */
-export async function fetchEStatData(bounds, meshLevel = 5) {
+export async function fetchEStatData(bounds, meshLevel = 5, retryCount = 0) {
   if (!API_CONFIG.E_STAT.appId) {
     console.warn('e-Stat API key not configured');
     return null;
   }
   
+  const maxRetries = 3;
+  const retryDelay = 1000 * Math.pow(2, retryCount);
+  
   try {
     // Check cache first
     const cached = populationCache.get(bounds, meshLevel);
-    if (cached) return cached;
+    if (cached) {
+      console.log('Using cached e-Stat data');
+      return cached;
+    }
+    
+    // Validate bounds size
+    const boundsArea = (bounds.north - bounds.south) * (bounds.east - bounds.west);
+    if (boundsArea > 0.5) { // Limit to ~55km x 55km for e-Stat
+      console.warn('Bounds too large for e-Stat API, using coarser resolution');
+      meshLevel = Math.max(3, meshLevel - 1);
+    }
+    
+    console.log(`Fetching e-Stat data with mesh level ${meshLevel} (attempt ${retryCount + 1})`);
     
     // Build API request
     const params = new URLSearchParams({
@@ -255,45 +326,87 @@ export async function fetchEStatData(bounds, meshLevel = 5) {
       statsDataId: API_CONFIG.E_STAT.censusTableIds['2020'],
       cdArea: getMeshAreaCode(bounds, meshLevel),
       cdCat01: '#A03503', // Total population
-      lang: 'J'
+      lang: 'J',
+      limit: '10000' // Increase limit for larger datasets
     });
     
     const url = `${API_CONFIG.E_STAT.baseUrl}/getStatsData?${params}`;
     
-    const response = await fetch(url);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout for e-Stat
+    
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'TradeAreaAnalysis/1.0'
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
     if (!response.ok) {
-      throw new Error(`e-Stat API request failed: ${response.status}`);
+      throw new Error(`e-Stat API request failed: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.json();
+    
+    // Validate response structure
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid e-Stat API response format');
+    }
+    
+    // Check for API errors
+    if (data.GET_STATS_DATA?.RESULT?.ERROR_MSG) {
+      throw new Error(`e-Stat API error: ${data.GET_STATS_DATA.RESULT.ERROR_MSG}`);
+    }
     
     // Parse e-Stat response
     const results = [];
     
     if (data.GET_STATS_DATA && data.GET_STATS_DATA.STATISTICAL_DATA) {
-      const dataObj = data.GET_STATS_DATA.STATISTICAL_DATA.DATA_INF.VALUE;
+      const dataInf = data.GET_STATS_DATA.STATISTICAL_DATA.DATA_INF;
       
-      dataObj.forEach(item => {
-        if (item['@area'] && item.$) {
-          const meshCode = item['@area'];
-          const population = parseFloat(item.$) || 0;
-          const center = MeshCodeUtil.meshCodeToLatLng(meshCode);
-          
-          results.push({
-            meshCode,
-            center,
-            population
-          });
-        }
-      });
+      if (dataInf && dataInf.VALUE && Array.isArray(dataInf.VALUE)) {
+        dataInf.VALUE.forEach(item => {
+          if (item['@area'] && item.$) {
+            const meshCode = item['@area'];
+            const population = parseFloat(item.$) || 0;
+            
+            try {
+              const center = MeshCodeUtil.meshCodeToLatLng(meshCode);
+              results.push({
+                meshCode,
+                center,
+                population
+              });
+            } catch (meshError) {
+              console.warn(`Invalid mesh code: ${meshCode}`, meshError);
+            }
+          }
+        });
+      }
     }
     
-    // Cache results
-    populationCache.set(bounds, meshLevel, results);
+    console.log(`Successfully fetched ${results.length} mesh data points from e-Stat`);
+    
+    // Only cache if we got meaningful data
+    if (results.length > 0) {
+      populationCache.set(bounds, meshLevel, results);
+    }
     
     return results;
+    
   } catch (error) {
-    console.error('Error fetching e-Stat data:', error);
+    console.error(`e-Stat API error (attempt ${retryCount + 1}):`, error);
+    
+    // Retry logic
+    if (retryCount < maxRetries && error.name !== 'AbortError') {
+      console.log(`Retrying e-Stat request in ${retryDelay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      return fetchEStatData(bounds, meshLevel, retryCount + 1);
+    }
+    
     return null;
   }
 }
