@@ -13,57 +13,62 @@
     <h1>🔍 Environment Debug</h1>
     <div id="results"></div>
     
-    <script type="module">
+    <script>
         const results = document.getElementById('results');
         
-        function addResult(label, value, expected) {
+        function addResult(label, status, message) {
             const div = document.createElement('div');
-            const isCorrect = value === expected;
-            div.className = `env-var ${isCorrect ? 'correct' : 'incorrect'}`;
+            div.className = `env-var ${status}`;
             div.innerHTML = `
                 <h3>${label}</h3>
-                <p><strong>Current:</strong> ${value || 'undefined'}</p>
-                <p><strong>Expected:</strong> ${expected}</p>
-                <p><strong>Status:</strong> ${isCorrect ? '✅ Correct' : '❌ Wrong'}</p>
+                <p>${message}</p>
             `;
             results.appendChild(div);
         }
         
-        // Check environment variables
-        const currentUrl = import.meta.env.VITE_SUPABASE_URL;
-        const currentKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        const useDirect = import.meta.env.VITE_USE_SUPABASE_DIRECT;
-        
+        // The issue is clear: import.meta.env is undefined
         addResult(
-            'VITE_SUPABASE_URL',
-            currentUrl,
-            'https://vjbhwtwxjhyufvjrnhyu.supabase.co'
+            '🚨 Problem Identified',
+            'incorrect',
+            '❌ Environment variables are not available in the browser.<br>' +
+            'This means Vercel environment variables are not configured correctly.'
         );
         
         addResult(
-            'VITE_SUPABASE_ANON_KEY', 
-            currentKey ? currentKey.substring(0, 20) + '...' : 'undefined',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'.substring(0, 20) + '...'
+            '📋 Required Variables',
+            'env-var',
+            '<strong>Missing variables that need to be set in Vercel:</strong><br>' +
+            '• VITE_SUPABASE_URL=https://vjbhwtwxjhyufvjrnhyu.supabase.co<br>' +
+            '• VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...<br>' +
+            '• VITE_USE_SUPABASE_DIRECT=true'
         );
         
         addResult(
-            'VITE_USE_SUPABASE_DIRECT',
-            useDirect,
-            'true'
+            '🔧 Fix Instructions',
+            'env-var',
+            '<strong>To fix this:</strong><br>' +
+            '1. Go to <a href="https://vercel.com/dashboard" target="_blank">Vercel Dashboard</a><br>' +
+            '2. Find your trade-area-analysis project<br>' +
+            '3. Go to Settings → Environment Variables<br>' +
+            '4. Add the missing variables above<br>' +
+            '5. Redeploy the project'
         );
         
-        // Test connection to correct Supabase
-        async function testConnection() {
+        // Test if we can reach the correct Supabase instance directly
+        async function testDirectConnection() {
             const testDiv = document.createElement('div');
             testDiv.className = 'env-var';
-            testDiv.innerHTML = '<h3>🔌 Connection Test</h3><p>Testing...</p>';
+            testDiv.innerHTML = '<h3>🔌 Direct Connection Test</h3><p>Testing direct connection to correct Supabase...</p>';
             results.appendChild(testDiv);
             
+            const correctUrl = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
+            const correctKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
+            
             try {
-                const response = await fetch(`${currentUrl}/rest/v1/population_mesh?limit=1`, {
+                const response = await fetch(`${correctUrl}/rest/v1/population_mesh?limit=3`, {
                     headers: {
-                        'apikey': currentKey,
-                        'Authorization': `Bearer ${currentKey}`
+                        'apikey': correctKey,
+                        'Authorization': `Bearer ${correctKey}`
                     }
                 });
                 
@@ -71,14 +76,16 @@
                     const data = await response.json();
                     testDiv.className = 'env-var correct';
                     testDiv.innerHTML = `
-                        <h3>🔌 Connection Test</h3>
-                        <p>✅ Successfully connected to Supabase</p>
-                        <p>Found ${data.length} sample records</p>
+                        <h3>🔌 Direct Connection Test</h3>
+                        <p>✅ Census data is accessible!</p>
+                        <p>Found ${data.length} sample records in correct Supabase instance</p>
+                        <p><strong>Sample data:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
                     `;
                 } else {
                     testDiv.className = 'env-var incorrect';
                     testDiv.innerHTML = `
-                        <h3>🔌 Connection Test</h3>
+                        <h3>🔌 Direct Connection Test</h3>
                         <p>❌ Connection failed: ${response.status}</p>
                         <p>Error: ${await response.text()}</p>
                     `;
@@ -86,15 +93,13 @@
             } catch (error) {
                 testDiv.className = 'env-var incorrect';
                 testDiv.innerHTML = `
-                    <h3>🔌 Connection Test</h3>
+                    <h3>🔌 Direct Connection Test</h3>
                     <p>❌ Connection error: ${error.message}</p>
                 `;
             }
         }
         
-        if (currentUrl && currentKey) {
-            testConnection();
-        }
+        testDirectConnection();
     </script>
 </body>
 </html>
