@@ -285,23 +285,83 @@ function App() {
     try {
       setMessage('Analyzing your request with AI...');
       
+      // Current project context
+      const projectContext = {
+        projectName: selectedProject?.name || 'Project',
+        locationsCount: locations.length,
+        storesCount: locations.filter(l => l.location_type === 'store').length,
+        competitorsCount: locations.filter(l => l.location_type === 'competitor').length,
+        poisCount: locations.filter(l => l.location_type === 'poi').length,
+        hasPopulationGrid: showDemandGrid,
+        hasTradeAreas: tradeAreas.length > 0
+      };
+
       const prompt = `
-You are an expert retail location analyst. A user wants help with: "${currentAddress}"
+You are an expert retail location analyst helping with trade area analysis. 
 
-Available analysis tools:
-- Store location mapping and management
-- Population density visualization (250m grid cells)
-- Store optimization algorithms (find optimal locations)
-- Competitive analysis vs existing competitors
-- Multi-scenario planning and comparison
-- AI-powered insights and recommendations
+USER REQUEST: "${currentAddress}"
 
-Provide a clear, actionable response in HTML format with:
-- Brief interpretation of their goal
-- 3-4 specific steps they should take
-- Expected insights they'll gain
+CURRENT PROJECT STATE:
+- Project: ${projectContext.projectName}
+- Total Locations: ${projectContext.locationsCount}
+- Stores: ${projectContext.storesCount}
+- Competitors: ${projectContext.competitorsCount}  
+- Points of Interest: ${projectContext.poisCount}
+- Population Grid: ${projectContext.hasPopulationGrid ? 'ENABLED' : 'NOT ENABLED'}
+- Trade Areas: ${projectContext.hasTradeAreas ? tradeAreas.length + ' created' : 'None created'}
 
-Keep it concise and practical. Use <strong> for emphasis and <ul><li> for steps.
+AVAILABLE PLATFORM FUNCTIONS & TOOLS:
+
+**1. DATA MANAGEMENT:**
+- Add Location: Manually add stores/competitors with name, address, coordinates, type
+- CSV Bulk Upload: Import multiple locations with auto-geocoding for Japanese addresses
+- Location Types: Store (your locations), Competitor (rival businesses), POI (points of interest)
+
+**2. VISUALIZATION TOOLS:**
+- Population Grid: 250m mesh population density overlay (click "📊 Population Grid" button)
+- Map Types: Satellite imagery (Mapbox) or Japanese government data (国土地理院)
+- Trade Area Creation: Create radius-based or Huff model trade areas for each location
+
+**3. OPTIMIZATION ALGORITHMS:**
+- Greedy Optimization: Fast algorithm for finding optimal store locations
+- MIP (Mixed Integer Programming): Advanced optimization for complex scenarios  
+- Competitive Analysis: Analyze market positioning vs competitors
+- Multi-scenario Analysis: Compare 4 strategies (Conservative, Standard, Optimized, Aggressive)
+- Capacity Optimization: Optimize store capacity, staffing, and financial performance
+- Historical Analysis: Use past performance data to predict optimal locations
+
+**4. AI ANALYSIS FEATURES:**
+- AI Analyst Chat: Interactive AI for strategic recommendations and insights
+- Natural Language Queries: Ask questions like "find underserved areas" or "analyze competition"
+- Automated Recommendations: AI suggests next steps based on current analysis state
+
+**5. SPECIFIC ANALYSIS FUNCTIONS:**
+- Distance Decay Analysis: How customer demand decreases with distance
+- Market Share Calculation: Estimate potential market capture using Huff model
+- Financial Modeling: Revenue/cost projections, ROI calculations, break-even analysis
+- Competitive Pressure Analysis: Identify high-threat competitors and market saturation
+- Demand Flow Visualization: See customer flow patterns between locations
+- Site Selection Scoring: Rate potential locations based on multiple criteria
+
+**6. WORKFLOW CAPABILITIES:**
+- Project Management: Create/switch between multiple analysis projects
+- Data Export: Download analysis results and recommendations  
+- Scenario Comparison: Side-by-side comparison of different expansion strategies
+- Performance Tracking: Monitor key metrics across different time periods
+
+**UI BUTTON REFERENCES:**
+- "📊 Population Grid" = Enable/disable population density visualization
+- "🎯 Store Optimizer" = Launch optimization panel with algorithm selection
+- "🤖 AI Analyst" = Open interactive AI chat for strategic guidance
+- "📊 Create Trade Area" = Create trade areas for specific locations
+
+Based on the user's request and current project state, provide specific, actionable guidance in HTML format with:
+- Clear interpretation of their goal
+- Step-by-step instructions using the exact button names and functions above
+- Expected insights and outcomes
+- Recommendations for next actions
+
+Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools/buttons to use.
 `;
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -340,16 +400,49 @@ Keep it concise and practical. Use <strong> for emphasis and <ul><li> for steps.
     } catch (error) {
       console.error('AI analysis failed:', error);
       
-      // Simple fallback
+      // Comprehensive fallback based on current state
       const fallbackRecommendations = `
         <p><strong>Analysis Goal:</strong> ${currentAddress}</p>
+        
+        <p><strong>Current Status:</strong> ${projectContext.storesCount} store(s), ${projectContext.competitorsCount} competitor(s), Population Grid ${projectContext.hasPopulationGrid ? 'ENABLED' : 'DISABLED'}</p>
+        
         <ul>
-          <li><strong>Step 1:</strong> Add your store and competitor locations using the form below</li>
-          <li><strong>Step 2:</strong> Enable "Population Grid" to visualize customer density</li>
-          <li><strong>Step 3:</strong> Use "Store Optimizer" to find the best new locations</li>
-          <li><strong>Step 4:</strong> Review results and run "AI Analyst" for detailed insights</li>
+          ${projectContext.locationsCount === 0 ? `
+            <li><strong>Step 1:</strong> Add locations using the "Add Location" form below or CSV bulk upload</li>
+            <li><strong>Step 2:</strong> Click <strong>"📊 Population Grid"</strong> to enable population density visualization</li>
+          ` : ''}
+          
+          ${projectContext.locationsCount > 0 && !projectContext.hasPopulationGrid ? `
+            <li><strong>Next:</strong> Click <strong>"📊 Population Grid"</strong> to see customer demand patterns</li>
+          ` : ''}
+          
+          ${projectContext.storesCount > 0 ? `
+            <li><strong>Analysis:</strong> Click <strong>"🎯 Store Optimizer"</strong> and choose algorithm:
+              <ul>
+                <li>Greedy: Fast optimization for new locations</li>
+                <li>Multi-scenario: Compare 4 different strategies</li>
+                <li>Capacity: Optimize existing store performance</li>
+              </ul>
+            </li>
+          ` : ''}
+          
+          <li><strong>AI Insights:</strong> Use <strong>"🤖 AI Analyst"</strong> for interactive strategic guidance</li>
+          
+          ${!projectContext.hasTradeAreas && projectContext.locationsCount > 0 ? `
+            <li><strong>Trade Areas:</strong> Click <strong>"📊 Create Trade Area"</strong> for each location to analyze market coverage</li>
+          ` : ''}
         </ul>
-        <p><em>For advanced AI analysis, check your OpenAI API configuration.</em></p>
+        
+        <p><strong>Available Analysis Types:</strong></p>
+        <ul>
+          <li>Site Selection & Expansion Planning</li>
+          <li>Competitive Market Analysis</li>
+          <li>Customer Demand Flow Visualization</li>
+          <li>Financial Performance Optimization</li>
+          <li>Multi-scenario Strategic Planning</li>
+        </ul>
+        
+        <p><em>For advanced AI-powered recommendations, configure your OpenAI API key in the environment settings.</em></p>
       `;
       
       setAnalysisRecommendations(fallbackRecommendations);
@@ -2141,6 +2234,11 @@ Keep it concise and practical. Use <strong> for emphasis and <ul><li> for steps.
                     </div>
                     <Button 
                       onClick={() => {
+                        // Clear candidate sites and optimization results from previous project
+                        setCandidateMarkers([]);
+                        setOptimizationResults(null);
+                        
+                        // Switch to new project
                         setSelectedProject(project);
                         changeView('map');
                         loadLocations(project.id);
