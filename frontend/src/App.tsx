@@ -1532,12 +1532,12 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
   // Get current map bounds for optimization
   const getCurrentMapBounds = () => {
     if (locations.length === 0) {
-      // Return default bounds for Tokyo area when no locations exist
+      // Return default bounds covering all census data when no locations exist
       return {
-        north: 35.8,
-        south: 35.5,
-        east: 140.1,
-        west: 139.3
+        north: 36.2,  // Covers all 32,173 census records
+        south: 35.3,
+        east: 140.3,
+        west: 138.8
       };
     }
     
@@ -1575,12 +1575,14 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
 
   // Get full viewport bounds (hardcoded for now, ideally from map instance)
   const getFullMapBounds = () => {
-    // This covers a much larger Tokyo metropolitan area
+    // Updated to match actual census data coverage (32,173 records)
+    // Based on /check-all-japan-mesh.html analysis:
+    // Lat: 35.34-36.19, Lng: 138.80-140.29
     return {
-      north: 35.9,
-      south: 35.4,
-      east: 140.2,
-      west: 139.2
+      north: 36.2,  // Slightly expanded from 36.19
+      south: 35.3,  // Slightly expanded from 35.34
+      east: 140.3,  // Slightly expanded from 140.29
+      west: 138.8   // Matches data coverage 138.80
     };
   };
 
