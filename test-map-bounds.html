@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Map Bounds & Census Data</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .info { background: #d1ecf1; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .data { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; overflow-x: auto; }
+        pre { font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🗺️ Census Data Bounds Test</h1>
+    
+    <div class="info">
+        <strong>Current Map Bounds:</strong><br>
+        North: 35.8, South: 35.5<br>
+        East: 140.1, West: 139.3<br>
+        <strong>This covers:</strong> Tokyo central + Kanagawa border areas
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        async function testBounds() {
+            const resultsDiv = document.getElementById('results');
+            const supabaseUrl = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
+            
+            try {
+                // Test the exact same bounds the app is using
+                const bounds = {
+                    north: 35.8,
+                    south: 35.5, 
+                    east: 140.1,
+                    west: 139.3
+                };
+                
+                resultsDiv.innerHTML = '<div class="info">🔄 Testing exact same bounds as your app...</div>';
+                
+                const response = await fetch(`${supabaseUrl}/rest/v1/population_mesh?center_lat=gte.${bounds.south}&center_lat=lte.${bounds.north}&center_lng=gte.${bounds.west}&center_lng=lte.${bounds.east}&order=population.desc&limit=20`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                let html = `<div class="info">✅ Found ${data.length} records in map bounds</div>`;
+                
+                if (data.length > 0) {
+                    html += '<div class="data"><h3>📊 Top 20 Population Areas in Your Map View:</h3><pre>';
+                    
+                    data.forEach((record, index) => {
+                        const area = getAreaName(record.center_lat, record.center_lng);
+                        html += `${index + 1}. Population: ${record.population.toLocaleString().padStart(6)} | `;
+                        html += `Mesh: ${record.mesh_code} | `;
+                        html += `Location: ${record.center_lat.toFixed(4)}, ${record.center_lng.toFixed(4)} | `;
+                        html += `Area: ${area}\n`;
+                    });
+                    
+                    html += '</pre></div>';
+                    
+                    // Show geographical distribution
+                    const tokyoCount = data.filter(r => r.center_lat > 35.65).length;
+                    const kanagawaCount = data.filter(r => r.center_lat <= 35.65).length;
+                    
+                    html += `<div class="info">
+                        <strong>Geographic Distribution:</strong><br>
+                        🏙️ Tokyo area (lat > 35.65): ${tokyoCount} records<br>
+                        🏘️ Kanagawa area (lat ≤ 35.65): ${kanagawaCount} records<br><br>
+                        <strong>Why mostly Kanagawa?</strong> The map bounds (35.5-35.8) cover more Kanagawa than central Tokyo.
+                        Central Tokyo is around 35.65-35.75 latitude.
+                    </div>`;
+                    
+                } else {
+                    html += '<div class="info">❌ No data found in these bounds</div>';
+                }
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div style="background: #f8d7da; padding: 15px; border-radius: 5px;">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        function getAreaName(lat, lng) {
+            if (lat > 35.7) return 'Tokyo North';
+            if (lat > 35.65) return 'Tokyo Central';
+            if (lat > 35.6) return 'Tokyo South';
+            return 'Kanagawa';
+        }
+        
+        testBounds();
+    </script>
+</body>
+</html>
