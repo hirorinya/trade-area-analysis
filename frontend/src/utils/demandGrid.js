@@ -28,9 +28,14 @@ export async function generateDemandGrid(bounds, meshSize = 250, useRealData = t
   if (useRealData) {
     try {
       // Determine mesh level based on mesh size
-      let meshLevel = 5; // 250m mesh
+      // Note: Database only contains level 4 (500m) data
+      let meshLevel = 4; // Default to 500m mesh (available in database)
       if (meshSize >= 1000) meshLevel = 3; // 1km mesh
       else if (meshSize >= 500) meshLevel = 4; // 500m mesh
+      else if (meshSize < 500) {
+        console.warn('250m mesh (level 5) requested but not available in database, using 500m mesh instead');
+        meshLevel = 4; // Use 500m mesh as fallback
+      }
       
       console.log('Fetching real population data...');
       const realPopulationData = await fetchRealPopulationData(bounds, meshLevel);
