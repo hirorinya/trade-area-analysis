@@ -581,7 +581,8 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5, onProgress 
     const data = allData;
     
     if (!data || data.length === 0) {
-      console.log('No population data found in database for these bounds');
+      console.log(`No population data found in database for bounds: Lat ${bounds.south.toFixed(2)}-${bounds.north.toFixed(2)}, Lng ${bounds.west.toFixed(2)}-${bounds.east.toFixed(2)}`);
+      console.log('💡 This region may not be loaded yet. Current coverage: Tokyo area (35.3-36.2°N, 138.8-140.3°E)');
       return null; // Use fallback simulation
     }
     
