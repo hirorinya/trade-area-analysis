@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { generateDemandGrid, calculateDemandCapture, calculateStorePerformance } from '../../utils/demandGrid';
+import RegionNotice from '../ui/RegionNotice';
 
 interface Location {
   id: string;
@@ -41,6 +42,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const lastLocationsRef = useRef<string>('');
   const prerenderedGridRef = useRef<any>(null);
   const renderingProgressRef = useRef<number>(0);
+  const [regionNotice, setRegionNotice] = useState<any>(null);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -179,8 +181,20 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
 
     try {
       console.log(`📊 Generating demand meshes with ${meshSize}m size...`);
-      const meshes = await generateDemandGrid(gridBounds, meshSize); // Use dynamic mesh size with real data
+      const result = await generateDemandGrid(gridBounds, meshSize); // Use dynamic mesh size with real data
+      
+      // Check if we got a "no data" response
+      if (result && result.noData) {
+        console.log(`❌ No census data available for ${result.region} region`);
+        setRegionNotice(result);
+        return;
+      }
+      
+      const meshes = result;
       console.log(`✅ Generated ${meshes.length} demand meshes`);
+      
+      // Clear any existing region notice
+      setRegionNotice(null);
 
       // Calculate demand capture
       const storeLocations = locations.filter(loc => loc.location_type === 'store');
@@ -306,6 +320,19 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
+      
+      {/* Region Notice for areas without census data */}
+      {regionNotice && (
+        <RegionNotice
+          region={regionNotice.region}
+          bounds={regionNotice.bounds}
+          onLoadData={() => {
+            console.log(`Loading data for ${regionNotice.region} region...`);
+            // Future: trigger loading script for specific region
+            setRegionNotice(null);
+          }}
+        />
+      )}
       
       {/* Map Legend */}
       <div style={{

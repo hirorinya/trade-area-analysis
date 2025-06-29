@@ -72,7 +72,26 @@ export async function generateDemandGrid(bounds, meshSize = 250, useRealData = t
         
         return meshes;
       } else {
-        console.warn('Real population data not available, falling back to simulated data');
+        console.warn('Real population data not available for this region');
+        // Determine region name based on coordinates
+        const centerLat = (bounds.north + bounds.south) / 2;
+        const centerLng = (bounds.east + bounds.west) / 2;
+        
+        let regionName = 'Unknown';
+        if (centerLat >= 43.0) regionName = 'Hokkaido';
+        else if (centerLat >= 40.0) regionName = 'Tohoku';
+        else if (centerLat >= 36.5) regionName = 'Kanto';
+        else if (centerLat >= 34.5) regionName = 'Chubu';
+        else if (centerLat >= 33.0) regionName = 'Kansai';
+        else if (centerLat >= 31.0) regionName = 'Chugoku/Shikoku';
+        else regionName = 'Kyushu/Okinawa';
+        
+        return {
+          noData: true,
+          region: regionName,
+          bounds: bounds,
+          message: `Census data not loaded for ${regionName} region. Currently showing: Tokyo area only.`
+        };
       }
     } catch (error) {
       console.error('Error fetching real population data:', error);

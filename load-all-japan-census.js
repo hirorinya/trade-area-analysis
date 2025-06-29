@@ -60,9 +60,9 @@ function meshCodeToLatLng(meshCode) {
   }
 }
 
-// Process a single census CSV file
-function processCensusFile(csvContent, filename) {
-  const lines = csvContent.split('\n').filter(line => line.trim());
+// Process a single census TXT file
+function processCensusFile(txtContent, filename) {
+  const lines = txtContent.split('\n').filter(line => line.trim());
   const records = [];
   
   console.log(`📄 Processing ${filename}: ${lines.length} lines`);
@@ -121,14 +121,14 @@ async function loadAllJapanCensus() {
       const zip = new AdmZip(filePath);
       const zipEntries = zip.getEntries();
       
-      const csvEntry = zipEntries.find(entry => entry.entryName.endsWith('.csv'));
-      if (!csvEntry) {
-        console.warn(`❌ No CSV found in ${filename}`);
+      const txtEntry = zipEntries.find(entry => entry.entryName.endsWith('.txt'));
+      if (!txtEntry) {
+        console.warn(`❌ No TXT found in ${filename}`);
         continue;
       }
       
-      const csvContent = csvEntry.getData().toString('utf8');
-      const records = processCensusFile(csvContent, filename);
+      const txtContent = txtEntry.getData().toString('utf8');
+      const records = processCensusFile(txtContent, filename);
       
       if (records.length === 0) {
         console.warn(`❌ No valid records in ${filename}`);
