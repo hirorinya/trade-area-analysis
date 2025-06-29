@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Mesh Levels in Database</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .result { padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #f4f4f4; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Check Actual Mesh Levels in Database</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function checkMeshLevels() {
+            const resultsDiv = document.getElementById('results');
+            const supabaseUrl = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
+            
+            resultsDiv.innerHTML = '<div class="result info">🔄 Checking mesh levels in database...</div>';
+            
+            try {
+                // Get distinct mesh levels
+                const response1 = await fetch(`${supabaseUrl}/rest/v1/population_mesh?select=mesh_level&limit=1000`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+                
+                const data = await response1.json();
+                const meshLevels = [...new Set(data.map(r => r.mesh_level))].sort();
+                
+                let html = `<div class="result success">✅ Found mesh levels: ${meshLevels.join(', ')}</div>`;
+                
+                // Count records per mesh level
+                html += '<table><tr><th>Mesh Level</th><th>Description</th><th>Record Count</th><th>Sample Mesh Codes</th></tr>';
+                
+                for (const level of meshLevels) {
+                    const countResponse = await fetch(`${supabaseUrl}/rest/v1/population_mesh?mesh_level=eq.${level}&select=count`, {
+                        headers: {
+                            'apikey': supabaseKey,
+                            'Authorization': `Bearer ${supabaseKey}`,
+                            'Range': '0-0',
+                            'Prefer': 'count=exact'
+                        }
+                    });
+                    
+                    const countHeader = countResponse.headers.get('content-range');
+                    const count = countHeader ? countHeader.split('/')[1] : '0';
+                    
+                    // Get sample mesh codes
+                    const sampleResponse = await fetch(`${supabaseUrl}/rest/v1/population_mesh?mesh_level=eq.${level}&select=mesh_code&limit=3`, {
+                        headers: {
+                            'apikey': supabaseKey,
+                            'Authorization': `Bearer ${supabaseKey}`
+                        }
+                    });
+                    const samples = await sampleResponse.json();
+                    const sampleCodes = samples.map(s => s.mesh_code).join(', ');
+                    
+                    const description = level === 3 ? '1km mesh' : 
+                                      level === 4 ? '500m mesh' : 
+                                      level === 5 ? '250m mesh' : 
+                                      `Level ${level}`;
+                    
+                    html += `<tr>
+                        <td>${level}</td>
+                        <td>${description}</td>
+                        <td>${count}</td>
+                        <td>${sampleCodes}</td>
+                    </tr>`;
+                }
+                
+                html += '</table>';
+                
+                // Test the exact query the app uses
+                html += '<h2>🧪 Testing App Query (mesh_level=4, Tokyo bounds)</h2>';
+                
+                const bounds = {
+                    north: 35.8,
+                    south: 35.5,
+                    east: 140.1,
+                    west: 139.3
+                };
+                
+                const appQuery = `${supabaseUrl}/rest/v1/population_mesh?` +
+                    `select=mesh_code,center_lat,center_lng,population,mesh_level&` +
+                    `mesh_level=eq.4&` +
+                    `center_lat=gte.${bounds.south}&` +
+                    `center_lat=lte.${bounds.north}&` +
+                    `center_lng=gte.${bounds.west}&` +
+                    `center_lng=lte.${bounds.east}&` +
+                    `population=gt.0`;
+                
+                const appResponse = await fetch(appQuery, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+                
+                const appData = await appResponse.json();
+                
+                html += `<div class="result ${appData.length > 0 ? 'success' : 'error'}">`;
+                html += `Query returned: ${appData.length} records<br>`;
+                if (appData.length > 0) {
+                    html += `Sample: Mesh ${appData[0].mesh_code}, Pop: ${appData[0].population}, Level: ${appData[0].mesh_level}`;
+                }
+                html += '</div>';
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="result error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        checkMeshLevels();
+    </script>
+</body>
+</html>
