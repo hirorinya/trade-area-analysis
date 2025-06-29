@@ -271,6 +271,15 @@ function App() {
         return;
       }
       
+      // Handle demo mode - use local storage instead of Supabase
+      if (user.id.startsWith('demo-')) {
+        console.log('🧪 Demo mode - loading projects from localStorage');
+        const demoProjects = JSON.parse(localStorage.getItem('demo-projects') || '[]');
+        console.log('✅ Demo projects loaded:', demoProjects.length, 'projects');
+        setProjects(demoProjects);
+        return;
+      }
+      
       console.log('📂 Loading projects for user:', user.id);
       const { data, error } = await db.getProjects(user.id);
       
@@ -293,6 +302,26 @@ function App() {
     try {
       if (!user?.id) {
         throw new Error('User not authenticated');
+      }
+      
+      // Handle demo mode - create project locally without Supabase
+      if (user.id.startsWith('demo-')) {
+        console.log('🧪 Demo mode - creating project locally');
+        const demoProject = {
+          id: 'project-' + Date.now(),
+          name: formData.get('name'),
+          description: formData.get('description') || '',
+          user_id: user.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        const demoProjects = JSON.parse(localStorage.getItem('demo-projects') || '[]');
+        demoProjects.unshift(demoProject);
+        localStorage.setItem('demo-projects', JSON.stringify(demoProjects));
+        setProjects(demoProjects);
+        setMessage('Demo project created successfully!');
+        e.target.reset();
+        return;
       }
       
       const { data, error } = await db.createProject(user.id, {
