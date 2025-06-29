@@ -498,33 +498,66 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
     
     console.log(`Fetching population data from database for mesh level ${meshLevel}`);
     
-    // Try direct REST API call to bypass any JS SDK limits
+    // Use pagination to get ALL data (7,093 records total)
     const supabaseUrl = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
     
-    const url = `${supabaseUrl}/rest/v1/population_mesh?` +
+    const baseUrl = `${supabaseUrl}/rest/v1/population_mesh?` +
       `select=mesh_code,center_lat,center_lng,population,mesh_level&` +
       `mesh_level=eq.${meshLevel}&` +
       `center_lat=gte.${bounds.south}&` +
       `center_lat=lte.${bounds.north}&` +
       `center_lng=gte.${bounds.west}&` +
       `center_lng=lte.${bounds.east}&` +
-      `population=gt.0`;
+      `population=gt.0&` +
+      `order=mesh_code.asc`; // Order for consistent pagination
     
-    const response = await fetch(url, {
-      headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Range': '0-9999', // Use Range header to get 10,000 records
-        'Prefer': 'return=representation'
+    const allData = [];
+    let offset = 0;
+    const pageSize = 1000; // Use the maximum allowed per request
+    
+    console.log('🔄 Fetching all data using pagination...');
+    
+    while (true) {
+      const response = await fetch(baseUrl, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Range': `${offset}-${offset + pageSize - 1}`, // e.g., 0-999, 1000-1999, etc.
+          'Prefer': 'return=representation'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      
+      const pageData = await response.json();
+      
+      if (!pageData || pageData.length === 0) {
+        console.log(`📄 Page ${Math.floor(offset/pageSize) + 1}: No more data`);
+        break; // No more data
+      }
+      
+      allData.push(...pageData);
+      console.log(`📄 Page ${Math.floor(offset/pageSize) + 1}: Retrieved ${pageData.length} records (total: ${allData.length})`);
+      
+      // If we got less than a full page, we're done
+      if (pageData.length < pageSize) {
+        console.log(`✅ Reached end of data (got ${pageData.length} < ${pageSize})`);
+        break;
+      }
+      
+      offset += pageSize;
+      
+      // Safety check to prevent infinite loops
+      if (offset > 20000) {
+        console.warn('⚠️ Safety limit reached, stopping pagination');
+        break;
+      }
     }
     
-    const data = await response.json();
+    const data = allData;
     
     if (!data || data.length === 0) {
       console.log('No population data found in database for these bounds');
