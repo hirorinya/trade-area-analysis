@@ -8,6 +8,7 @@ import LeafletMap from './components/map/LeafletMap';
 import AIAnalysisChat from './components/ai/AIAnalysisChat';
 import OptimizationPanel from './components/analysis/OptimizationPanel';
 import ModernLoginForm from './components/auth/ModernLoginForm';
+import LoadingOverlay from './components/ui/LoadingOverlay';
 import Button from './components/ui/Button';
 import Input from './components/ui/Input';
 
@@ -127,6 +128,8 @@ function App() {
   const [formCoordinates, setFormCoordinates] = useState({ lat: '', lng: '' });
   const [currentAddress, setCurrentAddress] = useState('');
   const [analysisRecommendations, setAnalysisRecommendations] = useState('');
+  const [isLoadingPopulation, setIsLoadingPopulation] = useState(false);
+  const [populationProgress, setPopulationProgress] = useState(null);
 
   // Helper function to change view and persist to localStorage
   const changeView = (newView) => {
@@ -1527,6 +1530,20 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     demandMeshesRef.current = analysis.meshes || [];
     setDemandDataReady(analysis.meshes && analysis.meshes.length > 0);
     console.log('Demand analysis updated:', analysis);
+  }, []);
+
+  // Handle population loading progress
+  const handlePopulationProgress = useCallback((progress) => {
+    setIsLoadingPopulation(true);
+    setPopulationProgress(progress);
+    
+    // Hide loading when complete
+    if (progress.percentage >= 100) {
+      setTimeout(() => {
+        setIsLoadingPopulation(false);
+        setPopulationProgress(null);
+      }, 1000); // Show complete state for 1 second
+    }
   }, []);
 
   // Get current map bounds for optimization
@@ -3828,8 +3845,14 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
               ...mapContainerStyle,
               flex: showAIChat ? '1' : '1', 
               height: '600px',
-              minHeight: '500px'
+              minHeight: '500px',
+              position: 'relative' // For loading overlay positioning
             }}>
+              <LoadingOverlay 
+                isLoading={isLoadingPopulation}
+                progress={populationProgress}
+                position="top-right"
+              />
               {useMapbox ? (
                 <MapboxMap
                   locations={[
@@ -3863,6 +3886,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                   meshSize={meshSize}
                   catchmentRadius={catchmentRadius}
                   onDemandAnalysis={handleDemandAnalysis}
+                  onPopulationProgress={handlePopulationProgress}
                 />
               ) : (
                 <LeafletMap
@@ -3887,6 +3911,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                   meshSize={meshSize}
                   catchmentRadius={catchmentRadius}
                   onDemandAnalysis={handleDemandAnalysis}
+                  onPopulationProgress={handlePopulationProgress}
                 />
               )}
             </div>
