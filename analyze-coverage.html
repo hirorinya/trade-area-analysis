@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Census Data Coverage Analysis</title>
+    <style>
+        body { font-family: Arial; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .analysis-section { background: white; margin: 20px 0; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-card { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }
+        .stat-number { font-size: 24px; font-weight: bold; color: #007bff; }
+        .coverage-map { width: 100%; height: 400px; border: 1px solid #ddd; border-radius: 8px; margin: 20px 0; }
+        .recommendation { background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
+        .data-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .data-table th, .data-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .data-table th { background: #f8f9fa; }
+        .density-high { background-color: #ff4444; color: white; }
+        .density-medium { background-color: #ff8844; color: white; }
+        .density-low { background-color: #44ff44; color: black; }
+    </style>
+</head>
+<body>
+    <h1>📊 Census Data Coverage Analysis</h1>
+    <p><em>Analyzing 32,173+ records to optimize for trade area analysis</em></p>
+    
+    <div class="analysis-section">
+        <h2>🗺️ Geographic Coverage Overview</h2>
+        <div id="coverage-stats" class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="total-records">Loading...</div>
+                <div>Total Records</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="lat-range">Loading...</div>
+                <div>Latitude Range</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="lng-range">Loading...</div>
+                <div>Longitude Range</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="density-areas">Loading...</div>
+                <div>High Density Areas</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="analysis-section">
+        <h2>🏙️ Regional Distribution</h2>
+        <table class="data-table" id="regional-table">
+            <thead>
+                <tr>
+                    <th>Region</th>
+                    <th>Lat Range</th>
+                    <th>Lng Range</th>
+                    <th>Record Count</th>
+                    <th>Avg Population</th>
+                    <th>Max Population</th>
+                    <th>Business Viability</th>
+                </tr>
+            </thead>
+            <tbody id="regional-data">
+                <tr><td colspan="7">Loading regional analysis...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="analysis-section">
+        <h2>🎯 Recommendations for Perfect Tool</h2>
+        <div id="recommendations">
+            <div class="recommendation">
+                <strong>📍 Optimal Coverage Strategy:</strong> Loading analysis...
+            </div>
+        </div>
+    </div>
+
+    <div class="analysis-section">
+        <h2>📈 Population Density Heatmap Data</h2>
+        <div id="density-analysis">Loading density analysis...</div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
+
+        async function analyzeCoverage() {
+            try {
+                // Get overall statistics
+                const statsResponse = await fetch(`${supabaseUrl}/rest/v1/population_mesh?select=center_lat,center_lng,population&order=population.desc&limit=5000`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+                
+                const allData = await statsResponse.json();
+                
+                // Calculate coverage statistics
+                const latitudes = allData.map(r => r.center_lat);
+                const longitudes = allData.map(r => r.center_lng);
+                const populations = allData.map(r => r.population);
+                
+                const minLat = Math.min(...latitudes);
+                const maxLat = Math.max(...latitudes);
+                const minLng = Math.min(...longitudes);
+                const maxLng = Math.max(...longitudes);
+                
+                document.getElementById('total-records').textContent = allData.length.toLocaleString();
+                document.getElementById('lat-range').textContent = `${minLat.toFixed(3)} - ${maxLat.toFixed(3)}`;
+                document.getElementById('lng-range').textContent = `${minLng.toFixed(3)} - ${maxLng.toFixed(3)}`;
+                document.getElementById('density-areas').textContent = populations.filter(p => p > 10000).length;
+                
+                // Regional analysis
+                const regions = [
+                    { name: 'Tokyo Central (Chiyoda, Chuo, Minato)', latMin: 35.65, latMax: 35.70, lngMin: 139.70, lngMax: 139.80 },
+                    { name: 'Tokyo East (Sumida, Koto, Taito)', latMin: 35.68, latMax: 35.73, lngMin: 139.78, lngMax: 139.85 },
+                    { name: 'Tokyo West (Shibuya, Shinjuku, Setagaya)', latMin: 35.66, latMax: 35.71, lngMin: 139.65, lngMax: 139.75 },
+                    { name: 'Tokyo South (Shinagawa, Ota)', latMin: 35.58, latMax: 35.66, lngMin: 139.70, lngMax: 139.78 },
+                    { name: 'Kanagawa North (Kawasaki)', latMin: 35.52, latMax: 35.60, lngMin: 139.68, lngMax: 139.75 },
+                    { name: 'Kanagawa Central (Yokohama)', latMin: 35.43, latMax: 35.52, lngMin: 139.60, lngMax: 139.70 }
+                ];
+                
+                let regionalHtml = '';
+                let recommendations = '';
+                let bestRegion = null;
+                let maxBusinessScore = 0;
+                
+                for (const region of regions) {
+                    const regionData = allData.filter(r => 
+                        r.center_lat >= region.latMin && r.center_lat <= region.latMax &&
+                        r.center_lng >= region.lngMin && r.center_lng <= region.lngMax
+                    );
+                    
+                    if (regionData.length > 0) {
+                        const avgPop = regionData.reduce((sum, r) => sum + r.population, 0) / regionData.length;
+                        const maxPop = Math.max(...regionData.map(r => r.population));
+                        const businessScore = regionData.length * (avgPop / 1000) * (maxPop / 10000);
+                        
+                        if (businessScore > maxBusinessScore) {
+                            maxBusinessScore = businessScore;
+                            bestRegion = region;
+                        }
+                        
+                        const viability = businessScore > 50 ? 'Excellent' : businessScore > 20 ? 'Good' : businessScore > 5 ? 'Fair' : 'Limited';
+                        const viabilityClass = businessScore > 50 ? 'density-high' : businessScore > 20 ? 'density-medium' : 'density-low';
+                        
+                        regionalHtml += `
+                            <tr>
+                                <td><strong>${region.name}</strong></td>
+                                <td>${region.latMin} - ${region.latMax}</td>
+                                <td>${region.lngMin} - ${region.lngMax}</td>
+                                <td>${regionData.length}</td>
+                                <td>${Math.round(avgPop).toLocaleString()}</td>
+                                <td>${maxPop.toLocaleString()}</td>
+                                <td class="${viabilityClass}">${viability}</td>
+                            </tr>
+                        `;
+                    } else {
+                        regionalHtml += `
+                            <tr>
+                                <td>${region.name}</td>
+                                <td>${region.latMin} - ${region.latMax}</td>
+                                <td>${region.lngMin} - ${region.lngMax}</td>
+                                <td>0</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td class="density-low">No Data</td>
+                            </tr>
+                        `;
+                    }
+                }
+                
+                document.getElementById('regional-data').innerHTML = regionalHtml;
+                
+                // Generate recommendations
+                if (bestRegion) {
+                    recommendations = `
+                        <div class="recommendation">
+                            <strong>🎯 Optimal Focus Area:</strong> ${bestRegion.name}<br>
+                            <strong>Recommended Bounds:</strong> Lat ${bestRegion.latMin}-${bestRegion.latMax}, Lng ${bestRegion.lngMin}-${bestRegion.lngMax}<br>
+                            <strong>Why:</strong> Highest data density and business viability score
+                        </div>
+                        <div class="recommendation">
+                            <strong>📊 Strategy for Perfect Tool:</strong><br>
+                            1. Focus on 2-3 highest-scoring regions for dense coverage<br>
+                            2. Use 500m mesh for detailed analysis in business districts<br>
+                            3. Add 1km mesh for broader suburban coverage<br>
+                            4. Implement dynamic zoom-based mesh resolution
+                        </div>
+                        <div class="warning">
+                            <strong>⚠️ Current Issue:</strong> Data is too spread out geographically. 
+                            Focusing on specific metropolitan areas will provide better user experience.
+                        </div>
+                    `;
+                } else {
+                    recommendations = `
+                        <div class="warning">
+                            <strong>⚠️ Coverage Analysis:</strong> Data appears to be scattered. 
+                            Consider focusing on specific business districts for optimal trade area analysis.
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('recommendations').innerHTML = recommendations;
+                
+                // Density analysis
+                const densityHtml = `
+                    <h3>Population Density Distribution:</h3>
+                    <ul>
+                        <li><strong>Ultra High (>15,000):</strong> ${populations.filter(p => p > 15000).length} areas</li>
+                        <li><strong>High (10,000-15,000):</strong> ${populations.filter(p => p >= 10000 && p <= 15000).length} areas</li>
+                        <li><strong>Medium (5,000-10,000):</strong> ${populations.filter(p => p >= 5000 && p < 10000).length} areas</li>
+                        <li><strong>Low (1,000-5,000):</strong> ${populations.filter(p => p >= 1000 && p < 5000).length} areas</li>
+                        <li><strong>Very Low (<1,000):</strong> ${populations.filter(p => p < 1000).length} areas</li>
+                    </ul>
+                    <p><strong>Recommendation:</strong> Focus map display on areas with >5,000 population for retail analysis.</p>
+                `;
+                
+                document.getElementById('density-analysis').innerHTML = densityHtml;
+                
+            } catch (error) {
+                console.error('Analysis error:', error);
+                document.getElementById('recommendations').innerHTML = `
+                    <div class="warning">
+                        <strong>❌ Analysis Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        analyzeCoverage();
+    </script>
+</body>
+</html>
