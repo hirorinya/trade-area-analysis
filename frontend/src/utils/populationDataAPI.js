@@ -489,6 +489,9 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5, onProgress 
   const cached = populationCache.get(bounds, meshLevel);
   if (cached) {
     console.log('Using cached population data from database');
+    if (onProgress) {
+      onProgress({ loaded: cached.length, total: cached.length, percentage: 100, fromCache: true });
+    }
     return cached;
   }
   

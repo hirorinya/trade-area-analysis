@@ -2521,27 +2521,29 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
               }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '12px', color: theme.colors.gray[600], display: 'block', marginBottom: '4px' }}>
-                    Mesh Size: {meshSize}m
+                    Mesh Size: {meshSize}m {meshSize !== 500 && '(→500m)'}
                   </label>
-                  <input
-                    type="range"
-                    min="250"
-                    max="1000"
-                    step="50"
+                  <select
                     value={meshSize}
                     onChange={(e) => setMeshSize(Number(e.target.value))}
                     style={{
                       width: '100%',
-                      height: '6px',
-                      background: '#e5e7eb',
-                      borderRadius: '3px',
-                      outline: 'none',
+                      padding: '8px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      backgroundColor: 'white',
                       cursor: 'pointer'
                     }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: theme.colors.gray[500], marginTop: '2px' }}>
-                    <span>250m</span>
-                    <span>1000m</span>
+                  >
+                    <option value="250" disabled>250m (Not available)</option>
+                    <option value="500">500m ✓ (Available)</option>
+                    <option value="600" disabled>600m (Not standard)</option>
+                    <option value="750" disabled>750m (Not standard)</option>
+                    <option value="1000" disabled>1000m (Not loaded yet)</option>
+                  </select>
+                  <div style={{ fontSize: '11px', color: theme.colors.gray[500], marginTop: '4px' }}>
+                    Japan Statistics Bureau provides: 250m, 500m, 1000m only
                   </div>
                 </div>
                 
