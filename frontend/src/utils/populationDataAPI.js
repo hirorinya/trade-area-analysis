@@ -499,6 +499,7 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
     console.log(`Fetching population data from database for mesh level ${meshLevel}`);
     
     // Query population mesh data within bounds
+    // Use range instead of limit to bypass default pagination
     const { data, error } = await supabase
       .from('population_mesh')
       .select('mesh_code, center_lat, center_lng, population, mesh_level')
@@ -508,7 +509,7 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
       .gte('center_lng', bounds.west)
       .lte('center_lng', bounds.east)
       .gt('population', 0)
-      .limit(50000); // Get up to 50,000 meshes to load all available data
+      .range(0, 9999); // Get up to 10,000 records (0-based indexing)
     
     if (error) {
       console.warn('Database query error:', error);
