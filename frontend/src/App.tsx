@@ -1948,6 +1948,12 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
         const demoToken = localStorage.getItem('token');
         const demoUser = localStorage.getItem('user');
         
+        console.log('🔍 Demo session check:', {
+          demoToken: demoToken ? demoToken.substring(0, 20) + '...' : 'null',
+          demoUser: demoUser ? 'found' : 'null',
+          isDemo: demoToken && demoToken.startsWith('demo-token-')
+        });
+        
         if (demoToken && demoToken.startsWith('demo-token-') && demoUser) {
           console.log('🧪 Demo session found, bypassing Supabase auth');
           const parsedUser = JSON.parse(demoUser);
