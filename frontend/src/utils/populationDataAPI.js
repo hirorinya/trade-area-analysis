@@ -551,7 +551,7 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
       offset += pageSize;
       
       // Safety check to prevent infinite loops
-      if (offset > 20000) {
+      if (offset > 40000) {
         console.warn('⚠️ Safety limit reached, stopping pagination');
         break;
       }
