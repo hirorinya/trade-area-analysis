@@ -507,7 +507,8 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
       .lte('center_lat', bounds.north)
       .gte('center_lng', bounds.west)
       .lte('center_lng', bounds.east)
-      .gt('population', 0); // Only get meshes with population data
+      .gt('population', 0)
+      .limit(50000); // Get up to 50,000 meshes to load all available data
     
     if (error) {
       console.warn('Database query error:', error);

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Total Mesh in Current Bounds</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .result { padding: 15px; margin: 10px 0; border-radius: 5px; background: #f8f9fa; }
+        .big-number { font-size: 32px; font-weight: bold; color: #007bff; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Check Total Mesh Records in App Bounds</h1>
+    <div id="results">Loading...</div>
+    
+    <script>
+        async function checkMeshInBounds() {
+            const resultsDiv = document.getElementById('results');
+            const supabaseUrl = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
+            
+            try {
+                // Check app bounds (from getCurrentMapBounds)
+                const bounds = {
+                    north: 35.8,
+                    south: 35.5,
+                    east: 140.1,
+                    west: 139.3
+                };
+                
+                // Count with same query as app uses
+                const countResponse = await fetch(
+                    `${supabaseUrl}/rest/v1/population_mesh?` +
+                    `mesh_level=eq.4&` +
+                    `center_lat=gte.${bounds.south}&` +
+                    `center_lat=lte.${bounds.north}&` +
+                    `center_lng=gte.${bounds.west}&` +
+                    `center_lng=lte.${bounds.east}&` +
+                    `population=gt.0&` +
+                    `select=count`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Range': '0-0',
+                        'Prefer': 'count=exact'
+                    }
+                });
+                
+                const countHeader = countResponse.headers.get('content-range');
+                const totalCount = countHeader ? countHeader.split('/')[1] : '0';
+                
+                // Check how many we get with different limits
+                const limits = [1000, 10000, 50000];
+                let results = `<div class="result">
+                    <h2>📊 Total Records in App Bounds</h2>
+                    <div class="big-number">${parseInt(totalCount).toLocaleString()}</div>
+                    <p>Total records with population > 0 in bounds: Lat ${bounds.south}-${bounds.north}, Lng ${bounds.west}-${bounds.east}</p>
+                </div>`;
+                
+                for (const limit of limits) {
+                    const testResponse = await fetch(
+                        `${supabaseUrl}/rest/v1/population_mesh?` +
+                        `mesh_level=eq.4&` +
+                        `center_lat=gte.${bounds.south}&` +
+                        `center_lat=lte.${bounds.north}&` +
+                        `center_lng=gte.${bounds.west}&` +
+                        `center_lng=lte.${bounds.east}&` +
+                        `population=gt.0&` +
+                        `limit=${limit}&` +
+                        `select=mesh_code`, {
+                        headers: {
+                            'apikey': supabaseKey,
+                            'Authorization': `Bearer ${supabaseKey}`
+                        }
+                    });
+                    
+                    const testData = await testResponse.json();
+                    const retrieved = testData.length;
+                    
+                    results += `<div class="result">
+                        <h3>Limit ${limit.toLocaleString()}</h3>
+                        <p><strong>Retrieved:</strong> ${retrieved.toLocaleString()} records</p>
+                        <p><strong>Status:</strong> ${retrieved === parseInt(totalCount) ? '✅ Got all data' : retrieved === limit ? '⚠️ Hit limit, may be missing data' : '✅ Within limit'}</p>
+                    </div>`;
+                }
+                
+                results += `<div class="result">
+                    <h3>💡 Recommendation</h3>
+                    <p>To get all ${parseInt(totalCount).toLocaleString()} records, set limit to at least ${Math.ceil(parseInt(totalCount) * 1.1).toLocaleString()}</p>
+                </div>`;
+                
+                resultsDiv.innerHTML = results;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="result" style="background: #f8d7da; color: #721c24;">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        checkMeshInBounds();
+    </script>
+</body>
+</html>
