@@ -1943,6 +1943,20 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     const checkSession = async () => {
       try {
         console.log('🔍 Checking existing session...');
+        
+        // Check for demo/test mode first
+        if (window.location.search.includes('access=granted') || localStorage.getItem('token')?.startsWith('demo-token-')) {
+          console.log('🧪 Demo mode detected - bypassing auth check');
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            setUser(JSON.parse(storedUser));
+            setToken(localStorage.getItem('token'));
+            changeView('dashboard');
+            setIsInitialLoad(false);
+            return;
+          }
+        }
+        
         const result = await auth.getSession();
         
         // Handle case where result might be undefined
