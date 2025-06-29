@@ -90,11 +90,14 @@
             // Force the app to authenticated state
             localStorage.clear();
             
+            // Generate proper UUID for demo user
+            const demoUserId = 'demo-' + crypto.randomUUID();
+            
             // Set authenticated session
             localStorage.setItem('currentView', 'dashboard');
             localStorage.setItem('token', 'demo-token-' + Date.now());
             localStorage.setItem('user', JSON.stringify({
-                id: 'demo-user-' + Date.now(),
+                id: demoUserId,
                 email: 'demo@trade-area.app',
                 first_name: 'Demo',
                 last_name: 'User',
