@@ -498,23 +498,33 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
     
     console.log(`Fetching population data from database for mesh level ${meshLevel}`);
     
-    // Query population mesh data within bounds
-    // Use range instead of limit to bypass default pagination
-    const { data, error } = await supabase
-      .from('population_mesh')
-      .select('mesh_code, center_lat, center_lng, population, mesh_level')
-      .eq('mesh_level', meshLevel)
-      .gte('center_lat', bounds.south)
-      .lte('center_lat', bounds.north)
-      .gte('center_lng', bounds.west)
-      .lte('center_lng', bounds.east)
-      .gt('population', 0)
-      .range(0, 9999); // Get up to 10,000 records (0-based indexing)
+    // Try direct REST API call to bypass any JS SDK limits
+    const supabaseUrl = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
     
-    if (error) {
-      console.warn('Database query error:', error);
-      return null; // Use fallback simulation
+    const url = `${supabaseUrl}/rest/v1/population_mesh?` +
+      `select=mesh_code,center_lat,center_lng,population,mesh_level&` +
+      `mesh_level=eq.${meshLevel}&` +
+      `center_lat=gte.${bounds.south}&` +
+      `center_lat=lte.${bounds.north}&` +
+      `center_lng=gte.${bounds.west}&` +
+      `center_lng=lte.${bounds.east}&` +
+      `population=gt.0`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Range': '0-9999', // Use Range header to get 10,000 records
+        'Prefer': 'return=representation'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
+    
+    const data = await response.json();
     
     if (!data || data.length === 0) {
       console.log('No population data found in database for these bounds');
