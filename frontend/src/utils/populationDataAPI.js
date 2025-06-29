@@ -499,6 +499,7 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
     console.log(`Fetching population data from database for mesh level ${meshLevel}`);
     
     // Query population mesh data within bounds
+    // Note: Supabase defaults to 1000 rows, we need to explicitly set higher limit
     const { data, error } = await supabase
       .from('population_mesh')
       .select('mesh_code, center_lat, center_lng, population, mesh_level')
@@ -507,7 +508,8 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
       .lte('center_lat', bounds.north)
       .gte('center_lng', bounds.west)
       .lte('center_lng', bounds.east)
-      .gt('population', 0); // Only get meshes with population data
+      .gt('population', 0)
+      .limit(10000); // Get up to 10,000 meshes instead of default 1000
     
     if (error) {
       console.warn('Database query error:', error);
