@@ -1,0 +1,35 @@
+{
+  "optimalBounds": {
+    "tokyoMetro": {
+      "name": "Tokyo Metropolitan Area",
+      "description": "Optimal coverage for retail analysis",
+      "bounds": {
+        "north": 35.75,
+        "south": 35.55,
+        "east": 139.85,
+        "west": 139.65
+      },
+      "expectedMeshCells": "~3,000-5,000",
+      "keyAreas": ["Shibuya", "Shinjuku", "Ginza", "Tokyo Station", "Shinagawa"]
+    },
+    "yokohamaCore": {
+      "name": "Yokohama Business District",
+      "description": "Secondary market area",
+      "bounds": {
+        "north": 35.50,
+        "south": 35.40,
+        "east": 139.70,
+        "west": 139.60
+      },
+      "expectedMeshCells": "~1,000-2,000",
+      "keyAreas": ["Yokohama Station", "Minato Mirai", "Kannai"]
+    }
+  },
+  "displayStrategy": {
+    "zoomLevel10-12": "Show only cells with >3,000 population",
+    "zoomLevel13-14": "Show cells with >1,000 population",
+    "zoomLevel15+": "Show all cells with >100 population",
+    "hideEmpty": true,
+    "emphasizeCommercial": true
+  }
+}
