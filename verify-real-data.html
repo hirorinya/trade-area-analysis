@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify Real Data vs Display</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: Arial; margin: 0; padding: 0; }
+        .container { display: flex; height: 100vh; }
+        .sidebar { width: 400px; padding: 20px; overflow-y: auto; background: #f8f9fa; }
+        #map { flex: 1; }
+        .data-point { padding: 8px; margin: 4px 0; background: white; border-radius: 4px; font-size: 12px; }
+        .high-pop { border-left: 4px solid #ff0000; }
+        .med-pop { border-left: 4px solid #ff8800; }
+        .low-pop { border-left: 4px solid #00ff00; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>🔍 Real Census Data Verification</h2>
+            <div id="status">Loading...</div>
+            <h3>📊 Data Points</h3>
+            <div id="dataList"></div>
+        </div>
+        <div id="map"></div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([35.65, 139.7], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        
+        // Add reference markers
+        const landmarks = [
+            { name: 'Imperial Palace', lat: 35.685, lng: 139.753, color: 'purple' },
+            { name: 'Tokyo Bay', lat: 35.60, lng: 139.85, color: 'blue' },
+            { name: 'Shibuya', lat: 35.6595, lng: 139.7006, color: 'red' },
+            { name: 'Shinjuku', lat: 35.6896, lng: 139.6917, color: 'red' }
+        ];
+        
+        landmarks.forEach(l => {
+            L.circleMarker([l.lat, l.lng], {
+                radius: 10,
+                fillColor: l.color,
+                color: 'black',
+                weight: 2,
+                fillOpacity: 0.5
+            }).addTo(map).bindPopup(l.name);
+        });
+        
+        async function verifyData() {
+            const statusDiv = document.getElementById('status');
+            const listDiv = document.getElementById('dataList');
+            
+            const supabaseUrl = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
+            
+            try {
+                // Use exact same query as the app
+                const bounds = {
+                    north: 35.8,
+                    south: 35.5,
+                    east: 140.1,
+                    west: 139.3
+                };
+                
+                const url = `${supabaseUrl}/rest/v1/population_mesh?` +
+                    `select=mesh_code,center_lat,center_lng,population,mesh_level&` +
+                    `mesh_level=eq.4&` +
+                    `center_lat=gte.${bounds.south}&` +
+                    `center_lat=lte.${bounds.north}&` +
+                    `center_lng=gte.${bounds.west}&` +
+                    `center_lng=lte.${bounds.east}&` +
+                    `population=gt.0&` +
+                    `order=population.desc&` +
+                    `limit=1000`;
+                
+                statusDiv.innerHTML = '🔄 Fetching data with app parameters...';
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                statusDiv.innerHTML = `✅ Retrieved ${data.length} records (same as app logs!)`;
+                
+                // Analyze pattern
+                let imperialPalaceCount = 0;
+                let tokyoBayCount = 0;
+                let shibuya500mCount = 0;
+                
+                // Map all points
+                data.forEach((record, index) => {
+                    // Check Imperial Palace (should be 0)
+                    if (record.center_lat >= 35.68 && record.center_lat <= 35.69 &&
+                        record.center_lng >= 139.75 && record.center_lng <= 139.76) {
+                        imperialPalaceCount++;
+                    }
+                    
+                    // Check Tokyo Bay (should be 0)
+                    if (record.center_lat <= 35.62 && record.center_lng >= 139.82) {
+                        tokyoBayCount++;
+                    }
+                    
+                    // Check near Shibuya
+                    const distToShibuya = getDistance(record.center_lat, record.center_lng, 35.6595, 139.7006);
+                    if (distToShibuya < 0.5) shibuya500mCount++;
+                    
+                    // Add to map (limit to avoid performance issues)
+                    if (index < 500) {
+                        const color = record.population > 10000 ? '#ff0000' :
+                                    record.population > 5000 ? '#ff8800' :
+                                    record.population > 1000 ? '#ffff00' : '#00ff00';
+                        
+                        L.circleMarker([record.center_lat, record.center_lng], {
+                            radius: 3,
+                            fillColor: color,
+                            color: 'black',
+                            weight: 0.5,
+                            fillOpacity: 0.6
+                        }).addTo(map).bindPopup(`
+                            Mesh: ${record.mesh_code}<br>
+                            Pop: ${record.population}<br>
+                            Level: ${record.mesh_level}
+                        `);
+                    }
+                });
+                
+                // Show first 20 records
+                let listHtml = '';
+                data.slice(0, 20).forEach(record => {
+                    const popClass = record.population > 10000 ? 'high-pop' :
+                                   record.population > 5000 ? 'med-pop' : 'low-pop';
+                    listHtml += `
+                        <div class="data-point ${popClass}">
+                            <strong>${record.mesh_code}</strong><br>
+                            Pop: ${record.population} | Lat: ${record.center_lat.toFixed(4)} | Lng: ${record.center_lng.toFixed(4)}
+                        </div>
+                    `;
+                });
+                listDiv.innerHTML = listHtml;
+                
+                // Analysis results
+                statusDiv.innerHTML += `
+                    <div style="margin-top: 20px; padding: 15px; background: ${imperialPalaceCount > 0 || tokyoBayCount > 0 ? '#f8d7da' : '#d4edda'}; border-radius: 5px;">
+                        <h3>📊 Data Pattern Analysis:</h3>
+                        <p><strong>Imperial Palace meshes:</strong> ${imperialPalaceCount} ${imperialPalaceCount > 0 ? '❌ SIMULATED DATA!' : '✅ Real census'}</p>
+                        <p><strong>Tokyo Bay meshes:</strong> ${tokyoBayCount} ${tokyoBayCount > 0 ? '❌ SIMULATED DATA!' : '✅ Real census'}</p>
+                        <p><strong>Near Shibuya (500m):</strong> ${shibuya500mCount} meshes</p>
+                        <p><strong>Verdict:</strong> ${imperialPalaceCount === 0 && tokyoBayCount === 0 ? '✅ This is REAL census data!' : '❌ This appears to be SIMULATED data'}</p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                statusDiv.innerHTML = `❌ Error: ${error.message}`;
+            }
+        }
+        
+        function getDistance(lat1, lng1, lat2, lng2) {
+            const dLat = Math.abs(lat2 - lat1);
+            const dLng = Math.abs(lng2 - lng1);
+            return Math.sqrt(dLat * dLat + dLng * dLng);
+        }
+        
+        verifyData();
+    </script>
+</body>
+</html>
