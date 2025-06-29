@@ -475,7 +475,7 @@ function getMeshAreaCode(bounds, meshLevel) {
  * @param {number} meshLevel - Mesh level (3, 4, or 5)
  * @returns {Promise<Array>} Array of population data by mesh
  */
-export async function fetchRealPopulationData(bounds, meshLevel = 5) {
+export async function fetchRealPopulationData(bounds, meshLevel = 5, onProgress = null) {
   // Validate bounds
   if (!bounds || typeof bounds !== 'object') {
     throw new Error('Invalid bounds provided');
@@ -514,9 +514,10 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
     
     const allData = [];
     let offset = 0;
-    const pageSize = 1000; // Use the maximum allowed per request
+    const pageSize = 10000; // Fetch 10,000 records per page for faster loading
+    const totalExpected = 32173; // Known total for progress calculation
     
-    console.log('🔄 Fetching all data using pagination...');
+    console.log('🔄 Fetching all census data (32,173 records)...');
     
     while (true) {
       const response = await fetch(baseUrl, {
@@ -540,11 +541,28 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
       }
       
       allData.push(...pageData);
-      console.log(`📄 Page ${Math.floor(offset/pageSize) + 1}: Retrieved ${pageData.length} records (total: ${allData.length})`);
+      
+      // Calculate and show progress
+      const progress = Math.min(100, Math.round((allData.length / totalExpected) * 100));
+      const progressBar = '█'.repeat(Math.floor(progress / 5)) + '░'.repeat(20 - Math.floor(progress / 5));
+      
+      console.log(`📊 Loading census data: [${progressBar}] ${progress}% (${allData.length.toLocaleString()}/${totalExpected.toLocaleString()} records)`);
+      
+      // Call progress callback if provided
+      if (onProgress) {
+        onProgress({
+          loaded: allData.length,
+          total: totalExpected,
+          percentage: progress
+        });
+      }
       
       // If we got less than a full page, we're done
       if (pageData.length < pageSize) {
-        console.log(`✅ Reached end of data (got ${pageData.length} < ${pageSize})`);
+        console.log(`✅ Census data loaded successfully! Total: ${allData.length.toLocaleString()} mesh cells`);
+        if (onProgress) {
+          onProgress({ loaded: allData.length, total: allData.length, percentage: 100 });
+        }
         break;
       }
       
