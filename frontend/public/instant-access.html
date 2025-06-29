@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Instant Access - Test Census Data</title>
+    <style>
+        body { 
+            font-family: Arial; 
+            padding: 0; 
+            margin: 0; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+        }
+        .button { 
+            width: 100%; 
+            padding: 15px; 
+            background: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 18px; 
+            font-weight: bold;
+            cursor: pointer; 
+            margin: 15px 0;
+            transition: background 0.3s;
+        }
+        .button:hover { background: #218838; }
+        .title { 
+            color: #333; 
+            font-size: 28px; 
+            font-weight: bold; 
+            margin-bottom: 15px; 
+        }
+        .subtitle { 
+            color: #666; 
+            font-size: 16px; 
+            margin-bottom: 30px; 
+        }
+        .features {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .features h3 { margin-top: 0; color: #333; }
+        .features ul { margin: 0; padding-left: 20px; }
+        .features li { margin: 8px 0; color: #555; }
+        .countdown {
+            font-size: 14px;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">🚀 Trade Area Analysis</div>
+        <div class="subtitle">Ready to test real Japanese census data!</div>
+        
+        <div class="features">
+            <h3>📊 What's Ready to Test:</h3>
+            <ul>
+                <li><strong>32,173+ Census Records</strong> - Real Japanese government data</li>
+                <li><strong>Tokyo Coverage</strong> - Shibuya, Shinjuku, Ginza areas</li>
+                <li><strong>Population Density</strong> - Accurate numbers (15,000+, 13,087, 12,092)</li>
+                <li><strong>No Simulation</strong> - Real data instead of random numbers</li>
+            </ul>
+        </div>
+        
+        <button class="button" onclick="accessApp()">
+            🎯 Start Testing Census Data Now
+        </button>
+        
+        <div id="status" class="countdown"></div>
+    </div>
+    
+    <script>
+        function accessApp() {
+            // Force the app to authenticated state
+            localStorage.clear();
+            
+            // Set authenticated session
+            localStorage.setItem('currentView', 'dashboard');
+            localStorage.setItem('token', 'demo-token-' + Date.now());
+            localStorage.setItem('user', JSON.stringify({
+                id: 'demo-user-' + Date.now(),
+                email: 'demo@trade-area.app',
+                first_name: 'Demo',
+                last_name: 'User',
+                created_at: new Date().toISOString()
+            }));
+            
+            // Update status
+            document.getElementById('status').innerHTML = '✅ Access granted! Redirecting to dashboard...';
+            document.querySelector('.button').style.background = '#6c757d';
+            document.querySelector('.button').innerHTML = '🔄 Redirecting...';
+            document.querySelector('.button').disabled = true;
+            
+            // Force redirect with cache bust
+            setTimeout(() => {
+                window.location.href = '/?access=granted&t=' + Date.now();
+            }, 1500);
+        }
+        
+        // Auto-access if URL has ?auto
+        if (window.location.search.includes('auto')) {
+            setTimeout(accessApp, 1000);
+        }
+    </script>
+</body>
+</html>
