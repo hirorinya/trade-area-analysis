@@ -1943,6 +1943,26 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     const checkSession = async () => {
       try {
         console.log('🔍 Checking existing session...');
+        
+        // Check for demo session first
+        const demoToken = localStorage.getItem('token');
+        const demoUser = localStorage.getItem('user');
+        
+        if (demoToken && demoToken.startsWith('demo-token-') && demoUser) {
+          console.log('🧪 Demo session found, bypassing Supabase auth');
+          const parsedUser = JSON.parse(demoUser);
+          setUser(parsedUser);
+          setToken(demoToken);
+          
+          if (currentView === 'login') {
+            console.log('🔄 Redirecting demo user to dashboard');
+            changeView('dashboard');
+          }
+          
+          setIsInitialLoad(false);
+          return;
+        }
+        
         const result = await auth.getSession();
         
         // Handle case where result might be undefined
