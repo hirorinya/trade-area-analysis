@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auto Demo Login</title>
+</head>
+<body>
+    <h1>Setting up demo session...</h1>
+    <p id="status">Creating demo session...</p>
+    
+    <script>
+        // Clear any existing sessions
+        localStorage.clear();
+        
+        // Create demo user session
+        const demoUser = {
+            id: 'demo-' + Date.now(),
+            email: 'demo@test.com',
+            created_at: new Date().toISOString()
+        };
+        
+        const demoToken = 'demo-token-' + Date.now();
+        
+        // Set demo session in localStorage
+        localStorage.setItem('token', demoToken);
+        localStorage.setItem('user', JSON.stringify(demoUser));
+        
+        console.log('✅ Demo session created!');
+        console.log('Token:', demoToken);
+        console.log('User:', demoUser);
+        
+        document.getElementById('status').innerHTML = '✅ Demo session created! Redirecting to app...';
+        
+        // Redirect to main app
+        setTimeout(() => {
+            window.location.href = './';
+        }, 2000);
+    </script>
+</body>
+</html>

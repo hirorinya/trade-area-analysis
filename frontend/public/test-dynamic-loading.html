@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dynamic Census Loading Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { height: 100vh; }
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        .loading { background: #007bff; color: white; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="info-panel">
+        <h3>🗾 All Japan Census Data</h3>
+        <p id="status">Ready to load data...</p>
+        <button onclick="loadVisibleArea()">Load Current View</button>
+        <button onclick="loadAllJapan()">Load ALL Japan (160k records)</button>
+        <hr>
+        <p>Loaded: <span id="loaded">0</span> mesh cells</p>
+        <p>Viewport: <span id="viewport">-</span></p>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize map centered on Japan
+        const map = L.map('map').setView([37.5, 138.5], 6); // All Japan view
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        
+        let meshLayer = L.layerGroup().addTo(map);
+        let loadedMeshes = new Set();
+        
+        // Update viewport info
+        function updateViewport() {
+            const bounds = map.getBounds();
+            document.getElementById('viewport').textContent = 
+                `${bounds.getSouth().toFixed(2)}-${bounds.getNorth().toFixed(2)}, ${bounds.getWest().toFixed(2)}-${bounds.getEast().toFixed(2)}`;
+        }
+        
+        map.on('moveend', updateViewport);
+        updateViewport();
+        
+        // Load only visible area
+        async function loadVisibleArea() {
+            const bounds = map.getBounds();
+            const zoom = map.getZoom();
+            
+            // Adjust mesh level based on zoom
+            let meshLevel = 4; // 500m default
+            if (zoom < 10) meshLevel = 3; // 1km for overview
+            if (zoom > 14) meshLevel = 5; // 250m for detail
+            
+            document.getElementById('status').textContent = '🔄 Loading visible area...';
+            
+            // Simulate loading (in real app, this would query Supabase)
+            const mockData = generateMockMeshes(bounds, meshLevel, 1000);
+            
+            mockData.forEach(mesh => {
+                if (!loadedMeshes.has(mesh.id)) {
+                    loadedMeshes.add(mesh.id);
+                    
+                    // Color by population density
+                    const color = mesh.population > 5000 ? '#ff0000' :
+                                mesh.population > 2000 ? '#ff8800' :
+                                mesh.population > 500 ? '#ffff00' : '#00ff00';
+                    
+                    L.circleMarker([mesh.lat, mesh.lng], {
+                        radius: zoom > 12 ? 5 : 3,
+                        fillColor: color,
+                        color: 'black',
+                        weight: 0.5,
+                        fillOpacity: 0.6
+                    }).addTo(meshLayer);
+                }
+            });
+            
+            document.getElementById('loaded').textContent = loadedMeshes.size.toLocaleString();
+            document.getElementById('status').textContent = '✅ Loaded visible area';
+        }
+        
+        // Load ALL Japan (warning: heavy!)
+        async function loadAllJapan() {
+            if (!confirm('This will load ~160,000 points. Continue?')) return;
+            
+            document.getElementById('status').textContent = '🔄 Loading ALL Japan...';
+            document.getElementById('status').className = 'loading';
+            
+            // In real app, this would load from database
+            alert('In production, this would load 160k records from database.\nFor demo, showing concept only.');
+            
+            document.getElementById('status').textContent = '✅ Ready for production!';
+            document.getElementById('status').className = '';
+        }
+        
+        // Generate mock mesh data for testing
+        function generateMockMeshes(bounds, level, count) {
+            const meshes = [];
+            for (let i = 0; i < count; i++) {
+                meshes.push({
+                    id: `mesh_${Date.now()}_${i}`,
+                    lat: bounds.getSouth() + Math.random() * (bounds.getNorth() - bounds.getSouth()),
+                    lng: bounds.getWest() + Math.random() * (bounds.getEast() - bounds.getWest()),
+                    population: Math.floor(Math.random() * 10000)
+                });
+            }
+            return meshes;
+        }
+        
+        // Preset views
+        const regions = {
+            tokyo: { center: [35.68, 139.76], zoom: 11 },
+            hokkaido: { center: [43.06, 141.35], zoom: 8 },
+            osaka: { center: [34.69, 135.50], zoom: 10 },
+            kyushu: { center: [33.0, 130.5], zoom: 8 }
+        };
+        
+        // Add region buttons
+        Object.entries(regions).forEach(([name, config]) => {
+            const btn = document.createElement('button');
+            btn.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+            btn.onclick = () => {
+                map.setView(config.center, config.zoom);
+                setTimeout(loadVisibleArea, 500);
+            };
+            document.querySelector('.info-panel').appendChild(btn);
+        });
+    </script>
+</body>
+</html>

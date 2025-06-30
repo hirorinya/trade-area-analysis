@@ -10,7 +10,7 @@ import { fetchRealPopulationData } from './populationDataAPI.js';
  * @param {boolean} useRealData - Whether to fetch real population data (default: true)
  * @returns {Promise<Array>} Promise resolving to array of mesh cells with demand data
  */
-export async function generateDemandGrid(bounds, meshSize = 250, useRealData = true) {
+export async function generateDemandGrid(bounds, meshSize = 250, useRealData = true, onProgress = null) {
   // Validate bounds
   if (!bounds || typeof bounds !== 'object') {
     throw new Error('Invalid bounds: bounds must be an object');
@@ -28,17 +28,29 @@ export async function generateDemandGrid(bounds, meshSize = 250, useRealData = t
   if (useRealData) {
     try {
       // Determine mesh level based on mesh size
-      // Note: Database only contains level 4 (500m) data
-      let meshLevel = 4; // Default to 500m mesh (available in database)
-      if (meshSize >= 1000) meshLevel = 3; // 1km mesh
-      else if (meshSize >= 500) meshLevel = 4; // 500m mesh
-      else if (meshSize < 500) {
-        console.warn('250m mesh (level 5) requested but not available in database, using 500m mesh instead');
+      // Japan Statistics Bureau provides: 250m (level 5), 500m (level 4), 1000m (level 3)
+      // Currently we only have 500m data loaded
+      let meshLevel = 4; // Default to 500m mesh
+      let actualMeshSize = meshSize;
+      
+      if (meshSize >= 1000) {
+        meshLevel = 3; // 1km mesh (need to load this data)
+        actualMeshSize = 1000;
+        console.warn('1km mesh data not yet loaded, using 500m mesh instead');
+        meshLevel = 4;
+      } else if (meshSize >= 500 && meshSize < 1000) {
+        meshLevel = 4; // 500m mesh (available)
+        actualMeshSize = 500;
+      } else if (meshSize < 500) {
+        console.warn('250m mesh (level 5) data not available, using 500m mesh instead');
         meshLevel = 4; // Use 500m mesh as fallback
+        actualMeshSize = 500;
       }
       
+      console.log(`Mesh size requested: ${meshSize}m, using: ${actualMeshSize}m (level ${meshLevel})`)
+      
       console.log('Fetching real population data...');
-      const realPopulationData = await fetchRealPopulationData(bounds, meshLevel);
+      const realPopulationData = await fetchRealPopulationData(bounds, meshLevel, onProgress);
       
       if (realPopulationData && realPopulationData.length > 0) {
         console.log(`Successfully loaded ${realPopulationData.length} mesh cells with real population data`);
@@ -60,7 +72,26 @@ export async function generateDemandGrid(bounds, meshSize = 250, useRealData = t
         
         return meshes;
       } else {
-        console.warn('Real population data not available, falling back to simulated data');
+        console.warn('Real population data not available for this region');
+        // Determine region name based on coordinates
+        const centerLat = (bounds.north + bounds.south) / 2;
+        const centerLng = (bounds.east + bounds.west) / 2;
+        
+        let regionName = 'Unknown';
+        if (centerLat >= 43.0) regionName = 'Hokkaido';
+        else if (centerLat >= 40.0) regionName = 'Tohoku';
+        else if (centerLat >= 36.5) regionName = 'Kanto';
+        else if (centerLat >= 34.5) regionName = 'Chubu';
+        else if (centerLat >= 33.0) regionName = 'Kansai';
+        else if (centerLat >= 31.0) regionName = 'Chugoku/Shikoku';
+        else regionName = 'Kyushu/Okinawa';
+        
+        return {
+          noData: true,
+          region: regionName,
+          bounds: bounds,
+          message: `Census data not loaded for ${regionName} region. Currently showing: Tokyo area only.`
+        };
       }
     } catch (error) {
       console.error('Error fetching real population data:', error);

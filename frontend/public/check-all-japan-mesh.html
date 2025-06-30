@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check All Japan Mesh Data</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .result { padding: 15px; margin: 10px 0; border-radius: 5px; background: #f8f9fa; }
+        .big-number { font-size: 48px; font-weight: bold; color: #007bff; }
+        .coverage { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <h1>🗾 All Japan Census Data Analysis</h1>
+    <div id="results">Loading...</div>
+    
+    <script>
+        async function checkAllJapanData() {
+            const resultsDiv = document.getElementById('results');
+            const supabaseUrl = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
+            
+            try {
+                // 1. Total records in entire database
+                const totalResponse = await fetch(`${supabaseUrl}/rest/v1/population_mesh?select=count`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Range': '0-0',
+                        'Prefer': 'count=exact'
+                    }
+                });
+                const totalCount = totalResponse.headers.get('content-range').split('/')[1];
+                
+                // 2. Geographic bounds of all data
+                const boundsResponse = await fetch(`${supabaseUrl}/rest/v1/population_mesh?select=center_lat,center_lng&order=center_lat.asc&limit=1`, {
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                });
+                const minData = await boundsResponse.json();
+                
+                const maxBoundsResponse = await fetch(`${supabaseUrl}/rest/v1/population_mesh?select=center_lat,center_lng&order=center_lat.desc&limit=1`, {
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                });
+                const maxData = await maxBoundsResponse.json();
+                
+                // 3. Mesh levels available
+                const levelsResponse = await fetch(`${supabaseUrl}/rest/v1/population_mesh?select=mesh_level&limit=1000`, {
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                });
+                const levelsData = await levelsResponse.json();
+                const meshLevels = [...new Set(levelsData.map(r => r.mesh_level))].sort();
+                
+                // 4. Count by mesh level
+                let levelCounts = {};
+                for (const level of meshLevels) {
+                    const levelResponse = await fetch(`${supabaseUrl}/rest/v1/population_mesh?mesh_level=eq.${level}&select=count`, {
+                        headers: {
+                            'apikey': supabaseKey,
+                            'Authorization': `Bearer ${supabaseKey}`,
+                            'Range': '0-0',
+                            'Prefer': 'count=exact'
+                        }
+                    });
+                    const levelCount = levelResponse.headers.get('content-range').split('/')[1];
+                    levelCounts[level] = levelCount;
+                }
+                
+                // 5. Sample high-population areas
+                const sampleResponse = await fetch(`${supabaseUrl}/rest/v1/population_mesh?select=mesh_code,center_lat,center_lng,population&order=population.desc&limit=10`, {
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                });
+                const sampleData = await sampleResponse.json();
+                
+                let html = `<div class="result coverage">
+                    <h2>🗾 Total Japan Census Data</h2>
+                    <div class="big-number">${parseInt(totalCount).toLocaleString()}</div>
+                    <p><strong>Total mesh records loaded from /population directory</strong></p>
+                </div>`;
+                
+                if (minData[0] && maxData[0]) {
+                    const latRange = (maxData[0].center_lat - minData[0].center_lat).toFixed(2);
+                    const lngRange = (maxData[0].center_lng - minData[0].center_lng).toFixed(2);
+                    
+                    html += `<div class="result">
+                        <h3>📍 Geographic Coverage</h3>
+                        <p><strong>Latitude range:</strong> ${minData[0].center_lat} to ${maxData[0].center_lat} (${latRange}°)</p>
+                        <p><strong>Longitude range:</strong> ${minData[0].center_lng} to ${maxData[0].center_lng} (${lngRange}°)</p>
+                        <p><strong>Coverage:</strong> ${latRange > 10 && lngRange > 10 ? '🗾 All Japan' : '🏙️ Regional (Tokyo area)'}</p>
+                    </div>`;
+                }
+                
+                html += `<div class="result">
+                    <h3>📊 Data by Mesh Level</h3>`;
+                for (const level of meshLevels) {
+                    const description = level === 3 ? '1km mesh' : level === 4 ? '500m mesh' : level === 5 ? '250m mesh' : `Level ${level}`;
+                    html += `<p><strong>${description}:</strong> ${parseInt(levelCounts[level]).toLocaleString()} records</p>`;
+                }
+                html += `</div>`;
+                
+                html += `<div class="result">
+                    <h3>🏙️ Current App Bounds vs Total Data</h3>
+                    <p><strong>App bounds (Tokyo area):</strong> 7,093 records</p>
+                    <p><strong>Total available:</strong> ${parseInt(totalCount).toLocaleString()} records</p>
+                    <p><strong>Coverage:</strong> ${((7093 / parseInt(totalCount)) * 100).toFixed(1)}% of total data</p>
+                </div>`;
+                
+                if (sampleData.length > 0) {
+                    html += `<div class="result">
+                        <h3>🏢 Highest Population Areas</h3>`;
+                    sampleData.forEach((record, i) => {
+                        html += `<p>${i+1}. Pop: ${record.population.toLocaleString()} | Lat: ${record.center_lat.toFixed(4)} | Lng: ${record.center_lng.toFixed(4)}</p>`;
+                    });
+                    html += `</div>`;
+                }
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="result" style="background: #f8d7da; color: #721c24;">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        checkAllJapanData();
+    </script>
+</body>
+</html>

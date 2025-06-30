@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Demo Login - Trade Area Analysis</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 400px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .button { background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; width: 100%; margin: 10px 0; }
+        .button:hover { background: #0056b3; }
+        .status { padding: 15px; margin: 10px 0; border-radius: 5px; text-align: center; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Demo Access</h1>
+        <p>Quick authentication bypass for testing the census data fix.</p>
+        
+        <div id="status" class="status info">Click the button below to create a demo session</div>
+        
+        <button class="button" onclick="createDemoSession()">🚀 Create Demo Session</button>
+        
+        <button class="button" onclick="openApp()" style="background: #28a745;">📊 Open Trade Area Analysis App</button>
+        
+        <hr style="margin: 30px 0;">
+        <small>This bypasses authentication for testing purposes only. In production, users must register normally.</small>
+    </div>
+
+    <script>
+        function createDemoSession() {
+            const statusDiv = document.getElementById('status');
+            
+            try {
+                // Create demo user session
+                const demoUser = {
+                    id: 'demo-' + Date.now(),
+                    email: 'demo@test.com',
+                    created_at: new Date().toISOString()
+                };
+                
+                const demoToken = 'demo-token-' + Date.now();
+                
+                // Set demo session in localStorage
+                localStorage.setItem('sb-vjbhwtwxjhyufvjrnhyu-auth-token', JSON.stringify({
+                    access_token: demoToken,
+                    token_type: 'bearer',
+                    user: demoUser
+                }));
+                
+                // Also set alternate format
+                localStorage.setItem('token', demoToken);
+                localStorage.setItem('user', JSON.stringify(demoUser));
+                
+                statusDiv.className = 'status success';
+                statusDiv.innerHTML = '✅ Demo session created successfully!<br>You can now access the app.';
+                
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = '❌ Error creating demo session: ' + error.message;
+            }
+        }
+        
+        function openApp() {
+            // Open in same tab to share localStorage
+            window.location.href = './';
+        }
+    </script>
+</body>
+</html>

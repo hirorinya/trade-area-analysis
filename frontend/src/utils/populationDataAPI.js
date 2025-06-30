@@ -475,7 +475,7 @@ function getMeshAreaCode(bounds, meshLevel) {
  * @param {number} meshLevel - Mesh level (3, 4, or 5)
  * @returns {Promise<Array>} Array of population data by mesh
  */
-export async function fetchRealPopulationData(bounds, meshLevel = 5) {
+export async function fetchRealPopulationData(bounds, meshLevel = 5, onProgress = null) {
   // Validate bounds
   if (!bounds || typeof bounds !== 'object') {
     throw new Error('Invalid bounds provided');
@@ -489,6 +489,9 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
   const cached = populationCache.get(bounds, meshLevel);
   if (cached) {
     console.log('Using cached population data from database');
+    if (onProgress) {
+      onProgress({ loaded: cached.length, total: cached.length, percentage: 100, fromCache: true });
+    }
     return cached;
   }
   
@@ -496,28 +499,90 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
     // Import Supabase client
     const { supabase } = await import('../lib/supabase.js');
     
-    console.log(`Fetching population data from database for mesh level ${meshLevel} with limit 10000`);
+    console.log(`Fetching population data from database for mesh level ${meshLevel}`);
     
-    // Query population mesh data within bounds
-    // Note: Supabase defaults to 1000 rows, we need to explicitly set higher limit
-    const { data, error } = await supabase
-      .from('population_mesh')
-      .select('mesh_code, center_lat, center_lng, population, mesh_level')
-      .eq('mesh_level', meshLevel)
-      .gte('center_lat', bounds.south)
-      .lte('center_lat', bounds.north)
-      .gte('center_lng', bounds.west)
-      .lte('center_lng', bounds.east)
-      .gt('population', 0)
-      .limit(10000); // Get up to 10,000 meshes instead of default 1000
+    // Use pagination to get ALL data (7,093 records total)
+    const supabaseUrl = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
     
-    if (error) {
-      console.warn('Database query error:', error);
-      return null; // Use fallback simulation
+    const baseUrl = `${supabaseUrl}/rest/v1/population_mesh?` +
+      `select=mesh_code,center_lat,center_lng,population,mesh_level&` +
+      `mesh_level=eq.${meshLevel}&` +
+      `center_lat=gte.${bounds.south}&` +
+      `center_lat=lte.${bounds.north}&` +
+      `center_lng=gte.${bounds.west}&` +
+      `center_lng=lte.${bounds.east}&` +
+      `population=gt.0&` +
+      `order=mesh_code.asc`; // Order for consistent pagination
+    
+    const allData = [];
+    let offset = 0;
+    const pageSize = 10000; // Fetch 10,000 records per page for faster loading
+    const totalExpected = 32173; // Known total for progress calculation
+    
+    console.log('🔄 Fetching all census data (32,173 records)...');
+    
+    while (true) {
+      const response = await fetch(baseUrl, {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Range': `${offset}-${offset + pageSize - 1}`, // e.g., 0-999, 1000-1999, etc.
+          'Prefer': 'return=representation'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const pageData = await response.json();
+      
+      if (!pageData || pageData.length === 0) {
+        console.log(`📄 Page ${Math.floor(offset/pageSize) + 1}: No more data`);
+        break; // No more data
+      }
+      
+      allData.push(...pageData);
+      
+      // Calculate and show progress
+      const progress = Math.min(100, Math.round((allData.length / totalExpected) * 100));
+      const progressBar = '█'.repeat(Math.floor(progress / 5)) + '░'.repeat(20 - Math.floor(progress / 5));
+      
+      console.log(`📊 Loading census data: [${progressBar}] ${progress}% (${allData.length.toLocaleString()}/${totalExpected.toLocaleString()} records)`);
+      
+      // Call progress callback if provided
+      if (onProgress) {
+        onProgress({
+          loaded: allData.length,
+          total: totalExpected,
+          percentage: progress
+        });
+      }
+      
+      // If we got less than a full page, we're done
+      if (pageData.length < pageSize) {
+        console.log(`✅ Census data loaded successfully! Total: ${allData.length.toLocaleString()} mesh cells`);
+        if (onProgress) {
+          onProgress({ loaded: allData.length, total: allData.length, percentage: 100 });
+        }
+        break;
+      }
+      
+      offset += pageSize;
+      
+      // Safety check to prevent infinite loops
+      if (offset > 40000) {
+        console.warn('⚠️ Safety limit reached, stopping pagination');
+        break;
+      }
     }
     
+    const data = allData;
+    
     if (!data || data.length === 0) {
-      console.log('No population data found in database for these bounds');
+      console.log(`No population data found in database for bounds: Lat ${bounds.south.toFixed(2)}-${bounds.north.toFixed(2)}, Lng ${bounds.west.toFixed(2)}-${bounds.east.toFixed(2)}`);
+      console.log('💡 This region may not be loaded yet. Current coverage: Tokyo area (35.3-36.2°N, 138.8-140.3°E)');
       return null; // Use fallback simulation
     }
     
@@ -531,7 +596,7 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5) {
       population: row.population
     }));
     
-    console.log(`Retrieved ${results.length} mesh data points from database (limit was set to 10000)`);
+    console.log(`Retrieved ${results.length} mesh data points from database`);
     
     // Cache the results
     populationCache.set(bounds, meshLevel, results);

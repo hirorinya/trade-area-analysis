@@ -8,6 +8,7 @@ import Card from '../ui/Card';
 interface ModernLoginFormProps {
   onLogin: (email: string, password: string) => void;
   onSwitchToRegister: () => void;
+  onDemoLogin?: () => void;
   loading?: boolean;
   error?: string;
 }
@@ -15,6 +16,7 @@ interface ModernLoginFormProps {
 const ModernLoginForm: React.FC<ModernLoginFormProps> = ({
   onLogin,
   onSwitchToRegister,
+  onDemoLogin,
   loading = false,
   error
 }) => {
@@ -210,6 +212,63 @@ const ModernLoginForm: React.FC<ModernLoginFormProps> = ({
                 'Sign In'
               )}
             </Button>
+
+            {onDemoLogin && (
+              <div style={{
+                marginTop: theme.spacing[4],
+                textAlign: 'center'
+              }}>
+                <div style={{
+                  position: 'relative',
+                  marginBottom: theme.spacing[4]
+                }}>
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    <div style={{
+                      width: '100%',
+                      borderTop: `1px solid ${theme.colors.gray[300]}`
+                    }} />
+                  </div>
+                  <div style={{
+                    position: 'relative',
+                    display: 'flex',
+                    justifyContent: 'center'
+                  }}>
+                    <span style={{
+                      backgroundColor: 'white',
+                      padding: `0 ${theme.spacing[4]}`,
+                      fontSize: theme.typography.fontSize.sm,
+                      color: theme.colors.gray[500]
+                    }}>
+                      or
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="large"
+                  onClick={onDemoLogin}
+                  disabled={loading}
+                  style={{ width: '100%' }}
+                >
+                  🚀 Try Demo Mode
+                </Button>
+                <p style={{
+                  margin: `${theme.spacing[2]} 0 0 0`,
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.gray[500],
+                  textAlign: 'center'
+                }}>
+                  Explore all features with sample data
+                </p>
+              </div>
+            )}
           </form>
 
           <div style={{

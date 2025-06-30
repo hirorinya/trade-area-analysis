@@ -2,12 +2,34 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import L from 'leaflet';
 import * as turf from '@turf/turf';
 import 'leaflet/dist/leaflet.css';
-import { auth, db } from './lib/supabase';
+import { auth, db as originalDb } from './lib/supabase';
+
+// Create a demo-aware database wrapper
+const db = {
+  ...originalDb,
+  createLocation: async (locationData) => {
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    if (currentUser.id && currentUser.id.startsWith('demo-')) {
+      console.log('🚫 Demo mode: Blocking Supabase createLocation call');
+      throw new Error('Demo mode: Use localStorage instead of Supabase');
+    }
+    return originalDb.createLocation(locationData);
+  },
+  deleteLocation: async (locationId) => {
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    if (currentUser.id && currentUser.id.startsWith('demo-')) {
+      console.log('🚫 Demo mode: Blocking Supabase deleteLocation call');
+      throw new Error('Demo mode: Use localStorage instead of Supabase');
+    }
+    return originalDb.deleteLocation(locationId);
+  }
+};
 import MapboxMap from './components/map/MapboxMap';
 import LeafletMap from './components/map/LeafletMap';
 import AIAnalysisChat from './components/ai/AIAnalysisChat';
 import OptimizationPanel from './components/analysis/OptimizationPanel';
 import ModernLoginForm from './components/auth/ModernLoginForm';
+import LoadingOverlay from './components/ui/LoadingOverlay';
 import Button from './components/ui/Button';
 import Input from './components/ui/Input';
 
@@ -127,11 +149,25 @@ function App() {
   const [formCoordinates, setFormCoordinates] = useState({ lat: '', lng: '' });
   const [currentAddress, setCurrentAddress] = useState('');
   const [analysisRecommendations, setAnalysisRecommendations] = useState('');
+  const [isLoadingPopulation, setIsLoadingPopulation] = useState(false);
+  const [populationProgress, setPopulationProgress] = useState(null);
 
   // Helper function to change view and persist to localStorage
   const changeView = (newView) => {
     setCurrentView(newView);
     localStorage.setItem('currentView', newView);
+  };
+
+  // Helper function to safely get coordinates from location
+  const getLocationCoordinates = (location) => {
+    if (location.coordinates && Array.isArray(location.coordinates.coordinates) && location.coordinates.coordinates.length >= 2) {
+      return location.coordinates.coordinates; // [lng, lat]
+    } else if (location.longitude && location.latitude) {
+      return [location.longitude, location.latitude]; // [lng, lat]
+    } else {
+      console.warn('Location has invalid coordinates:', location);
+      return null;
+    }
   };
 
   // Supabase direct API handler for production
@@ -190,6 +226,146 @@ function App() {
     }
   };
 
+  // Clear old demo data to prevent coordinate format issues
+  const clearOldDemoData = () => {
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('demo-') || key === 'demo-projects') {
+        localStorage.removeItem(key);
+        console.log('🧹 Cleared old demo data:', key);
+      }
+    });
+  };
+
+  // Demo Authentication
+  const handleDemoLogin = async () => {
+    try {
+      console.log('🧪 Starting demo mode...');
+      
+      // Clear any existing demo data to prevent format conflicts
+      clearOldDemoData();
+      
+      // Create demo user
+      const demoUser = {
+        id: 'demo-user-' + Date.now(),
+        email: 'demo@tradearea.app',
+        user_metadata: {
+          full_name: 'Demo User',
+          company: 'Demo Company',
+          role: 'Business Analyst'
+        }
+      };
+      
+      const demoToken = 'demo-token-' + Date.now();
+      
+      // Set demo state
+      setUser(demoUser);
+      setToken(demoToken);
+      localStorage.setItem('token', demoToken);
+      localStorage.setItem('user', JSON.stringify(demoUser));
+      setMessage('🚀 Demo mode activated!');
+      
+      console.log('✅ Demo user created successfully');
+      console.log('🔄 Redirecting to dashboard');
+      changeView('dashboard');
+      
+      // Create demo projects
+      await createDemoProjects();
+      
+    } catch (error) {
+      console.error('❌ Demo mode failed:', error);
+      setMessage(`Demo error: ${error.message}`);
+    }
+  };
+
+  // Create sample projects for demo
+  const createDemoProjects = async () => {
+    const demoProjects = [
+      {
+        id: 'demo-project-1',
+        name: 'Tokyo Store Expansion',
+        description: 'Analyzing optimal locations for new retail stores in Tokyo metropolitan area',
+        created_at: new Date().toISOString(),
+        user_id: 'demo-user',
+        version: '2.0' // Version bump to force recreation
+      },
+      {
+        id: 'demo-project-2', 
+        name: 'Shibuya Market Analysis',
+        description: 'Trade area analysis for high-traffic shopping district',
+        created_at: new Date().toISOString(),
+        user_id: 'demo-user',
+        version: '2.0' // Version bump to force recreation
+      }
+    ];
+    
+    localStorage.setItem('demo-projects', JSON.stringify(demoProjects));
+    setProjects(demoProjects);
+    console.log('✅ Demo projects created:', demoProjects.length, 'projects');
+    
+    // Auto-select first project
+    setSelectedProject(demoProjects[0]);
+    await createDemoLocations(demoProjects[0].id);
+  };
+
+  // Create sample locations for demo
+  const createDemoLocations = async (projectId) => {
+    const demoLocations = [
+      {
+        id: 'demo-store-1',
+        name: 'Shibuya Flagship Store',
+        latitude: 35.6595,
+        longitude: 139.7006,
+        coordinates: {
+          coordinates: [139.7006, 35.6595] // [lng, lat] GeoJSON format
+        },
+        location_type: 'store',
+        address: 'Shibuya, Tokyo',
+        project_id: projectId
+      },
+      {
+        id: 'demo-store-2',
+        name: 'Harajuku Branch',
+        latitude: 35.6702,
+        longitude: 139.7016,
+        coordinates: {
+          coordinates: [139.7016, 35.6702] // [lng, lat] GeoJSON format
+        },
+        location_type: 'store', 
+        address: 'Harajuku, Tokyo',
+        project_id: projectId
+      },
+      {
+        id: 'demo-competitor-1',
+        name: 'Competitor Store A',
+        latitude: 35.6654,
+        longitude: 139.6982,
+        coordinates: {
+          coordinates: [139.6982, 35.6654] // [lng, lat] GeoJSON format
+        },
+        location_type: 'competitor',
+        address: 'Near Shibuya Station',
+        project_id: projectId
+      },
+      {
+        id: 'demo-poi-1',
+        name: 'Shibuya Station',
+        latitude: 35.6580,
+        longitude: 139.7016,
+        coordinates: {
+          coordinates: [139.7016, 35.6580] // [lng, lat] GeoJSON format
+        },
+        location_type: 'poi',
+        address: 'Shibuya Station, Tokyo',
+        project_id: projectId
+      }
+    ];
+    
+    localStorage.setItem(`demo-locations-${projectId}`, JSON.stringify(demoLocations));
+    setLocations(demoLocations);
+    console.log('✅ Demo locations created:', demoLocations.length, 'locations');
+  };
+
   // Modern Authentication handlers
   const handleModernLogin = async (email, password) => {
     try {
@@ -224,8 +400,22 @@ function App() {
       }
     } catch (error) {
       console.error('❌ Login failed:', error);
-      setMessage(`Login error: ${error.message}`);
-      throw error; // Re-throw for ModernLoginForm to handle
+      const errorMessage = error.message || 'Login failed';
+      
+      // Provide user-friendly error messages
+      let userMessage = errorMessage;
+      if (errorMessage.includes('Invalid login credentials')) {
+        userMessage = 'Invalid email or password. Please check your credentials and try again.';
+      } else if (errorMessage.includes('Email not confirmed')) {
+        userMessage = 'Please check your email and click the confirmation link before signing in.';
+      } else if (errorMessage.includes('Too many requests')) {
+        userMessage = 'Too many login attempts. Please wait a few minutes and try again.';
+      } else if (errorMessage.includes('Network')) {
+        userMessage = 'Network error. Please check your connection and try again.';
+      }
+      
+      setMessage(`Login error: ${userMessage}`);
+      throw new Error(userMessage); // Re-throw for ModernLoginForm to handle
     }
   };
 
@@ -259,7 +449,22 @@ function App() {
       changeView('dashboard');
       loadProjects();
     } catch (error) {
-      setMessage(`Registration error: ${error.message}`);
+      console.error('❌ Registration failed:', error);
+      const errorMessage = error.message || 'Registration failed';
+      
+      // Provide user-friendly error messages
+      let userMessage = errorMessage;
+      if (errorMessage.includes('already registered')) {
+        userMessage = 'This email is already registered. Please sign in instead or use a different email.';
+      } else if (errorMessage.includes('weak password') || errorMessage.includes('password')) {
+        userMessage = 'Password must be at least 6 characters long.';
+      } else if (errorMessage.includes('invalid email')) {
+        userMessage = 'Please enter a valid email address.';
+      } else if (errorMessage.includes('rate limit')) {
+        userMessage = 'Too many registration attempts. Please wait a few minutes and try again.';
+      }
+      
+      setMessage(`Registration error: ${userMessage}`);
     }
   };
 
@@ -271,10 +476,12 @@ function App() {
         return;
       }
       
-      // Handle demo mode - skip Supabase call
-      if (user.id.startsWith('demo-') || localStorage.getItem('token')?.startsWith('demo-token-')) {
-        console.log('🧪 Demo mode - using local projects only');
-        // Projects are already stored in state, no need to load from DB
+      // Handle demo mode - use local storage instead of Supabase
+      if (user.id.startsWith('demo-')) {
+        console.log('🧪 Demo mode - loading projects from localStorage');
+        const demoProjects = JSON.parse(localStorage.getItem('demo-projects') || '[]');
+        console.log('✅ Demo projects loaded:', demoProjects.length, 'projects');
+        setProjects(demoProjects);
         return;
       }
       
@@ -303,7 +510,7 @@ function App() {
       }
       
       // Handle demo mode - create project locally without Supabase
-      if (user.id.startsWith('demo-') || localStorage.getItem('token')?.startsWith('demo-token-')) {
+      if (user.id.startsWith('demo-')) {
         console.log('🧪 Demo mode - creating project locally');
         const demoProject = {
           id: 'project-' + Date.now(),
@@ -313,10 +520,11 @@ function App() {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
-        
-        // Store in projects array
-        setProjects(prev => [demoProject, ...prev]);
-        setMessage('✅ Demo project created successfully!');
+        const demoProjects = JSON.parse(localStorage.getItem('demo-projects') || '[]');
+        demoProjects.unshift(demoProject);
+        localStorage.setItem('demo-projects', JSON.stringify(demoProjects));
+        setProjects(demoProjects);
+        setMessage('Demo project created successfully!');
         e.target.reset();
         return;
       }
@@ -516,11 +724,41 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
   // Locations
   const loadLocations = async (projectId) => {
     try {
+      // Handle demo mode - use local storage instead of Supabase
+      if (user && user.id.startsWith('demo-')) {
+        console.log('🧪 Demo mode - loading locations from localStorage');
+        const demoLocations = JSON.parse(localStorage.getItem(`demo-locations-${projectId}`) || '[]');
+        console.log('✅ Demo locations loaded:', demoLocations.length, 'locations');
+        
+        // Validate all locations have proper coordinates before setting
+        const validLocations = demoLocations.filter(loc => {
+          const hasCoords = getLocationCoordinates(loc) !== null;
+          if (!hasCoords) {
+            console.warn('Filtering out invalid location:', loc);
+          }
+          return hasCoords;
+        });
+        
+        console.log('📍 Valid locations after filtering:', validLocations.length);
+        setLocations(validLocations);
+        return;
+      }
+      
       const { data, error } = await db.getLocations(projectId);
       if (error) {
         throw new Error(error.message);
       }
-      setLocations(data || []);
+      
+      // Validate real database locations too
+      const validLocations = (data || []).filter(loc => {
+        const hasCoords = getLocationCoordinates(loc) !== null;
+        if (!hasCoords) {
+          console.warn('Filtering out invalid database location:', loc);
+        }
+        return hasCoords;
+      });
+      
+      setLocations(validLocations);
     } catch (error) {
       setMessage(`Error loading locations: ${error.message}`);
     }
@@ -530,16 +768,45 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     e.preventDefault();
     if (!selectedProject) return;
     
+    console.log('🔧 createLocation called - Demo mode check:', user?.id?.startsWith('demo-'));
+    
     const formData = new FormData(e.target);
+    const locationData = {
+      project_id: selectedProject.id,
+      name: formData.get('locationName'),
+      address: formData.get('address'),
+      latitude: parseFloat(formData.get('latitude')),
+      longitude: parseFloat(formData.get('longitude')),
+      location_type: formData.get('locationType')
+    };
+    
     try {
-      const { data, error } = await db.createLocation({
-        project_id: selectedProject.id,
-        name: formData.get('locationName'),
-        address: formData.get('address'),
-        latitude: parseFloat(formData.get('latitude')),
-        longitude: parseFloat(formData.get('longitude')),
-        location_type: formData.get('locationType')
-      });
+      // Handle demo mode - save to localStorage
+      if (user && user.id.startsWith('demo-')) {
+        console.log('🧪 Demo mode - saving location to localStorage');
+        
+        const newLocation = {
+          ...locationData,
+          id: 'demo-location-' + Date.now(),
+          coordinates: {
+            coordinates: [locationData.longitude, locationData.latitude] // GeoJSON format
+          }
+        };
+        
+        const existingLocations = JSON.parse(localStorage.getItem(`demo-locations-${selectedProject.id}`) || '[]');
+        existingLocations.push(newLocation);
+        localStorage.setItem(`demo-locations-${selectedProject.id}`, JSON.stringify(existingLocations));
+        
+        setMessage('Location created successfully!');
+        e.target.reset();
+        setCurrentAddress('');
+        setFormCoordinates({ lat: '', lng: '' });
+        loadLocations(selectedProject.id);
+        return;
+      }
+      
+      // Real user - save to database
+      const { data, error } = await db.createLocation(locationData);
       
       if (error) {
         throw new Error(error.message);
@@ -564,6 +831,20 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
   // Delete location functionality
   const deleteLocation = async (locationId) => {
     try {
+      // Handle demo mode - delete from localStorage
+      if (user && user.id.startsWith('demo-')) {
+        console.log('🧪 Demo mode - deleting location from localStorage');
+        
+        const existingLocations = JSON.parse(localStorage.getItem(`demo-locations-${selectedProject.id}`) || '[]');
+        const filteredLocations = existingLocations.filter(loc => loc.id !== locationId);
+        localStorage.setItem(`demo-locations-${selectedProject.id}`, JSON.stringify(filteredLocations));
+        
+        setMessage('Location deleted successfully!');
+        loadLocations(selectedProject.id);
+        return;
+      }
+      
+      // Real user - delete from database
       const { error } = await db.deleteLocation(locationId);
       
       if (error) {
@@ -850,8 +1131,17 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     };
     
     // Generate denser demand points grid around the area with realistic spacing
+    const validLocations = locations.filter(loc => getLocationCoordinates(loc) !== null);
+    if (validLocations.length === 0) {
+      console.warn('No valid locations for bounds calculation');
+      return;
+    }
+    
     const bounds = turf.bbox(turf.featureCollection(
-      locations.map(loc => turf.point([loc.coordinates.coordinates[0], loc.coordinates.coordinates[1]]))
+      validLocations.map(loc => {
+        const coords = getLocationCoordinates(loc);
+        return turf.point([coords[0], coords[1]]);
+      })
     ));
     
     // Expand bounds slightly for better coverage
@@ -935,8 +1225,17 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     if (!existingLocations || existingLocations.length === 0) return [];
     
     // Calculate bounds around existing locations
+    const validExistingLocations = existingLocations.filter(loc => getLocationCoordinates(loc) !== null);
+    if (validExistingLocations.length === 0) {
+      console.warn('No valid existing locations for candidate generation');
+      return [];
+    }
+    
     const bounds = turf.bbox(turf.featureCollection(
-      existingLocations.map(loc => turf.point([loc.coordinates.coordinates[0], loc.coordinates.coordinates[1]]))
+      validExistingLocations.map(loc => {
+        const coords = getLocationCoordinates(loc);
+        return turf.point([coords[0], coords[1]]);
+      })
     ));
     
     // Expand bounds for candidate generation
@@ -1406,7 +1705,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
       return {
         id: store.id,
         name: store.name,
-        coordinates: store.coordinates.coordinates,
+        coordinates: getLocationCoordinates(store),
         marketShare: marketShare?.marketSharePercentage || 0,
         capturedDemand: marketShare?.capturedDemand || 0,
         tradeAreaCount,
@@ -1431,8 +1730,12 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     };
 
     // Geographic analysis
-    const bounds = locations.length > 0 ? turf.bbox(turf.featureCollection(
-      locations.map(loc => turf.point([loc.coordinates.coordinates[0], loc.coordinates.coordinates[1]]))
+    const validLocations = locations.filter(loc => getLocationCoordinates(loc) !== null);
+    const bounds = validLocations.length > 0 ? turf.bbox(turf.featureCollection(
+      validLocations.map(loc => {
+        const coords = getLocationCoordinates(loc);
+        return turf.point([coords[0], coords[1]]);
+      })
     )) : null;
 
     const geographicMetrics = bounds ? {
@@ -1526,15 +1829,29 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     console.log('Demand analysis updated:', analysis);
   }, []);
 
+  // Handle population loading progress
+  const handlePopulationProgress = useCallback((progress) => {
+    setIsLoadingPopulation(true);
+    setPopulationProgress(progress);
+    
+    // Hide loading when complete
+    if (progress.percentage >= 100) {
+      setTimeout(() => {
+        setIsLoadingPopulation(false);
+        setPopulationProgress(null);
+      }, 1000); // Show complete state for 1 second
+    }
+  }, []);
+
   // Get current map bounds for optimization
   const getCurrentMapBounds = () => {
     if (locations.length === 0) {
-      // Return default bounds for Tokyo area when no locations exist
+      // Return default bounds covering all census data when no locations exist
       return {
-        north: 35.8,
-        south: 35.5,
-        east: 140.1,
-        west: 139.3
+        north: 36.2,  // Covers all 32,173 census records
+        south: 35.3,
+        east: 140.3,
+        west: 138.8
       };
     }
     
@@ -1572,12 +1889,14 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
 
   // Get full viewport bounds (hardcoded for now, ideally from map instance)
   const getFullMapBounds = () => {
-    // This covers a much larger Tokyo metropolitan area
+    // Updated to match actual census data coverage (32,173 records)
+    // Based on /check-all-japan-mesh.html analysis:
+    // Lat: 35.34-36.19, Lng: 138.80-140.29
     return {
-      north: 35.9,
-      south: 35.4,
-      east: 140.2,
-      west: 139.2
+      north: 36.2,  // Slightly expanded from 36.19
+      south: 35.3,  // Slightly expanded from 35.34
+      east: 140.3,  // Slightly expanded from 140.29
+      west: 138.8   // Matches data coverage 138.80
     };
   };
 
@@ -1728,17 +2047,38 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
         }
 
         try {
-          const { error } = await db.createLocation({
-            project_id: selectedProject.id,
-            name: name,
-            address: address,
-            latitude: latitude,
-            longitude: longitude,
-            location_type: validType
-          });
-          
-          if (error) {
-            throw new Error(error.message);
+          // Handle demo mode - save to localStorage
+          if (user && user.id.startsWith('demo-')) {
+            const newLocation = {
+              id: 'demo-location-' + Date.now() + '-' + i,
+              project_id: selectedProject.id,
+              name: name,
+              address: address,
+              latitude: latitude,
+              longitude: longitude,
+              location_type: validType,
+              coordinates: {
+                coordinates: [longitude, latitude] // GeoJSON format
+              }
+            };
+            
+            const existingLocations = JSON.parse(localStorage.getItem(`demo-locations-${selectedProject.id}`) || '[]');
+            existingLocations.push(newLocation);
+            localStorage.setItem(`demo-locations-${selectedProject.id}`, JSON.stringify(existingLocations));
+          } else {
+            // Real user - save to database
+            const { error } = await db.createLocation({
+              project_id: selectedProject.id,
+              name: name,
+              address: address,
+              latitude: latitude,
+              longitude: longitude,
+              location_type: validType
+            });
+            
+            if (error) {
+              throw new Error(error.message);
+            }
           }
           
           successCount++;
@@ -1970,17 +2310,47 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
       try {
         console.log('🔍 Checking existing session...');
         
-        // Check for demo/test mode first
-        if (window.location.search.includes('access=granted') || localStorage.getItem('token')?.startsWith('demo-token-')) {
-          console.log('🧪 Demo mode detected - bypassing auth check');
-          const storedUser = localStorage.getItem('user');
-          if (storedUser) {
-            setUser(JSON.parse(storedUser));
-            setToken(localStorage.getItem('token'));
-            changeView('dashboard');
-            setIsInitialLoad(false);
-            return;
+        // Check for demo session first
+        const demoToken = localStorage.getItem('token');
+        const demoUser = localStorage.getItem('user');
+        
+        console.log('🔍 Demo session check:', {
+          demoToken: demoToken ? demoToken.substring(0, 20) + '...' : 'null',
+          demoUser: demoUser ? 'found' : 'null',
+          isDemo: demoToken && demoToken.startsWith('demo-token-')
+        });
+        
+        if (demoToken && demoToken.startsWith('demo-token-') && demoUser) {
+          console.log('🧪 Demo session found, checking data version...');
+          
+          // Check if demo data needs to be recreated due to format changes
+          const demoProjects = localStorage.getItem('demo-projects');
+          if (demoProjects) {
+            const projects = JSON.parse(demoProjects);
+            // If projects don't have version 2.0, clear and force re-login
+            if (!projects[0] || projects[0].version !== '2.0') {
+              console.log('🧹 Demo data version mismatch, clearing old data');
+              clearOldDemoData();
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              changeView('login');
+              setIsInitialLoad(false);
+              return;
+            }
           }
+          
+          console.log('✅ Demo session validated, bypassing Supabase auth');
+          const parsedUser = JSON.parse(demoUser);
+          setUser(parsedUser);
+          setToken(demoToken);
+          
+          if (currentView === 'login') {
+            console.log('🔄 Redirecting demo user to dashboard');
+            changeView('dashboard');
+          }
+          
+          setIsInitialLoad(false);
+          return;
         }
         
         const result = await auth.getSession();
@@ -2197,215 +2567,14 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
         </nav>
       )}
 
-      {currentView === 'login' && authView === 'login' && (
+      {currentView === 'login' && (
         <ModernLoginForm
           onLogin={handleModernLogin}
           onSwitchToRegister={() => setAuthView('register')}
+          onDemoLogin={handleDemoLogin}
           loading={false}
           error={message?.includes('Login error') ? message.replace('Login error: ', '') : undefined}
         />
-      )}
-
-      {currentView === 'login' && authView === 'register' && (
-        <div style={{
-          minHeight: '100vh',
-          background: `linear-gradient(135deg, ${theme.colors.primary[500]} 0%, ${theme.colors.primary[700]} 100%)`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: theme.spacing[4],
-          fontFamily: theme.typography.fontFamily.primary
-        }}>
-          <div style={{ 
-            position: 'relative', 
-            zIndex: 1,
-            width: '100%',
-            maxWidth: '400px'
-          }}>
-            <div style={{ 
-              textAlign: 'center', 
-              marginBottom: theme.spacing[8],
-              color: 'white'
-            }}>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-                Create Account
-              </h1>
-              <p style={{ opacity: 0.8 }}>
-                Join Trade Area Analysis Platform
-              </p>
-            </div>
-
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '1rem',
-              padding: '2rem',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
-            }}>
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                const formData = new FormData(e.target);
-                const email = formData.get('email');
-                const password = formData.get('password');
-                const confirmPassword = formData.get('confirmPassword');
-                
-                if (password !== confirmPassword) {
-                  setMessage('❌ Passwords do not match');
-                  return;
-                }
-                
-                try {
-                  setMessage('🔄 Creating account...');
-                  const { data, error } = await auth.signUp({
-                    email,
-                    password,
-                    options: {
-                      data: {
-                        first_name: formData.get('firstName') || '',
-                        last_name: formData.get('lastName') || ''
-                      }
-                    }
-                  });
-                  
-                  if (error) throw error;
-                  
-                  if (data.user) {
-                    setMessage('✅ Account created! Please check your email to verify.');
-                    setTimeout(() => setAuthView('login'), 3000);
-                  }
-                } catch (error) {
-                  setMessage(`❌ Signup error: ${error.message}`);
-                }
-              }}>
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                  <input
-                    name="firstName"
-                    type="text"
-                    placeholder="First Name"
-                    style={{
-                      flex: 1,
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem'
-                    }}
-                  />
-                  <input
-                    name="lastName"
-                    type="text"
-                    placeholder="Last Name"
-                    style={{
-                      flex: 1,
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.5rem',
-                      fontSize: '1rem'
-                    }}
-                  />
-                </div>
-                
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="Email Address"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.5rem',
-                    fontSize: '1rem',
-                    marginBottom: '1rem'
-                  }}
-                />
-                
-                <input
-                  name="password"
-                  type="password"
-                  placeholder="Password"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.5rem',
-                    fontSize: '1rem',
-                    marginBottom: '1rem'
-                  }}
-                />
-                
-                <input
-                  name="confirmPassword"
-                  type="password"
-                  placeholder="Confirm Password"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.5rem',
-                    fontSize: '1rem',
-                    marginBottom: '1.5rem'
-                  }}
-                />
-                
-                <button
-                  type="submit"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    backgroundColor: theme.colors.primary[600],
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    fontSize: '1rem',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    marginBottom: '1rem'
-                  }}
-                >
-                  Create Account
-                </button>
-              </form>
-              
-              {message && (
-                <div style={{
-                  padding: '0.75rem',
-                  backgroundColor: message.includes('❌') ? '#fee2e2' : '#dcfce7',
-                  color: message.includes('❌') ? '#dc2626' : '#16a34a',
-                  borderRadius: '0.5rem',
-                  marginBottom: '1rem',
-                  fontSize: '0.875rem'
-                }}>
-                  {message}
-                </div>
-              )}
-              
-              <div style={{ textAlign: 'center' }}>
-                <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-                  Already have an account?{' '}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthView('login');
-                    setMessage('');
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: theme.colors.primary[600],
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    fontSize: '0.875rem'
-                  }}
-                >
-                  Sign In
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
 
       {currentView === 'dashboard' && user && (
@@ -2706,27 +2875,29 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
               }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ fontSize: '12px', color: theme.colors.gray[600], display: 'block', marginBottom: '4px' }}>
-                    Mesh Size: {meshSize}m
+                    Mesh Size: {meshSize}m {meshSize !== 500 && '(→500m)'}
                   </label>
-                  <input
-                    type="range"
-                    min="250"
-                    max="1000"
-                    step="50"
+                  <select
                     value={meshSize}
                     onChange={(e) => setMeshSize(Number(e.target.value))}
                     style={{
                       width: '100%',
-                      height: '6px',
-                      background: '#e5e7eb',
-                      borderRadius: '3px',
-                      outline: 'none',
+                      padding: '8px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      backgroundColor: 'white',
                       cursor: 'pointer'
                     }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: theme.colors.gray[500], marginTop: '2px' }}>
-                    <span>250m</span>
-                    <span>1000m</span>
+                  >
+                    <option value="250" disabled>250m (Not available)</option>
+                    <option value="500">500m ✓ (Available)</option>
+                    <option value="600" disabled>600m (Not standard)</option>
+                    <option value="750" disabled>750m (Not standard)</option>
+                    <option value="1000" disabled>1000m (Not loaded yet)</option>
+                  </select>
+                  <div style={{ fontSize: '11px', color: theme.colors.gray[500], marginTop: '4px' }}>
+                    Japan Statistics Bureau provides: 250m, 500m, 1000m only
                   </div>
                 </div>
                 
@@ -4011,8 +4182,14 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
               ...mapContainerStyle,
               flex: showAIChat ? '1' : '1', 
               height: '600px',
-              minHeight: '500px'
+              minHeight: '500px',
+              position: 'relative' // For loading overlay positioning
             }}>
+              <LoadingOverlay 
+                isLoading={isLoadingPopulation}
+                progress={populationProgress}
+                position="top-right"
+              />
               {useMapbox ? (
                 <MapboxMap
                   locations={[
@@ -4046,6 +4223,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                   meshSize={meshSize}
                   catchmentRadius={catchmentRadius}
                   onDemandAnalysis={handleDemandAnalysis}
+                  onPopulationProgress={handlePopulationProgress}
                 />
               ) : (
                 <LeafletMap
@@ -4070,6 +4248,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                   meshSize={meshSize}
                   catchmentRadius={catchmentRadius}
                   onDemandAnalysis={handleDemandAnalysis}
+                  onPopulationProgress={handlePopulationProgress}
                 />
               )}
             </div>
