@@ -14,10 +14,5 @@
       "main": true,
       "staging": true
     }
-  },
-  "functions": {
-    "api/**/*": {
-      "maxDuration": 30
-    }
   }
 }
