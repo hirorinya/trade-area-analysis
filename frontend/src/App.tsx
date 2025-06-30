@@ -193,6 +193,118 @@ function App() {
     }
   };
 
+  // Demo Authentication
+  const handleDemoLogin = async () => {
+    try {
+      console.log('🧪 Starting demo mode...');
+      
+      // Create demo user
+      const demoUser = {
+        id: 'demo-user-' + Date.now(),
+        email: 'demo@tradearea.app',
+        user_metadata: {
+          full_name: 'Demo User',
+          company: 'Demo Company',
+          role: 'Business Analyst'
+        }
+      };
+      
+      const demoToken = 'demo-token-' + Date.now();
+      
+      // Set demo state
+      setUser(demoUser);
+      setToken(demoToken);
+      localStorage.setItem('token', demoToken);
+      localStorage.setItem('user', JSON.stringify(demoUser));
+      setMessage('🚀 Demo mode activated!');
+      
+      console.log('✅ Demo user created successfully');
+      console.log('🔄 Redirecting to dashboard');
+      changeView('dashboard');
+      
+      // Create demo projects
+      await createDemoProjects();
+      
+    } catch (error) {
+      console.error('❌ Demo mode failed:', error);
+      setMessage(`Demo error: ${error.message}`);
+    }
+  };
+
+  // Create sample projects for demo
+  const createDemoProjects = async () => {
+    const demoProjects = [
+      {
+        id: 'demo-project-1',
+        name: 'Tokyo Store Expansion',
+        description: 'Analyzing optimal locations for new retail stores in Tokyo metropolitan area',
+        created_at: new Date().toISOString(),
+        user_id: 'demo-user'
+      },
+      {
+        id: 'demo-project-2', 
+        name: 'Shibuya Market Analysis',
+        description: 'Trade area analysis for high-traffic shopping district',
+        created_at: new Date().toISOString(),
+        user_id: 'demo-user'
+      }
+    ];
+    
+    localStorage.setItem('demo-projects', JSON.stringify(demoProjects));
+    setProjects(demoProjects);
+    console.log('✅ Demo projects created:', demoProjects.length, 'projects');
+    
+    // Auto-select first project
+    setSelectedProject(demoProjects[0]);
+    await createDemoLocations(demoProjects[0].id);
+  };
+
+  // Create sample locations for demo
+  const createDemoLocations = async (projectId) => {
+    const demoLocations = [
+      {
+        id: 'demo-store-1',
+        name: 'Shibuya Flagship Store',
+        latitude: 35.6595,
+        longitude: 139.7006,
+        location_type: 'store',
+        address: 'Shibuya, Tokyo',
+        project_id: projectId
+      },
+      {
+        id: 'demo-store-2',
+        name: 'Harajuku Branch',
+        latitude: 35.6702,
+        longitude: 139.7016,
+        location_type: 'store', 
+        address: 'Harajuku, Tokyo',
+        project_id: projectId
+      },
+      {
+        id: 'demo-competitor-1',
+        name: 'Competitor Store A',
+        latitude: 35.6654,
+        longitude: 139.6982,
+        location_type: 'competitor',
+        address: 'Near Shibuya Station',
+        project_id: projectId
+      },
+      {
+        id: 'demo-poi-1',
+        name: 'Shibuya Station',
+        latitude: 35.6580,
+        longitude: 139.7016,
+        location_type: 'poi',
+        address: 'Shibuya Station, Tokyo',
+        project_id: projectId
+      }
+    ];
+    
+    localStorage.setItem(`demo-locations-${projectId}`, JSON.stringify(demoLocations));
+    setLocations(demoLocations);
+    console.log('✅ Demo locations created:', demoLocations.length, 'locations');
+  };
+
   // Modern Authentication handlers
   const handleModernLogin = async (email, password) => {
     try {
@@ -522,6 +634,15 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
   // Locations
   const loadLocations = async (projectId) => {
     try {
+      // Handle demo mode - use local storage instead of Supabase
+      if (user && user.id.startsWith('demo-')) {
+        console.log('🧪 Demo mode - loading locations from localStorage');
+        const demoLocations = JSON.parse(localStorage.getItem(`demo-locations-${projectId}`) || '[]');
+        console.log('✅ Demo locations loaded:', demoLocations.length, 'locations');
+        setLocations(demoLocations);
+        return;
+      }
+      
       const { data, error } = await db.getLocations(projectId);
       if (error) {
         throw new Error(error.message);
@@ -2235,6 +2356,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
         <ModernLoginForm
           onLogin={handleModernLogin}
           onSwitchToRegister={() => setAuthView('register')}
+          onDemoLogin={handleDemoLogin}
           loading={false}
           error={message?.includes('Login error') ? message.replace('Login error: ', '') : undefined}
         />
