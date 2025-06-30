@@ -205,10 +205,24 @@ function App() {
     }
   };
 
+  // Clear old demo data to prevent coordinate format issues
+  const clearOldDemoData = () => {
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('demo-') || key === 'demo-projects') {
+        localStorage.removeItem(key);
+        console.log('🧹 Cleared old demo data:', key);
+      }
+    });
+  };
+
   // Demo Authentication
   const handleDemoLogin = async () => {
     try {
       console.log('🧪 Starting demo mode...');
+      
+      // Clear any existing demo data to prevent format conflicts
+      clearOldDemoData();
       
       // Create demo user
       const demoUser = {
@@ -251,14 +265,16 @@ function App() {
         name: 'Tokyo Store Expansion',
         description: 'Analyzing optimal locations for new retail stores in Tokyo metropolitan area',
         created_at: new Date().toISOString(),
-        user_id: 'demo-user'
+        user_id: 'demo-user',
+        version: '2.0' // Version bump to force recreation
       },
       {
         id: 'demo-project-2', 
         name: 'Shibuya Market Analysis',
         description: 'Trade area analysis for high-traffic shopping district',
         created_at: new Date().toISOString(),
-        user_id: 'demo-user'
+        user_id: 'demo-user',
+        version: '2.0' // Version bump to force recreation
       }
     ];
     
@@ -1124,8 +1140,17 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     if (!existingLocations || existingLocations.length === 0) return [];
     
     // Calculate bounds around existing locations
+    const validExistingLocations = existingLocations.filter(loc => getLocationCoordinates(loc) !== null);
+    if (validExistingLocations.length === 0) {
+      console.warn('No valid existing locations for candidate generation');
+      return [];
+    }
+    
     const bounds = turf.bbox(turf.featureCollection(
-      existingLocations.map(loc => turf.point([loc.coordinates.coordinates[0], loc.coordinates.coordinates[1]]))
+      validExistingLocations.map(loc => {
+        const coords = getLocationCoordinates(loc);
+        return turf.point([coords[0], coords[1]]);
+      })
     ));
     
     // Expand bounds for candidate generation
@@ -1595,7 +1620,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
       return {
         id: store.id,
         name: store.name,
-        coordinates: store.coordinates.coordinates,
+        coordinates: getLocationCoordinates(store),
         marketShare: marketShare?.marketSharePercentage || 0,
         capturedDemand: marketShare?.capturedDemand || 0,
         tradeAreaCount,
@@ -1620,8 +1645,12 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     };
 
     // Geographic analysis
-    const bounds = locations.length > 0 ? turf.bbox(turf.featureCollection(
-      locations.map(loc => turf.point([loc.coordinates.coordinates[0], loc.coordinates.coordinates[1]]))
+    const validLocations = locations.filter(loc => getLocationCoordinates(loc) !== null);
+    const bounds = validLocations.length > 0 ? turf.bbox(turf.featureCollection(
+      validLocations.map(loc => {
+        const coords = getLocationCoordinates(loc);
+        return turf.point([coords[0], coords[1]]);
+      })
     )) : null;
 
     const geographicMetrics = bounds ? {
