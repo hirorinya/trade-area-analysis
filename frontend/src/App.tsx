@@ -2,7 +2,28 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import L from 'leaflet';
 import * as turf from '@turf/turf';
 import 'leaflet/dist/leaflet.css';
-import { auth, db } from './lib/supabase';
+import { auth, db as originalDb } from './lib/supabase';
+
+// Create a demo-aware database wrapper
+const db = {
+  ...originalDb,
+  createLocation: async (locationData) => {
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    if (currentUser.id && currentUser.id.startsWith('demo-')) {
+      console.log('🚫 Demo mode: Blocking Supabase createLocation call');
+      throw new Error('Demo mode: Use localStorage instead of Supabase');
+    }
+    return originalDb.createLocation(locationData);
+  },
+  deleteLocation: async (locationId) => {
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    if (currentUser.id && currentUser.id.startsWith('demo-')) {
+      console.log('🚫 Demo mode: Blocking Supabase deleteLocation call');
+      throw new Error('Demo mode: Use localStorage instead of Supabase');
+    }
+    return originalDb.deleteLocation(locationId);
+  }
+};
 import MapboxMap from './components/map/MapboxMap';
 import LeafletMap from './components/map/LeafletMap';
 import AIAnalysisChat from './components/ai/AIAnalysisChat';
@@ -746,6 +767,8 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
   const createLocation = async (e) => {
     e.preventDefault();
     if (!selectedProject) return;
+    
+    console.log('🔧 createLocation called - Demo mode check:', user?.id?.startsWith('demo-'));
     
     const formData = new FormData(e.target);
     const locationData = {
