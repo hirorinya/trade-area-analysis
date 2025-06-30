@@ -339,8 +339,22 @@ function App() {
       }
     } catch (error) {
       console.error('❌ Login failed:', error);
-      setMessage(`Login error: ${error.message}`);
-      throw error; // Re-throw for ModernLoginForm to handle
+      const errorMessage = error.message || 'Login failed';
+      
+      // Provide user-friendly error messages
+      let userMessage = errorMessage;
+      if (errorMessage.includes('Invalid login credentials')) {
+        userMessage = 'Invalid email or password. Please check your credentials and try again.';
+      } else if (errorMessage.includes('Email not confirmed')) {
+        userMessage = 'Please check your email and click the confirmation link before signing in.';
+      } else if (errorMessage.includes('Too many requests')) {
+        userMessage = 'Too many login attempts. Please wait a few minutes and try again.';
+      } else if (errorMessage.includes('Network')) {
+        userMessage = 'Network error. Please check your connection and try again.';
+      }
+      
+      setMessage(`Login error: ${userMessage}`);
+      throw new Error(userMessage); // Re-throw for ModernLoginForm to handle
     }
   };
 
@@ -374,7 +388,22 @@ function App() {
       changeView('dashboard');
       loadProjects();
     } catch (error) {
-      setMessage(`Registration error: ${error.message}`);
+      console.error('❌ Registration failed:', error);
+      const errorMessage = error.message || 'Registration failed';
+      
+      // Provide user-friendly error messages
+      let userMessage = errorMessage;
+      if (errorMessage.includes('already registered')) {
+        userMessage = 'This email is already registered. Please sign in instead or use a different email.';
+      } else if (errorMessage.includes('weak password') || errorMessage.includes('password')) {
+        userMessage = 'Password must be at least 6 characters long.';
+      } else if (errorMessage.includes('invalid email')) {
+        userMessage = 'Please enter a valid email address.';
+      } else if (errorMessage.includes('rate limit')) {
+        userMessage = 'Too many registration attempts. Please wait a few minutes and try again.';
+      }
+      
+      setMessage(`Registration error: ${userMessage}`);
     }
   };
 
