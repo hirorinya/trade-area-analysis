@@ -137,6 +137,18 @@ function App() {
     localStorage.setItem('currentView', newView);
   };
 
+  // Helper function to safely get coordinates from location
+  const getLocationCoordinates = (location) => {
+    if (location.coordinates && Array.isArray(location.coordinates.coordinates) && location.coordinates.coordinates.length >= 2) {
+      return location.coordinates.coordinates; // [lng, lat]
+    } else if (location.longitude && location.latitude) {
+      return [location.longitude, location.latitude]; // [lng, lat]
+    } else {
+      console.warn('Location has invalid coordinates:', location);
+      return null;
+    }
+  };
+
   // Supabase direct API handler for production
   const handleSupabaseAPI = async (endpoint, options = {}) => {
     // Map API endpoints to Supabase operations
@@ -267,6 +279,9 @@ function App() {
         name: 'Shibuya Flagship Store',
         latitude: 35.6595,
         longitude: 139.7006,
+        coordinates: {
+          coordinates: [139.7006, 35.6595] // [lng, lat] GeoJSON format
+        },
         location_type: 'store',
         address: 'Shibuya, Tokyo',
         project_id: projectId
@@ -276,6 +291,9 @@ function App() {
         name: 'Harajuku Branch',
         latitude: 35.6702,
         longitude: 139.7016,
+        coordinates: {
+          coordinates: [139.7016, 35.6702] // [lng, lat] GeoJSON format
+        },
         location_type: 'store', 
         address: 'Harajuku, Tokyo',
         project_id: projectId
@@ -285,6 +303,9 @@ function App() {
         name: 'Competitor Store A',
         latitude: 35.6654,
         longitude: 139.6982,
+        coordinates: {
+          coordinates: [139.6982, 35.6654] // [lng, lat] GeoJSON format
+        },
         location_type: 'competitor',
         address: 'Near Shibuya Station',
         project_id: projectId
@@ -294,6 +315,9 @@ function App() {
         name: 'Shibuya Station',
         latitude: 35.6580,
         longitude: 139.7016,
+        coordinates: {
+          coordinates: [139.7016, 35.6580] // [lng, lat] GeoJSON format
+        },
         location_type: 'poi',
         address: 'Shibuya Station, Tokyo',
         project_id: projectId
@@ -1006,8 +1030,17 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     };
     
     // Generate denser demand points grid around the area with realistic spacing
+    const validLocations = locations.filter(loc => getLocationCoordinates(loc) !== null);
+    if (validLocations.length === 0) {
+      console.warn('No valid locations for bounds calculation');
+      return;
+    }
+    
     const bounds = turf.bbox(turf.featureCollection(
-      locations.map(loc => turf.point([loc.coordinates.coordinates[0], loc.coordinates.coordinates[1]]))
+      validLocations.map(loc => {
+        const coords = getLocationCoordinates(loc);
+        return turf.point([coords[0], coords[1]]);
+      })
     ));
     
     // Expand bounds slightly for better coverage

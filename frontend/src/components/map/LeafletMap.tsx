@@ -104,6 +104,12 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
 
     // Add markers for locations
     locations.forEach(location => {
+      // Validate coordinates before creating marker
+      if (!location || typeof location.latitude !== 'number' || typeof location.longitude !== 'number') {
+        console.warn('Invalid location coordinates:', location);
+        return;
+      }
+
       let icon = storeIcon;
       if (location.location_type === 'competitor') icon = competitorIcon;
       if (location.location_type === 'poi') icon = poiIcon;
