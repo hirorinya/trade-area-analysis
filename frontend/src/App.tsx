@@ -708,7 +708,18 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
         console.log('🧪 Demo mode - loading locations from localStorage');
         const demoLocations = JSON.parse(localStorage.getItem(`demo-locations-${projectId}`) || '[]');
         console.log('✅ Demo locations loaded:', demoLocations.length, 'locations');
-        setLocations(demoLocations);
+        
+        // Validate all locations have proper coordinates before setting
+        const validLocations = demoLocations.filter(loc => {
+          const hasCoords = getLocationCoordinates(loc) !== null;
+          if (!hasCoords) {
+            console.warn('Filtering out invalid location:', loc);
+          }
+          return hasCoords;
+        });
+        
+        console.log('📍 Valid locations after filtering:', validLocations.length);
+        setLocations(validLocations);
         return;
       }
       
@@ -716,7 +727,17 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
       if (error) {
         throw new Error(error.message);
       }
-      setLocations(data || []);
+      
+      // Validate real database locations too
+      const validLocations = (data || []).filter(loc => {
+        const hasCoords = getLocationCoordinates(loc) !== null;
+        if (!hasCoords) {
+          console.warn('Filtering out invalid database location:', loc);
+        }
+        return hasCoords;
+      });
+      
+      setLocations(validLocations);
     } catch (error) {
       setMessage(`Error loading locations: ${error.message}`);
     }
@@ -2215,7 +2236,25 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
         });
         
         if (demoToken && demoToken.startsWith('demo-token-') && demoUser) {
-          console.log('🧪 Demo session found, bypassing Supabase auth');
+          console.log('🧪 Demo session found, checking data version...');
+          
+          // Check if demo data needs to be recreated due to format changes
+          const demoProjects = localStorage.getItem('demo-projects');
+          if (demoProjects) {
+            const projects = JSON.parse(demoProjects);
+            // If projects don't have version 2.0, clear and force re-login
+            if (!projects[0] || projects[0].version !== '2.0') {
+              console.log('🧹 Demo data version mismatch, clearing old data');
+              clearOldDemoData();
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              changeView('login');
+              setIsInitialLoad(false);
+              return;
+            }
+          }
+          
+          console.log('✅ Demo session validated, bypassing Supabase auth');
           const parsedUser = JSON.parse(demoUser);
           setUser(parsedUser);
           setToken(demoToken);
