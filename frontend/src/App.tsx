@@ -748,15 +748,42 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     if (!selectedProject) return;
     
     const formData = new FormData(e.target);
+    const locationData = {
+      project_id: selectedProject.id,
+      name: formData.get('locationName'),
+      address: formData.get('address'),
+      latitude: parseFloat(formData.get('latitude')),
+      longitude: parseFloat(formData.get('longitude')),
+      location_type: formData.get('locationType')
+    };
+    
     try {
-      const { data, error } = await db.createLocation({
-        project_id: selectedProject.id,
-        name: formData.get('locationName'),
-        address: formData.get('address'),
-        latitude: parseFloat(formData.get('latitude')),
-        longitude: parseFloat(formData.get('longitude')),
-        location_type: formData.get('locationType')
-      });
+      // Handle demo mode - save to localStorage
+      if (user && user.id.startsWith('demo-')) {
+        console.log('🧪 Demo mode - saving location to localStorage');
+        
+        const newLocation = {
+          ...locationData,
+          id: 'demo-location-' + Date.now(),
+          coordinates: {
+            coordinates: [locationData.longitude, locationData.latitude] // GeoJSON format
+          }
+        };
+        
+        const existingLocations = JSON.parse(localStorage.getItem(`demo-locations-${selectedProject.id}`) || '[]');
+        existingLocations.push(newLocation);
+        localStorage.setItem(`demo-locations-${selectedProject.id}`, JSON.stringify(existingLocations));
+        
+        setMessage('Location created successfully!');
+        e.target.reset();
+        setCurrentAddress('');
+        setFormCoordinates({ lat: '', lng: '' });
+        loadLocations(selectedProject.id);
+        return;
+      }
+      
+      // Real user - save to database
+      const { data, error } = await db.createLocation(locationData);
       
       if (error) {
         throw new Error(error.message);
@@ -781,6 +808,20 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
   // Delete location functionality
   const deleteLocation = async (locationId) => {
     try {
+      // Handle demo mode - delete from localStorage
+      if (user && user.id.startsWith('demo-')) {
+        console.log('🧪 Demo mode - deleting location from localStorage');
+        
+        const existingLocations = JSON.parse(localStorage.getItem(`demo-locations-${selectedProject.id}`) || '[]');
+        const filteredLocations = existingLocations.filter(loc => loc.id !== locationId);
+        localStorage.setItem(`demo-locations-${selectedProject.id}`, JSON.stringify(filteredLocations));
+        
+        setMessage('Location deleted successfully!');
+        loadLocations(selectedProject.id);
+        return;
+      }
+      
+      // Real user - delete from database
       const { error } = await db.deleteLocation(locationId);
       
       if (error) {
@@ -1983,17 +2024,38 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
         }
 
         try {
-          const { error } = await db.createLocation({
-            project_id: selectedProject.id,
-            name: name,
-            address: address,
-            latitude: latitude,
-            longitude: longitude,
-            location_type: validType
-          });
-          
-          if (error) {
-            throw new Error(error.message);
+          // Handle demo mode - save to localStorage
+          if (user && user.id.startsWith('demo-')) {
+            const newLocation = {
+              id: 'demo-location-' + Date.now() + '-' + i,
+              project_id: selectedProject.id,
+              name: name,
+              address: address,
+              latitude: latitude,
+              longitude: longitude,
+              location_type: validType,
+              coordinates: {
+                coordinates: [longitude, latitude] // GeoJSON format
+              }
+            };
+            
+            const existingLocations = JSON.parse(localStorage.getItem(`demo-locations-${selectedProject.id}`) || '[]');
+            existingLocations.push(newLocation);
+            localStorage.setItem(`demo-locations-${selectedProject.id}`, JSON.stringify(existingLocations));
+          } else {
+            // Real user - save to database
+            const { error } = await db.createLocation({
+              project_id: selectedProject.id,
+              name: name,
+              address: address,
+              latitude: latitude,
+              longitude: longitude,
+              location_type: validType
+            });
+            
+            if (error) {
+              throw new Error(error.message);
+            }
           }
           
           successCount++;
