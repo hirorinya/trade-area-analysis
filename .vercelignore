@@ -1,0 +1,27 @@
+# Ignore backend directory since we're using Supabase
+backend/
+node_modules/
+.git/
+.env
+.env.local
+
+# Documentation files
+*.md
+docs/
+
+# Test files
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+__tests__/
+
+# Development files
+*.sql
+*.html
+load-*.js
+test-*.js
+analyze-*.js
+create-*.js
+batch-*.sql
+census-*.sql

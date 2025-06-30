@@ -8,5 +8,16 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "staging": true
+    }
+  },
+  "functions": {
+    "api/**/*": {
+      "maxDuration": 30
+    }
+  }
 }
