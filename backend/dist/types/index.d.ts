@@ -15,7 +15,7 @@ export interface Project {
     user_id: string;
     name: string;
     description?: string;
-    settings: Record<string, any>;
+    settings: Record<string, unknown>;
     created_at: Date;
     updated_at: Date;
 }
@@ -29,7 +29,7 @@ export interface Location {
         coordinates: [number, number];
     };
     location_type: string;
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
     created_at: Date;
 }
 export interface TradeArea {
@@ -40,10 +40,13 @@ export interface TradeArea {
     parameters: {
         minutes?: number;
         miles?: number;
-        [key: string]: any;
+        [key: string]: unknown;
     };
-    geometry?: any;
-    demographics_data: Record<string, any>;
+    geometry?: {
+        type: 'Polygon';
+        coordinates: number[][][];
+    };
+    demographics_data: Record<string, unknown>;
     created_at: Date;
 }
 export interface Competitor {
@@ -57,7 +60,7 @@ export interface Competitor {
     };
     address?: string;
     category?: string;
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
     created_at: Date;
 }
 export interface AuthRequest extends Request {

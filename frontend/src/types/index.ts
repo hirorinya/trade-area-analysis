@@ -69,5 +69,46 @@ export interface Location {
 
 export interface ApiError {
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
+}
+
+export interface OptimizationResult {
+  id: string;
+  score: number;
+  location: {
+    coordinates: [number, number];
+    address?: string;
+  };
+  metrics: {
+    population: number;
+    competition: number;
+    accessibility: number;
+    market_potential: number;
+  };
+  recommendation: string;
+}
+
+export interface OptimizationParams {
+  algorithm: 'greedy' | 'genetic' | 'mip';
+  max_locations: number;
+  min_distance: number;
+  weights: {
+    population: number;
+    competition: number;
+    accessibility: number;
+  };
+}
+
+export interface StoreData {
+  id: string;
+  name: string;
+  location: [number, number];
+  performance_score?: number;
+}
+
+export interface HistoricalData {
+  date: string;
+  revenue: number;
+  customers: number;
+  transactions: number;
 }

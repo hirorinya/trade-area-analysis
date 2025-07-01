@@ -152,6 +152,38 @@ function App() {
   const [isLoadingPopulation, setIsLoadingPopulation] = useState(false);
   const [populationProgress, setPopulationProgress] = useState(null);
 
+  // Sanitize HTML content to prevent XSS attacks
+  const sanitizeHtml = (html: string): string => {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    
+    // Remove all script tags and event attributes
+    const scripts = doc.querySelectorAll('script');
+    scripts.forEach(script => script.remove());
+    
+    // Remove dangerous attributes
+    const allElements = doc.querySelectorAll('*');
+    allElements.forEach(element => {
+      const attrs = element.attributes;
+      for (let i = attrs.length - 1; i >= 0; i--) {
+        const attr = attrs[i];
+        if (attr.name.startsWith('on') || attr.name === 'javascript:') {
+          element.removeAttribute(attr.name);
+        }
+      }
+    });
+    
+    // Only allow safe HTML tags
+    const allowedTags = ['p', 'div', 'span', 'strong', 'em', 'ul', 'ol', 'li', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+    const allTags = doc.querySelectorAll('*');
+    allTags.forEach(element => {
+      if (!allowedTags.includes(element.tagName.toLowerCase())) {
+        element.replaceWith(document.createTextNode(element.textContent || ''));
+      }
+    });
+    
+    return doc.body.innerHTML;
+  };
+
   // Helper function to change view and persist to localStorage
   const changeView = (newView) => {
     setCurrentView(newView);
@@ -665,7 +697,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
       const data = await response.json();
       const recommendations = data.choices[0].message.content;
       
-      setAnalysisRecommendations(recommendations);
+      setAnalysisRecommendations(sanitizeHtml(recommendations));
       setMessage('AI analysis complete! See recommendations below.');
       
     } catch (error) {
@@ -716,7 +748,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
         <p><em>For advanced AI-powered recommendations, configure your OpenAI API key in the environment settings.</em></p>
       `;
       
-      setAnalysisRecommendations(fallbackRecommendations);
+      setAnalysisRecommendations(sanitizeHtml(fallbackRecommendations));
       setMessage('Basic workflow generated. For AI analysis, configure OpenAI API key.');
     }
   };

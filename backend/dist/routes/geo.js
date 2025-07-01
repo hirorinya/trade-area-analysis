@@ -15,34 +15,53 @@ router.post('/isochrone', auth_1.authenticate, async (req, res) => {
                 error: 'Invalid coordinates. Expected [longitude, latitude]'
             });
         }
-        // Mock isochrone data for now
-        // TODO: Integrate with Mapbox Isochrone API
-        const mockIsochrone = {
-            type: 'FeatureCollection',
-            features: [{
-                    type: 'Feature',
-                    properties: {
-                        fillColor: '#6366f1',
-                        fillOpacity: 0.2,
-                        fillOutlineColor: '#4f46e5',
-                        contour: time_minutes,
-                        metric: 'time'
-                    },
-                    geometry: {
-                        type: 'Polygon',
-                        coordinates: [[
-                                [coordinates[0] - 0.01, coordinates[1] - 0.01],
-                                [coordinates[0] + 0.01, coordinates[1] - 0.01],
-                                [coordinates[0] + 0.01, coordinates[1] + 0.01],
-                                [coordinates[0] - 0.01, coordinates[1] + 0.01],
-                                [coordinates[0] - 0.01, coordinates[1] - 0.01]
-                            ]]
-                    }
-                }]
-        };
+        // Try to use Mapbox Isochrone API if available
+        let isochroneData;
+        if (process.env.MAPBOX_ACCESS_TOKEN) {
+            try {
+                const mapboxUrl = `https://api.mapbox.com/isochrone/v1/mapbox/${mode}/${coordinates[0]},${coordinates[1]}?contours_minutes=${time_minutes}&polygons=true&access_token=${process.env.MAPBOX_ACCESS_TOKEN}`;
+                const mapboxResponse = await fetch(mapboxUrl);
+                if (mapboxResponse.ok) {
+                    isochroneData = await mapboxResponse.json();
+                }
+                else {
+                    throw new Error(`Mapbox API error: ${mapboxResponse.status}`);
+                }
+            }
+            catch (error) {
+                console.warn('Mapbox Isochrone API failed, using fallback:', error.message);
+                isochroneData = null;
+            }
+        }
+        // Fallback to mock data if Mapbox fails or token is not available
+        if (!isochroneData) {
+            isochroneData = {
+                type: 'FeatureCollection',
+                features: [{
+                        type: 'Feature',
+                        properties: {
+                            fillColor: '#6366f1',
+                            fillOpacity: 0.2,
+                            fillOutlineColor: '#4f46e5',
+                            contour: time_minutes,
+                            metric: 'time'
+                        },
+                        geometry: {
+                            type: 'Polygon',
+                            coordinates: [[
+                                    [coordinates[0] - 0.01, coordinates[1] - 0.01],
+                                    [coordinates[0] + 0.01, coordinates[1] - 0.01],
+                                    [coordinates[0] + 0.01, coordinates[1] + 0.01],
+                                    [coordinates[0] - 0.01, coordinates[1] + 0.01],
+                                    [coordinates[0] - 0.01, coordinates[1] - 0.01]
+                                ]]
+                        }
+                    }]
+            };
+        }
         res.json({
             message: 'Isochrone generated successfully',
-            data: mockIsochrone
+            data: isochroneData
         });
     }
     catch (error) {
@@ -57,25 +76,59 @@ router.post('/geocode', auth_1.authenticate, async (req, res) => {
         if (!address) {
             return res.status(400).json({ error: 'Address is required' });
         }
-        // Mock geocoding response
-        // TODO: Integrate with Mapbox Geocoding API
-        const mockResult = {
-            type: 'FeatureCollection',
-            features: [{
-                    type: 'Feature',
-                    properties: {
-                        full_address: address,
-                        confidence: 0.9
-                    },
-                    geometry: {
-                        type: 'Point',
-                        coordinates: [139.6917, 35.6895] // Tokyo coordinates as default
+        // Try to use Mapbox Geocoding API if available
+        let geocodeResult;
+        if (process.env.MAPBOX_ACCESS_TOKEN) {
+            try {
+                const encodedAddress = encodeURIComponent(address);
+                const mapboxUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedAddress}.json?access_token=${process.env.MAPBOX_ACCESS_TOKEN}&limit=1`;
+                const mapboxResponse = await fetch(mapboxUrl);
+                if (mapboxResponse.ok) {
+                    const mapboxData = await mapboxResponse.json();
+                    if (mapboxData.features && mapboxData.features.length > 0) {
+                        const feature = mapboxData.features[0];
+                        geocodeResult = {
+                            type: 'FeatureCollection',
+                            features: [{
+                                    type: 'Feature',
+                                    properties: {
+                                        full_address: feature.place_name,
+                                        confidence: feature.relevance || 0.9
+                                    },
+                                    geometry: feature.geometry
+                                }]
+                        };
                     }
-                }]
-        };
+                }
+                else {
+                    throw new Error(`Mapbox API error: ${mapboxResponse.status}`);
+                }
+            }
+            catch (error) {
+                console.warn('Mapbox Geocoding API failed, using fallback:', error.message);
+                geocodeResult = null;
+            }
+        }
+        // Fallback to mock data if Mapbox fails or token is not available
+        if (!geocodeResult) {
+            geocodeResult = {
+                type: 'FeatureCollection',
+                features: [{
+                        type: 'Feature',
+                        properties: {
+                            full_address: address,
+                            confidence: 0.5 // Lower confidence for mock data
+                        },
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [139.6917, 35.6895] // Tokyo coordinates as default
+                        }
+                    }]
+            };
+        }
         res.json({
             message: 'Address geocoded successfully',
-            data: mockResult
+            data: geocodeResult
         });
     }
     catch (error) {

@@ -1,20 +1,61 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
+const TradeArea_1 = require("../models/TradeArea");
 const router = express_1.default.Router();
 // Get all trade areas for a project
 router.get('/project/:projectId', auth_1.authenticate, async (req, res) => {
     try {
         const { projectId } = req.params;
-        // TODO: Implement database query
+        const userId = req.user.id;
+        // Validate project ownership
+        const { ProjectModel } = await Promise.resolve().then(() => __importStar(require('../models/Project')));
+        const project = await ProjectModel.findById(projectId, userId);
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found or access denied' });
+        }
+        const tradeAreas = await TradeArea_1.TradeAreaModel.findByProjectId(projectId);
         res.json({
-            message: 'Trade areas for project',
+            message: 'Trade areas retrieved successfully',
             projectId,
-            data: []
+            data: tradeAreas
         });
     }
     catch (error) {
@@ -25,24 +66,28 @@ router.get('/project/:projectId', auth_1.authenticate, async (req, res) => {
 // Create a new trade area
 router.post('/', auth_1.authenticate, async (req, res) => {
     try {
-        const { project_id, name, area_type, radius, drive_time, coordinates } = req.body;
+        const { location_id, name, area_type, parameters, geometry, demographics_data } = req.body;
+        const userId = req.user.id;
         // Basic validation
-        if (!project_id || !name || !coordinates) {
+        if (!location_id || !name || !area_type || !parameters) {
             return res.status(400).json({
-                error: 'Missing required fields: project_id, name, coordinates'
+                error: 'Missing required fields: location_id, name, area_type, parameters'
             });
         }
-        // TODO: Implement database insertion
-        const tradeArea = {
-            id: Date.now().toString(), // Temporary ID
-            project_id,
+        // Validate location ownership
+        const hasAccess = await TradeArea_1.TradeAreaModel.validateLocationOwnership(location_id, userId);
+        if (!hasAccess) {
+            return res.status(403).json({ error: 'Access denied to this location' });
+        }
+        const tradeAreaData = {
+            location_id,
             name,
-            area_type: area_type || 'radius',
-            radius,
-            drive_time,
-            coordinates,
-            created_at: new Date().toISOString()
+            area_type: area_type,
+            parameters,
+            geometry,
+            demographics_data
         };
+        const tradeArea = await TradeArea_1.TradeAreaModel.create(tradeAreaData);
         res.status(201).json({
             message: 'Trade area created successfully',
             data: tradeArea
@@ -57,11 +102,19 @@ router.post('/', auth_1.authenticate, async (req, res) => {
 router.get('/:id', auth_1.authenticate, async (req, res) => {
     try {
         const { id } = req.params;
-        // TODO: Implement database query
+        const userId = req.user.id;
+        const tradeArea = await TradeArea_1.TradeAreaModel.findById(id);
+        if (!tradeArea) {
+            return res.status(404).json({ error: 'Trade area not found' });
+        }
+        // Validate access through location ownership
+        const hasAccess = await TradeArea_1.TradeAreaModel.validateLocationOwnership(tradeArea.location_id, userId);
+        if (!hasAccess) {
+            return res.status(403).json({ error: 'Access denied to this trade area' });
+        }
         res.json({
-            message: 'Trade area details',
-            id,
-            data: null
+            message: 'Trade area retrieved successfully',
+            data: tradeArea
         });
     }
     catch (error) {
@@ -73,12 +126,32 @@ router.get('/:id', auth_1.authenticate, async (req, res) => {
 router.put('/:id', auth_1.authenticate, async (req, res) => {
     try {
         const { id } = req.params;
-        const updates = req.body;
-        // TODO: Implement database update
+        const { name, area_type, parameters, geometry, demographics_data } = req.body;
+        const userId = req.user.id;
+        // Check if trade area exists
+        const existingTradeArea = await TradeArea_1.TradeAreaModel.findById(id);
+        if (!existingTradeArea) {
+            return res.status(404).json({ error: 'Trade area not found' });
+        }
+        // Validate access through location ownership
+        const hasAccess = await TradeArea_1.TradeAreaModel.validateLocationOwnership(existingTradeArea.location_id, userId);
+        if (!hasAccess) {
+            return res.status(403).json({ error: 'Access denied to this trade area' });
+        }
+        const updates = {
+            name,
+            area_type: area_type,
+            parameters,
+            geometry,
+            demographics_data
+        };
+        const updatedTradeArea = await TradeArea_1.TradeAreaModel.update(id, updates);
+        if (!updatedTradeArea) {
+            return res.status(404).json({ error: 'Trade area not found after update' });
+        }
         res.json({
             message: 'Trade area updated successfully',
-            id,
-            data: { id, ...updates, updated_at: new Date().toISOString() }
+            data: updatedTradeArea
         });
     }
     catch (error) {
@@ -90,7 +163,21 @@ router.put('/:id', auth_1.authenticate, async (req, res) => {
 router.delete('/:id', auth_1.authenticate, async (req, res) => {
     try {
         const { id } = req.params;
-        // TODO: Implement database deletion
+        const userId = req.user.id;
+        // Check if trade area exists and validate access
+        const existingTradeArea = await TradeArea_1.TradeAreaModel.findById(id);
+        if (!existingTradeArea) {
+            return res.status(404).json({ error: 'Trade area not found' });
+        }
+        // Validate access through location ownership
+        const hasAccess = await TradeArea_1.TradeAreaModel.validateLocationOwnership(existingTradeArea.location_id, userId);
+        if (!hasAccess) {
+            return res.status(403).json({ error: 'Access denied to this trade area' });
+        }
+        const deleted = await TradeArea_1.TradeAreaModel.delete(id);
+        if (!deleted) {
+            return res.status(404).json({ error: 'Trade area not found' });
+        }
         res.json({
             message: 'Trade area deleted successfully',
             id

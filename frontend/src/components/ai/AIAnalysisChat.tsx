@@ -245,8 +245,16 @@ Could you be more specific about what aspect you'd like me to analyze? For examp
   };
 
   const formatMessageContent = (content: string) => {
-    // Convert markdown-style formatting to HTML
-    return content
+    // Sanitize content to prevent XSS attacks
+    const sanitizedContent = content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;');
+    
+    // Convert markdown-style formatting to HTML (after sanitization)
+    return sanitizedContent
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/• (.*?)(?=\n|$)/g, '<li>$1</li>')
       .replace(/(\d+)\. (.*?)(?=\n|$)/g, '<div style="margin: 8px 0;"><strong>$1.</strong> $2</div>')

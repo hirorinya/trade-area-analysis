@@ -23,7 +23,7 @@ export async function greedyOptimization(candidateSites, demandMeshes, numStores
     timeoutMs = 30000          // 30 second timeout
   } = constraints;
 
-  console.log(`Starting Greedy optimization for ${numStores} stores from ${candidateSites.length} candidates`);
+  // Greedy optimization starting
   
   const startTime = Date.now();
   const selectedStores = [];
@@ -37,14 +37,13 @@ export async function greedyOptimization(candidateSites, demandMeshes, numStores
   // Limit candidates to prevent excessive computation
   const maxCandidates = Math.min(candidateSites.length, 500);
   if (candidateSites.length > maxCandidates) {
-    console.log(`Limiting candidates from ${candidateSites.length} to ${maxCandidates} for performance`);
+    // Limiting candidates for performance
     remainingCandidates.splice(maxCandidates);
   }
   
   for (let iteration = 0; iteration < numStores; iteration++) {
     // Check timeout
     if (Date.now() - startTime > timeoutMs) {
-      console.warn('Greedy optimization timeout reached');
       throw new Error(`Optimization timeout after ${timeoutMs/1000} seconds`);
     }
     
