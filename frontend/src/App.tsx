@@ -3,6 +3,7 @@ import L from 'leaflet';
 import * as turf from '@turf/turf';
 import 'leaflet/dist/leaflet.css';
 import { auth, db as originalDb } from './lib/supabase';
+import { getLocationCoordinates as getCoords, toLocationCoordinates } from './utils/coordinateUtils';
 
 // Create a demo-aware database wrapper
 const db = {
@@ -151,6 +152,13 @@ function App() {
   const [analysisRecommendations, setAnalysisRecommendations] = useState('');
   const [isLoadingPopulation, setIsLoadingPopulation] = useState(false);
   const [populationProgress, setPopulationProgress] = useState(null);
+  
+  // Additional loading and error states
+  const [authLoading, setAuthLoading] = useState(false);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [locationsLoading, setLocationsLoading] = useState(false);
+  const [errorType, setErrorType] = useState(null);
+  const [errorDetails, setErrorDetails] = useState(null);
 
   // Helper function to change view and persist to localStorage
   const changeView = (newView) => {
@@ -159,16 +167,8 @@ function App() {
   };
 
   // Helper function to safely get coordinates from location
-  const getLocationCoordinates = (location) => {
-    if (location.coordinates && Array.isArray(location.coordinates.coordinates) && location.coordinates.coordinates.length >= 2) {
-      return location.coordinates.coordinates; // [lng, lat]
-    } else if (location.longitude && location.latitude) {
-      return [location.longitude, location.latitude]; // [lng, lat]
-    } else {
-      console.warn('Location has invalid coordinates:', location);
-      return null;
-    }
-  };
+  // Use standardized coordinate utility
+  const getLocationCoordinates = getCoords;
 
   // Supabase direct API handler for production
   const handleSupabaseAPI = async (endpoint, options = {}) => {
@@ -316,9 +316,7 @@ function App() {
         name: 'Shibuya Flagship Store',
         latitude: 35.6595,
         longitude: 139.7006,
-        coordinates: {
-          coordinates: [139.7006, 35.6595] // [lng, lat] GeoJSON format
-        },
+        coordinates: toLocationCoordinates(139.7006, 35.6595),
         location_type: 'store',
         address: 'Shibuya, Tokyo',
         project_id: projectId
@@ -328,9 +326,7 @@ function App() {
         name: 'Harajuku Branch',
         latitude: 35.6702,
         longitude: 139.7016,
-        coordinates: {
-          coordinates: [139.7016, 35.6702] // [lng, lat] GeoJSON format
-        },
+        coordinates: toLocationCoordinates(139.7016, 35.6702),
         location_type: 'store', 
         address: 'Harajuku, Tokyo',
         project_id: projectId
@@ -340,9 +336,7 @@ function App() {
         name: 'Competitor Store A',
         latitude: 35.6654,
         longitude: 139.6982,
-        coordinates: {
-          coordinates: [139.6982, 35.6654] // [lng, lat] GeoJSON format
-        },
+        coordinates: toLocationCoordinates(139.6982, 35.6654),
         location_type: 'competitor',
         address: 'Near Shibuya Station',
         project_id: projectId
@@ -352,9 +346,7 @@ function App() {
         name: 'Shibuya Station',
         latitude: 35.6580,
         longitude: 139.7016,
-        coordinates: {
-          coordinates: [139.7016, 35.6580] // [lng, lat] GeoJSON format
-        },
+        coordinates: toLocationCoordinates(139.7016, 35.6580),
         location_type: 'poi',
         address: 'Shibuya Station, Tokyo',
         project_id: projectId
@@ -368,6 +360,10 @@ function App() {
 
   // Modern Authentication handlers
   const handleModernLogin = async (email, password) => {
+    setAuthLoading(true);
+    setErrorType(null);
+    setErrorDetails(null);
+    
     try {
       console.log('🔐 Attempting login for:', email);
       const { data, error } = await auth.signIn(email, password);
@@ -414,8 +410,12 @@ function App() {
         userMessage = 'Network error. Please check your connection and try again.';
       }
       
+      setErrorType('auth');
+      setErrorDetails(userMessage);
       setMessage(`Login error: ${userMessage}`);
       throw new Error(userMessage); // Re-throw for ModernLoginForm to handle
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -470,6 +470,9 @@ function App() {
 
   // Projects
   const loadProjects = async () => {
+    setProjectsLoading(true);
+    setErrorType(null);
+    
     try {
       if (!user?.id) {
         console.log('⚠️ Cannot load projects: No user ID available', user);
@@ -497,7 +500,11 @@ function App() {
       setProjects(data || []);
     } catch (error) {
       console.error('❌ LoadProjects failed:', error);
+      setErrorType('data');
+      setErrorDetails(`Failed to load projects: ${error.message}`);
       setMessage(`Error loading projects: ${error.message}`);
+    } finally {
+      setProjectsLoading(false);
     }
   };
 
@@ -723,6 +730,9 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
 
   // Locations
   const loadLocations = async (projectId) => {
+    setLocationsLoading(true);
+    setErrorType(null);
+    
     try {
       // Handle demo mode - use local storage instead of Supabase
       if (user && user.id.startsWith('demo-')) {
@@ -760,7 +770,11 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
       
       setLocations(validLocations);
     } catch (error) {
+      setErrorType('data');
+      setErrorDetails(`Failed to load locations: ${error.message}`);
       setMessage(`Error loading locations: ${error.message}`);
+    } finally {
+      setLocationsLoading(false);
     }
   };
 
@@ -788,9 +802,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
         const newLocation = {
           ...locationData,
           id: 'demo-location-' + Date.now(),
-          coordinates: {
-            coordinates: [locationData.longitude, locationData.latitude] // GeoJSON format
-          }
+          coordinates: toLocationCoordinates(locationData.longitude, locationData.latitude)
         };
         
         const existingLocations = JSON.parse(localStorage.getItem(`demo-locations-${selectedProject.id}`) || '[]');
@@ -1181,7 +1193,9 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     const captureData = demandPoints.map(demand => {
       let totalAttraction = 0;
       const storeAttractions = locations.map(store => {
-        const storePoint = turf.point([store.coordinates.coordinates[0], store.coordinates.coordinates[1]]);
+        const coords = getLocationCoordinates(store);
+        if (!coords) return { storeId: store.id, attraction: 0, distance: 0 };
+        const storePoint = turf.point(coords);
         const distance = turf.distance(demand.point, storePoint, { units: 'kilometers' });
         
         if (distance === 0) return { storeId: store.id, attraction: 0, distance: 0 };
@@ -1404,7 +1418,9 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     demandPoints.forEach(demand => {
       let totalAttraction = 0;
       const storeAttractions = storeLocations.map(store => {
-        const storePoint = turf.point([store.coordinates.coordinates[0], store.coordinates.coordinates[1]]);
+        const coords = getLocationCoordinates(store);
+        if (!coords) return { storeId: store.id, attraction: 0, distance: 0 };
+        const storePoint = turf.point(coords);
         const distance = turf.distance(demand.point, storePoint, { units: 'kilometers' });
         
         if (distance === 0) return { storeType: store.location_type, attraction: 0, distance: 0 };
@@ -1612,7 +1628,9 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
     demandPoints.forEach(demand => {
       let totalAttraction = 0;
       const storeAttractions = allLocations.map(store => {
-        const storePoint = turf.point([store.coordinates.coordinates[0], store.coordinates.coordinates[1]]);
+        const coords = getLocationCoordinates(store);
+        if (!coords) return { storeId: store.id, attraction: 0, distance: 0 };
+        const storePoint = turf.point(coords);
         const distance = turf.distance(demand.point, storePoint, { units: 'kilometers' });
         
         if (distance === 0) return { storeId: store.id, attraction: 0, distance: 0 };
@@ -2271,7 +2289,9 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
 
     // Add optimized location markers
     optimizedStores.forEach((store, index) => {
-      const marker = L.marker([store.coordinates.coordinates[1], store.coordinates.coordinates[0]], {
+      const coords = getLocationCoordinates(store);
+      if (!coords) return;
+      const marker = L.marker([coords[1], coords[0]], {
         optimizedLocation: true // Custom property to identify optimized markers
       }).addTo(map).bindPopup(`
         <strong>⭐ ${store.name}</strong><br/>
@@ -2572,7 +2592,7 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
           onLogin={handleModernLogin}
           onSwitchToRegister={() => setAuthView('register')}
           onDemoLogin={handleDemoLogin}
-          loading={false}
+          loading={authLoading}
           error={message?.includes('Login error') ? message.replace('Login error: ', '') : undefined}
         />
       )}
@@ -2629,7 +2649,16 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
           {/* Projects List */}
           <div style={sectionStyle}>
             <h3 style={heading3Style}>Your Projects ({projects.length})</h3>
-            {projects.length === 0 ? (
+            {projectsLoading ? (
+              <div style={{
+                textAlign: 'center',
+                padding: theme.spacing[8],
+                color: theme.colors.gray[600]
+              }}>
+                <Icon icon={ArrowPathIcon} size={24} className="animate-spin" />
+                <p style={{ marginTop: theme.spacing[2] }}>Loading projects...</p>
+              </div>
+            ) : projects.length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: theme.spacing[8],
@@ -3561,7 +3590,16 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
             {/* Locations List */}
             <div style={formStyle}>
               <h3 style={formHeaderStyle}>Locations ({locations.length})</h3>
-              {locations.length === 0 ? (
+              {locationsLoading ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: theme.spacing[8],
+                  color: theme.colors.gray[600]
+                }}>
+                  <Icon icon={ArrowPathIcon} size={24} className="animate-spin" />
+                  <p style={{ marginTop: theme.spacing[2] }}>Loading locations...</p>
+                </div>
+              ) : locations.length === 0 ? (
                 <div style={{
                   textAlign: 'center',
                   padding: theme.spacing[8],
@@ -3602,7 +3640,10 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                         fontSize: theme.typography.fontSize.xs,
                         marginBottom: theme.spacing[3]
                       }}>
-                        {location.coordinates.coordinates[1].toFixed(4)}, {location.coordinates.coordinates[0].toFixed(4)}
+                        {(() => {
+                          const coords = getLocationCoordinates(location);
+                          return coords ? `${coords[1].toFixed(4)}, ${coords[0].toFixed(4)}` : 'Invalid coordinates';
+                        })()}
                       </div>
                       <div style={buttonGroupStyle}>
                         <Button 
@@ -3841,7 +3882,10 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
                             ⭐ {store.name}
                           </div>
                           <div style={{ color: '#666' }}>
-                            📍 {store.coordinates.coordinates[1].toFixed(4)}, {store.coordinates.coordinates[0].toFixed(4)}<br/>
+                            📍 {(() => {
+                              const coords = getLocationCoordinates(store);
+                              return coords ? `${coords[1].toFixed(4)}, ${coords[0].toFixed(4)}` : 'Invalid coordinates';
+                            })()}<br/>
                             📊 Score: {store.score.toFixed(2)} | 
                             👥 Additional Demand: {Math.round(store.marketImpact.additionalDemand).toLocaleString()}
                           </div>

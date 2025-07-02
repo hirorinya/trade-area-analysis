@@ -502,8 +502,8 @@ export async function fetchRealPopulationData(bounds, meshLevel = 5, onProgress 
     console.log(`Fetching population data from database for mesh level ${meshLevel}`);
     
     // Use pagination to get ALL data (7,093 records total)
-    const supabaseUrl = 'https://vjbhwtwxjhyufvjrnhyu.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqYmh3dHd4amh5dWZ2anJuaHl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODg2OTgsImV4cCI6MjA2NTk2NDY5OH0.hGyGbKGxIt25CHE_YGHVLx6c8iH--VRnvowGo1wKGww';
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     
     const baseUrl = `${supabaseUrl}/rest/v1/population_mesh?` +
       `select=mesh_code,center_lat,center_lng,population,mesh_level&` +
