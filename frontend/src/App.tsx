@@ -572,13 +572,30 @@ function App() {
         return;
       }
       
+      const projectName = formData.get('name');
+      const projectDescription = formData.get('description');
+      
+      console.log('🚀 Creating project:', { userId: user.id, name: projectName });
+      
       const { data, error } = await db.createProject(user.id, {
-        name: formData.get('name'),
-        description: formData.get('description')
+        name: projectName,
+        description: projectDescription
       });
       
       if (error) {
-        throw new Error(error.message);
+        console.error('❌ Project creation failed:', error);
+        // Provide more specific error messages based on the error
+        if (error.code === '23505') {
+          throw new Error('A project with this name already exists. Please choose a different name.');
+        } else if (error.code === '42501') {
+          throw new Error('Permission denied. Please ensure you are logged in properly.');
+        } else if (error.message?.includes('duplicate')) {
+          throw new Error('This project name is already taken. Please choose another name.');
+        } else if (error.message?.includes('permission')) {
+          throw new Error('You do not have permission to create projects. Please contact support.');
+        } else {
+          throw new Error(error.message || 'Failed to create project');
+        }
       }
       
       setMessage('Project created successfully!');

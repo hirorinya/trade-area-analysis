@@ -7,7 +7,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true
+  }
+})
 
 // Helper function to handle Supabase auth
 export const auth = {
@@ -64,6 +69,17 @@ export const db = {
   },
 
   createProject: async (userId, projectData) => {
+    console.log('📝 Creating project with data:', { userId, projectData });
+    
+    // Check current session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      console.error('❌ No active session found:', sessionError);
+      return { data: null, error: { message: 'No active session. Please log in again.' } };
+    }
+    
+    console.log('🔐 Current session user:', session.user.id);
+    
     const { data, error } = await supabase
       .from('projects')
       .insert([{
@@ -72,6 +88,18 @@ export const db = {
       }])
       .select()
       .single()
+    
+    if (error) {
+      console.error('❌ Project creation error:', error);
+      console.error('Error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+    } else {
+      console.log('✅ Project created successfully:', data);
+    }
     
     return { data, error }
   },
