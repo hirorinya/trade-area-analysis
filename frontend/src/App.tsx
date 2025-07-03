@@ -421,6 +421,15 @@ function App() {
         setUser(data.session.user);
         setToken(data.session.access_token);
         localStorage.setItem('token', data.session.access_token);
+        
+        // Ensure user exists in public.users table
+        console.log('🔄 Ensuring user exists in database');
+        const { error: userSyncError } = await db.ensureUserExists(data.session.user.id, data.session.user.email);
+        if (userSyncError) {
+          console.error('⚠️ Failed to sync user to database:', userSyncError);
+          // Continue anyway - the user is authenticated
+        }
+        
         setMessage('Login successful!');
         
         console.log('🔄 Redirecting to dashboard');
@@ -475,6 +484,14 @@ function App() {
       
       if (data?.user) {
         console.log('✅ Registration successful');
+        
+        // Ensure user exists in public.users table
+        console.log('🔄 Creating user in database after registration');
+        const { error: userSyncError } = await db.ensureUserExists(data.user.id, data.user.email);
+        if (userSyncError) {
+          console.error('⚠️ Failed to create user in database:', userSyncError);
+        }
+        
         setMessage('Registration successful! Please check your email to confirm your account.');
         
         // Switch back to login view after successful registration
@@ -2451,6 +2468,10 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
           console.log('✅ Valid session found for:', session.user.email);
           setUser(session.user);
           setToken(session.access_token);
+          
+          // Ensure user exists in public.users table
+          console.log('🔄 Ensuring user exists in database for existing session');
+          await db.ensureUserExists(session.user.id, session.user.email);
           
           // If user is authenticated but currentView is login, redirect to dashboard
           if (currentView === 'login') {

@@ -57,6 +57,43 @@ export const auth = {
 
 // Database helper functions
 export const db = {
+  // User sync function
+  ensureUserExists: async (userId, email) => {
+    console.log('🔄 Ensuring user exists in public.users table:', { userId, email });
+    
+    // First check if user exists
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .single();
+    
+    if (existingUser) {
+      console.log('✅ User already exists in public.users');
+      return { data: existingUser, error: null };
+    }
+    
+    // If user doesn't exist, create them
+    console.log('📝 Creating user in public.users table');
+    const { data, error } = await supabase
+      .from('users')
+      .insert([{
+        id: userId,
+        email: email,
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('❌ Failed to create user in public.users:', error);
+    } else {
+      console.log('✅ User created in public.users:', data);
+    }
+    
+    return { data, error };
+  },
+
   // Projects
   getProjects: async (userId) => {
     const { data, error } = await supabase
