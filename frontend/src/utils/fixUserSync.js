@@ -42,6 +42,7 @@ export async function manualUserSync() {
       .insert([{
         id: userId,
         email: email,
+        password_hash: 'supabase_auth_user', // Dummy value since we use Supabase Auth
         created_at: new Date().toISOString()
       }])
       .select()

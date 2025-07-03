@@ -79,11 +79,13 @@ export const db = {
     
     // If user doesn't exist, create them
     console.log('📝 Creating user in public.users table');
+    // Add dummy password_hash since it's required by the table
     const { data, error } = await supabase
       .from('users')
       .insert([{
         id: userId,
         email: email,
+        password_hash: 'supabase_auth_user', // Dummy value since we use Supabase Auth
         created_at: new Date().toISOString()
       }])
       .select()
