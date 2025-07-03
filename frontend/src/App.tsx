@@ -594,6 +594,14 @@ function App() {
       
       console.log('🚀 Creating project:', { userId: user.id, name: projectName });
       
+      // Ensure user exists in public.users table before creating project
+      console.log('🔄 Ensuring user exists before project creation');
+      const { error: syncError } = await db.ensureUserExists(user.id, user.email);
+      if (syncError) {
+        console.error('❌ Failed to sync user:', syncError);
+        throw new Error('Failed to sync user account. Please try logging out and back in.');
+      }
+      
       const { data, error } = await db.createProject(user.id, {
         name: projectName,
         description: projectDescription

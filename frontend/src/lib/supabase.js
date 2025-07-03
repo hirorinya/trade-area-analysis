@@ -62,15 +62,19 @@ export const db = {
     console.log('🔄 Ensuring user exists in public.users table:', { userId, email });
     
     // First check if user exists
-    const { data: existingUser, error: checkError } = await supabase
+    const { data: existingUsers, error: checkError } = await supabase
       .from('users')
       .select('id')
-      .eq('id', userId)
-      .single();
+      .eq('id', userId);
     
-    if (existingUser) {
+    if (checkError) {
+      console.error('❌ Error checking user existence:', checkError);
+      return { data: null, error: checkError };
+    }
+    
+    if (existingUsers && existingUsers.length > 0) {
       console.log('✅ User already exists in public.users');
-      return { data: existingUser, error: null };
+      return { data: existingUsers[0], error: null };
     }
     
     // If user doesn't exist, create them
@@ -86,7 +90,7 @@ export const db = {
       .single();
     
     if (error) {
-      console.error('❌ Failed to create user in public.users:', error);
+      console.error('❌ Failed to create user in public.users:', JSON.stringify(error, null, 2));
     } else {
       console.log('✅ User created in public.users:', data);
     }
@@ -127,12 +131,13 @@ export const db = {
       .single()
     
     if (error) {
-      console.error('❌ Project creation error:', error);
+      console.error('❌ Project creation error:', JSON.stringify(error, null, 2));
       console.error('Error details:', {
         code: error.code,
         message: error.message,
         details: error.details,
-        hint: error.hint
+        hint: error.hint,
+        statusCode: error.statusCode
       });
     } else {
       console.log('✅ Project created successfully:', data);
