@@ -29,6 +29,7 @@ import LeafletMap from './components/map/LeafletMap';
 import AIAnalysisChat from './components/ai/AIAnalysisChat';
 import OptimizationPanel from './components/analysis/OptimizationPanel';
 import ModernLoginForm from './components/auth/ModernLoginForm';
+import ModernRegisterForm from './components/auth/ModernRegisterForm';
 import LoadingOverlay from './components/ui/LoadingOverlay';
 import Button from './components/ui/Button';
 import Input from './components/ui/Input';
@@ -451,35 +452,36 @@ function App() {
     }
   };
 
-  // Legacy Authentication (keep for backup)
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    await handleModernLogin(formData.get('email'), formData.get('password'));
-  };
-
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
+  // Modern Registration handler
+  const handleRegister = async (email, password, fullName) => {
     try {
-      const { data, error } = await auth.signUp(
-        formData.get('email'),
-        formData.get('password'),
-        {
-          firstName: formData.get('firstName'),
-          lastName: formData.get('lastName')
+      console.log('📝 Attempting registration for:', email);
+      const { data, error } = await auth.signUp(email, password, {
+        data: {
+          full_name: fullName
         }
-      );
+      });
+      
+      console.log('📝 Registration attempt result:', { 
+        success: !!data?.user, 
+        user: data?.user?.email, 
+        error: error?.message 
+      });
       
       if (error) {
+        console.error('❌ Supabase registration error:', error);
         throw new Error(error.message);
       }
       
-      setToken(data.session?.access_token);
-      setUser(data.user);
-      setMessage('Registration successful! Please check your email to verify your account.');
-      changeView('dashboard');
-      loadProjects();
+      if (data?.user) {
+        console.log('✅ Registration successful');
+        setMessage('Registration successful! Please check your email to confirm your account.');
+        
+        // Switch back to login view after successful registration
+        setAuthView('login');
+      } else {
+        throw new Error('No user returned from registration');
+      }
     } catch (error) {
       console.error('❌ Registration failed:', error);
       const errorMessage = error.message || 'Registration failed';
@@ -488,17 +490,26 @@ function App() {
       let userMessage = errorMessage;
       if (errorMessage.includes('already registered')) {
         userMessage = 'This email is already registered. Please sign in instead or use a different email.';
-      } else if (errorMessage.includes('weak password') || errorMessage.includes('password')) {
-        userMessage = 'Password must be at least 6 characters long.';
+      } else if (errorMessage.includes('weak password')) {
+        userMessage = 'Password is too weak. Please use at least 8 characters with a mix of letters and numbers.';
       } else if (errorMessage.includes('invalid email')) {
         userMessage = 'Please enter a valid email address.';
-      } else if (errorMessage.includes('rate limit')) {
-        userMessage = 'Too many registration attempts. Please wait a few minutes and try again.';
+      } else if (errorMessage.includes('Network')) {
+        userMessage = 'Network error. Please check your connection and try again.';
       }
       
       setMessage(`Registration error: ${userMessage}`);
+      throw new Error(userMessage); // Re-throw for ModernRegisterForm to handle
     }
   };
+
+  // Legacy Authentication (keep for backup)
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    await handleModernLogin(formData.get('email'), formData.get('password'));
+  };
+
 
   // Projects
   const loadProjects = async () => {
@@ -2599,13 +2610,22 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
         </nav>
       )}
 
-      {currentView === 'login' && (
+      {currentView === 'login' && authView === 'login' && (
         <ModernLoginForm
           onLogin={handleModernLogin}
           onSwitchToRegister={() => setAuthView('register')}
           onDemoLogin={handleDemoLogin}
           loading={false}
           error={message?.includes('Login error') ? message.replace('Login error: ', '') : undefined}
+        />
+      )}
+
+      {currentView === 'login' && authView === 'register' && (
+        <ModernRegisterForm
+          onRegister={handleRegister}
+          onSwitchToLogin={() => setAuthView('login')}
+          loading={false}
+          error={message?.includes('Registration error') ? message.replace('Registration error: ', '') : undefined}
         />
       )}
 
