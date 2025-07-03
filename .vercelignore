@@ -18,7 +18,6 @@ __tests__/
 
 # Development files
 *.sql
-*.html
 load-*.js
 test-*.js
 analyze-*.js
