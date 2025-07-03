@@ -3,6 +3,7 @@ import L from 'leaflet';
 import * as turf from '@turf/turf';
 import 'leaflet/dist/leaflet.css';
 import { auth, db as originalDb } from './lib/supabase';
+import { manualUserSync } from './utils/fixUserSync';
 
 // Create a demo-aware database wrapper
 const db = {
@@ -2680,9 +2681,24 @@ Use <strong> for emphasis, <ul><li> for steps, and be specific about which tools
           {/* Dashboard Header */}
           <div style={flexBetweenStyle}>
             <h2 style={heading2Style}>Welcome, {user.first_name || user.email}!</h2>
-            <Button variant="secondary" onClick={logout}>
-              Logout
-            </Button>
+            <div style={{ display: 'flex', gap: theme.spacing[2] }}>
+              <Button 
+                variant="outline" 
+                onClick={async () => {
+                  const result = await manualUserSync();
+                  if (result.success) {
+                    setMessage('User sync completed successfully!');
+                  } else {
+                    setMessage(`User sync failed: ${result.error?.message || 'Unknown error'}`);
+                  }
+                }}
+              >
+                Sync User
+              </Button>
+              <Button variant="secondary" onClick={logout}>
+                Logout
+              </Button>
+            </div>
           </div>
 
           {/* Create Project Form */}
