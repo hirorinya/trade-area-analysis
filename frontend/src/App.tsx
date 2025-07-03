@@ -5,26 +5,8 @@ import 'leaflet/dist/leaflet.css';
 import { auth, db as originalDb } from './lib/supabase';
 import { manualUserSync } from './utils/fixUserSync';
 
-// Create a demo-aware database wrapper
-const db = {
-  ...originalDb,
-  createLocation: async (locationData) => {
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    if (currentUser.id && currentUser.id.startsWith('demo-')) {
-      console.log('🚫 Demo mode: Blocking Supabase createLocation call');
-      throw new Error('Demo mode: Use localStorage instead of Supabase');
-    }
-    return originalDb.createLocation(locationData);
-  },
-  deleteLocation: async (locationId) => {
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    if (currentUser.id && currentUser.id.startsWith('demo-')) {
-      console.log('🚫 Demo mode: Blocking Supabase deleteLocation call');
-      throw new Error('Demo mode: Use localStorage instead of Supabase');
-    }
-    return originalDb.deleteLocation(locationId);
-  }
-};
+// Use the original db directly - demo mode checks will be done at call sites
+const db = originalDb;
 import MapboxMap from './components/map/MapboxMap';
 import LeafletMap from './components/map/LeafletMap';
 import AIAnalysisChat from './components/ai/AIAnalysisChat';
