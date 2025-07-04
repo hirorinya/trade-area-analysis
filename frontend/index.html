@@ -6,15 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Trade Area Analysis Tool</title>
     
-    <!-- Allow all resources for map compatibility -->
+    <!-- Secure CSP for map compatibility -->
     <meta http-equiv="Content-Security-Policy" content="
-      default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https: http:;
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https: http:;
-      style-src 'self' 'unsafe-inline' https: http:;
-      img-src 'self' data: blob: https: http:;
-      connect-src 'self' https: http: ws: wss:;
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' *.mapbox.com *.supabase.co;
+      style-src 'self' 'unsafe-inline' *.mapbox.com fonts.googleapis.com;
+      img-src 'self' data: *.mapbox.com *.openstreetmap.org *.tile.openstreetmap.org cyberjapandata.gsi.go.jp;
+      connect-src 'self' *.mapbox.com *.supabase.co api.mapbox.com events.mapbox.com;
       worker-src 'self' blob:;
-      font-src 'self' data: https: http:;
+      font-src 'self' data: fonts.gstatic.com *.mapbox.com;
+      frame-src 'none';
+      object-src 'none';
     ">
     
     <script src="/error-handler.js"></script>
