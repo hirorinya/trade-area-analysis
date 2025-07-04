@@ -24,3 +24,7 @@ analyze-*.js
 create-*.js
 batch-*.sql
 census-*.sql
+
+# Population data files
+population/
+*.txt
